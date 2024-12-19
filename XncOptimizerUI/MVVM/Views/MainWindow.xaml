@@ -11,7 +11,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="150"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <StackPanel  Grid.Column="0">
@@ -20,7 +20,10 @@
                     Command="{Binding OpenFile}"/>
             <Button Height="50" 
                     Content="Optimize" 
-                    Command="{Binding ExecuteOperation}"/>
+                    Command="{Binding ExecuteOptimize}"/>
+            <Button Height="50" 
+                    Content="Prep. For Split Along X" 
+                    Command="{Binding ExecutePrepForSplitAlongX}"/>
         </StackPanel>
         <TextBox Grid.Column="1" 
                  Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}"

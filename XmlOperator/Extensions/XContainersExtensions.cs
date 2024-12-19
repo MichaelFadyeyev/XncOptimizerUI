@@ -39,6 +39,9 @@ namespace XncOptimizer.Extensions
         public static string? GetElrMatValue(this XElement element) => element.Attribute("elrMat")!.Value;
 
         public static XAttribute? GetEltMat(this XElement element) => element.Attribute("eltMat");
-        public static string? GetEltMatValue(this XElement element) => element.Attribute("eltMat")!.Value; 
+        public static string? GetEltMatValue(this XElement element) => element.Attribute("eltMat")!.Value;
+
+        public static XAttribute? GetPartName(this XElement element) => element.Attribute("name");
+        public static string? GetPartNameValue(this XElement element) => element.Attribute("name")!.Value;
     }
 }

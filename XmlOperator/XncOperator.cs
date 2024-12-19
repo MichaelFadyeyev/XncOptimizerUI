@@ -1,5 +1,8 @@
 ﻿using System.IO;
+using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Linq;
 using XncOptimizer.Extensions;
 
@@ -10,47 +13,38 @@ namespace XmlOperator
         const string Optimized = "optimized";
 
         private string _fullPath = string.Empty;
+        XDocument? _doc;
+        XElement? _project;
+        string _path = string.Empty;
+        string _source = string.Empty;
 
-        public XncOperator(string fullPath)
-        {
-            _fullPath = fullPath;
-        }
+        public XncOperator() { }
 
-        public void Execute(ref string log)
+        public void Optimize(ref string log)
         {
-            XDocument? doc;
-            XElement? project;
+
             Dictionary<string, string> partOperations = [];
             Dictionary<string, string> partsOldNewIds = [];
             Dictionary<string, string> sheetOldNewIds = [];
 
-            string path = string.Empty;
-            string source = string.Empty;
-
-            path = Path.GetDirectoryName(_fullPath) ?? string.Empty;
-            source = Path.GetFileName(_fullPath);
-
-            doc = XDocument.Load(_fullPath);
-            project = doc.GetProject()!;
-
-            var xncOperations = project.GetOperations() // XNC operations
+            var xncOperations = _project!.GetOperations() // XNC operations
                 .Where(e => e.GetTypeIdValue() == "XNC")
                 .ToList();
 
-            var csOperations = project.GetOperations() // sheet operations
+            var csOperations = _project!.GetOperations() // sheet operations
                 .Where(e => e.GetTypeIdValue() == "CS")
                 .ToList();
 
-            var elOperations = project.GetOperations() // band operations
+            var elOperations = _project!.GetOperations() // band operations
                 .Where(e => e.GetTypeIdValue() == "EL")
                 .ToList();
 
-            var sheetGoods = project.GetGoods() // sheet materials
+            var sheetGoods = _project!.GetGoods() // sheet materials
                 .Where(e => e.GetTypeIdValue() == "sheet")
                 .ToList();
 
             var format = xncOperations.Count.ToString().Length;
-            var goods = project.GetGoods().Where(e => e.GetTypeIdValue() == "product").ToList();
+            var goods = _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product").ToList();
 
             for (int i = 0; i < xncOperations.Count; i++)
             {
@@ -89,9 +83,9 @@ namespace XmlOperator
             }
 
             List<XElement> orderedXncOperations = [.. xncOperations.OrderBy(o => o.GetGroupCodeValue())];
-            project.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
+            _project!.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
 
-            var operations = project.GetOperations().ToList();
+            var operations = _project!.GetOperations().ToList();
             var maxOpIndex = 0;
 
             foreach (var operation in operations)
@@ -105,10 +99,9 @@ namespace XmlOperator
             for (var i = 0; i < orderedXncOperations.Count; i++)
             {
                 orderedXncOperations[i].SetIdValue((maxOpIndex + i).ToString());
-                project.Add(orderedXncOperations[i]);
+                _project!.Add(orderedXncOperations[i]);
             }
 
-            //*
             var xncFreeParts = new List<XElement>(); // new list for all parts without xnc
             var xncParts = new List<XElement>(); // new list for all parts with xnc
 
@@ -161,7 +154,7 @@ namespace XmlOperator
 
             var id = goods.First().GetIdValue()!; // store id of first existed good
 
-            project.GetGoods().Where(e => e.GetTypeIdValue() == "product")
+            _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product")
                     .Remove(); // remove all goods (is "products") with parts
 
             // create new good is one for all parts; assign stored id
@@ -185,6 +178,7 @@ namespace XmlOperator
                 var part = sortedParts[i - 1];
                 var oldId = part.GetIdValue()!;
                 var newId = (i).ToString();
+
                 part.SetIdValue(newId);
                 newGood.Add(part);
                 partsOldNewIds.Add(oldId, newId);
@@ -199,6 +193,7 @@ namespace XmlOperator
                 {
                     var oldId = parts[i].GetIdValue()!;
                     var newId = partsOldNewIds[oldId];
+
                     parts[i].SetIdValue(newId);
                 }
             }
@@ -211,16 +206,21 @@ namespace XmlOperator
                 {
                     var oldId = parts[i].GetIdValue()!;
                     var newId = partsOldNewIds[oldId];
+
                     parts[i].SetIdValue(newId);
                 }
 
                 var sheetOldId = parts.Last().GetIdValue()!;
                 var sheetNewId = sheetOldNewIds[sheetOldId];
+
                 parts.Last().SetIdValue(sheetNewId);
+
                 var sheetPart = new XElement(parts.Last());
+
                 parts.Last().Remove();
 
                 List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!))];
+
                 operation.GetParts().Remove();
                 orederedParts.Add(sheetPart);
                 operation.Add(orederedParts);
@@ -234,6 +234,7 @@ namespace XmlOperator
                 {
                     var oldId = parts[i].GetIdValue()!;
                     var newId = partsOldNewIds[oldId];
+
                     parts[i].SetIdValue(newId);
                 }
             }
@@ -242,21 +243,22 @@ namespace XmlOperator
             {
                 var oldId = good.GetPart()!.GetIdValue()!;
                 var newId = sheetOldNewIds[oldId];
+
                 good.GetPart()!.SetIdValue(newId);
             }
 
-            project.Add(newGood);
+            _project!.Add(newGood);
 
-            AppendDescription();
+            AppendDescription("grouped by XNC");
 
-            var result = source.Replace(".project", "_opt.project");
-            _fullPath = Path.Combine(path, result);
+            var result = _source.Replace(".project", "_opt.project");
 
-            doc.Save(_fullPath);
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
 
             log += $"***\nStored to: {_fullPath}";
 
-            #region METHODES
+            #region LOCAL_FUNCTIONS
 
             static void AppendGroupCode(string groupCode, XElement operation)
             {
@@ -275,19 +277,6 @@ namespace XmlOperator
                 }
 
                 partOperations.Add(partId, groupCode);
-            }
-
-            void AppendDescription()
-            {
-                var description = $"{DateTime.Now:yyyy-MM-dd hh:mm:ss} -> added XNC group codes";
-
-                if (project.Attribute("description") == null)
-                {
-                    project.Add(new XAttribute("description", description));
-                    return;
-                }
-
-                project.Attribute("description")!.Value = description;
             }
 
             bool CheckBendsAreIdentical(XElement part1, XElement part2)
@@ -310,18 +299,156 @@ namespace XmlOperator
                     && (part1.GetEltMat() != null && part1.GetEltMatValue() == part2.GetEltMatValue() || true);
             }
 
-            bool WrongFileType(string fileName)
-            {
-                return Path.GetExtension(fileName) != "project";
-            }
-
-            bool FileNotExists(string fullPath)
-            {
-                return !Path.Exists(fullPath);
-            }
-
             #endregion
+
         }
+
+        public void PrepForSplitAlongX(ref string log, string searchText)
+        {
+            var goods = _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "product")
+                .ToList();
+
+            var xncOperations = _project!.GetOperations() // XNC operations
+                .Where(e => e.GetTypeIdValue() == "XNC")
+                .ToList();
+
+            foreach (var good in goods)
+            {
+                var parts = good.GetParts().ToList();
+
+                foreach (var part in parts)
+                {
+                    var name = part.GetPartNameValue();
+
+                    if (name!.Contains(searchText))
+                    {
+                        var dw = part.Attribute("dw");
+                        var cw = part.Attribute("cw");
+
+                        // TODO support for decimal separator
+                        var width = Decimal.Parse(PointToComa(dw!.Value)) * 2 + 4;
+
+                        dw.SetValue(ComaToPoint(width));
+                        cw!.SetValue(width);
+
+                        var count = Int32.Parse(part.Attribute("count")!.Value);
+                        var newCount = count / 2 + count % 2;
+
+                        part.Attribute("count")!.SetValue(newCount);
+
+                        var partXncOperations = xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
+
+                        foreach (var xncOperation in partXncOperations)
+                        {
+                            var programAttribute = xncOperation.GetProgram();
+                            var programInnerXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute!.Value!));
+                            var program = programInnerXml.Element("program");
+                            var dy = program!.Attribute("dy")!.Value;
+
+                            program!.Attribute("dy")!.SetValue(width);
+
+                            var bores = program!.Elements().Where(e => ElementIsBore(e.Name.ToString())).ToList();
+                            var boreCount = bores.Count();
+
+                            foreach (var bore in bores)
+                            {
+                                var boreType = bore.Name.ToString();
+                                switch (boreType)
+                                {
+                                    case "bf":
+                                    case "bl":
+                                    case "br":
+                                        {
+                                            var newBore = new XElement(bore);
+                                            var y = bore.Attribute("y");
+                                            var yValue = Decimal.Parse(PointToComa(y.Value));
+
+                                            y.SetValue(ComaToPoint(width - yValue));
+                                            program.Add(newBore);
+                                            boreCount++;
+                                        }
+                                        break;
+                                    case "bt":
+                                    case "bb":
+                                        {
+                                            var attributes = bore.Attributes();
+                                            var newBore = new XElement(boreType == "bt" ? "bb" : "bt", attributes);
+
+                                            program.Add(newBore);
+                                            boreCount++;
+                                        }
+                                        break;
+                                }
+                            }
+
+                            xncOperation.Attribute("count")!.SetValue($"{newCount}");
+                            xncOperation.Attribute("countBore")!.SetValue($"{boreCount}");
+
+                            programAttribute.Value = program.ToString();
+                        }
+
+                        log += $"{name} resized to 84; count changed: {count} -> {newCount}\n";
+
+                    }
+                }
+            }
+
+            AppendDescription("specified parts prep for split along X");
+
+            var result = _source.Replace(".project", "_opt.project");
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nStored to: {_fullPath}";
+        }
+
+        #region GLOBAL_METHODES
+
+        public void OpenProject(string fullPath)
+        {
+            _fullPath = fullPath;
+            _path = Path.GetDirectoryName(_fullPath) ?? string.Empty;
+            _source = Path.GetFileName(_fullPath);
+            _doc = XDocument.Load(_fullPath);
+            _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
+        }
+
+        void AppendDescription(string message)
+        {
+            var description = $"{DateTime.Now:yyyy-MM-dd hh:mm:ss} -> {message}\n";
+
+            if (_project!.Attribute("description") == null)
+            {
+                _project!.Add(new XAttribute("description", description));
+                return;
+            }
+
+            _project!.Attribute("description")!.Value += description;
+        }
+
+        bool ElementIsBore(string name)
+        {
+            return name is "bf" || name is "bt" || name is "bb" || name is "bl" || name is "br";
+        }
+
+        string PointToComa(string text)
+        {
+            return text.Replace('.', ',');
+        }
+
+        string ComaToPoint(decimal number)
+        {
+            return number.ToString().Replace(',', '.');
+        }
+
+        #endregion
+
+
+
+
+
     }
 }
 

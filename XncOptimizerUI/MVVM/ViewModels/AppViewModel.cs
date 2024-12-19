@@ -11,7 +11,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
     {
         private Context _context;
         private RelayCommand? _openFile;
-        private RelayCommand? _executeOperation;
+        private RelayCommand? _executeOptimize;
+        private RelayCommand? _executePrepForSplitAlongX;
+
+        private XncOperator _operator = new();
 
 
         public string Log
@@ -36,27 +39,66 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     };
                     if (openDialog.ShowDialog() == true)
                     {
-                        FullPath = openDialog.FileName;
-                        Log += $"Opened file: {FullPath}\n";
+                        try
+                        {
+                            _operator.OpenProject(openDialog.FileName);
+                            Log = string.Empty;
+                            FullPath = openDialog.FileName;
+                            Log += $"Opened file: {FullPath}\n";
+                        }
+                        catch (Exception e)
+                        {
+                            Log = e.Message;
+                        }
                     }
                 });
             }
         }
-        public RelayCommand ExecuteOperation
+
+        public RelayCommand ExecuteOptimize
         {
             get
             {
-                return _executeOperation ??= new RelayCommand(obj =>
+
+                return _executeOptimize ??= new RelayCommand(obj =>
                 {
-                    var @operator = new XncOperator(FullPath);
+                    if (_context.FullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
+
                     var log = Log;
 
-                    @operator.Execute(ref log);
+                    _operator.Optimize(ref log);
 
                     Log = log;
                 });
             }
         }
+
+        public RelayCommand ExecutePrepForSplitAlongX
+        {
+            get
+            {
+                return _executePrepForSplitAlongX ??= new RelayCommand(obj =>
+                {
+                    if (_context.FullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
+
+                    var log = Log;
+
+                    _operator.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
+
+                    Log = log;
+                });
+            }
+        }
+
+
 
         public AppViewModel(Context context)
         {
