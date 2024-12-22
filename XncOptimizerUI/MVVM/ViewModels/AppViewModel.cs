@@ -1,9 +1,10 @@
 ﻿
 using Microsoft.Win32;
-using System.Diagnostics;
-using XmlOperator;
+using System.Collections.ObjectModel;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Core;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
@@ -11,11 +12,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
     {
         private Context _context;
         private RelayCommand? _openFile;
+        private RelayCommand? _readParts;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
-
-        private XncOperator _operator = new();
-
+        private IProjectService _projectService = new GibLabProjectService();
 
         public string Log
         {
@@ -27,6 +27,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
             get { return _context.FullPath; }
             set { _context.FullPath = value; OnPropertyChanged(); }
         }
+
+        public ObservableCollection<Part> Parts
+        {
+            get { return _context.Parts; }
+            set { _context.Parts = value; OnPropertyChanged(); }
+        }
+
         public RelayCommand OpenFile
         {
             get
@@ -41,7 +48,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     {
                         try
                         {
-                            _operator.OpenProject(openDialog.FileName);
+                            _projectService.OpenProject(openDialog.FileName);
                             Log = string.Empty;
                             FullPath = openDialog.FileName;
                             Log += $"Opened file: {FullPath}\n";
@@ -51,6 +58,17 @@ namespace XncOptimizerUI.MVVM.ViewModels
                             Log = e.Message;
                         }
                     }
+                });
+            }
+        }
+
+        public RelayCommand ReadParts
+        {
+            get
+            {
+                return _readParts ??= new RelayCommand(obj =>
+                {
+                    Parts = _projectService.ReadParts();
                 });
             }
         }
@@ -70,7 +88,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
                     var log = Log;
 
-                    _operator.Optimize(ref log);
+                    _projectService.GroupIdenticalElements(ref log);
 
                     Log = log;
                 });
@@ -91,7 +109,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
                     var log = Log;
 
-                    _operator.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
+                    _projectService.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
 
                     Log = log;
                 });

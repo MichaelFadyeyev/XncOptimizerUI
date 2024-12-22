@@ -24,10 +24,23 @@
             <Button Height="50" 
                     Content="Prep. For Split Along X" 
                     Command="{Binding ExecutePrepForSplitAlongX}"/>
+            <Button Height="50" 
+                    Content="Read parts" 
+                    Command="{Binding ReadParts}"/>
         </StackPanel>
-        <TextBox Grid.Column="1" 
+        <StackPanel  Grid.Column="1">
+            <DataGrid AutoGenerateColumns="False" ItemsSource="{Binding Parts}" CanUserAddRows="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="*"/>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="Width" Binding="{Binding Width}" Width="*"/>
+                    <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBox 
                  Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}"
                  VerticalScrollBarVisibility="Auto"
                  TextWrapping="WrapWithOverflow"/>
+        </StackPanel>
     </Grid>
 </Window>

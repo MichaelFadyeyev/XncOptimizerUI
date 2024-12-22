@@ -1,6 +1,6 @@
 ﻿using System.Xml.Linq;
 
-namespace XncOptimizer.Extensions
+namespace XncOptimizerUI.Extensions
 {
     public static class XContainersExtensions
     {
@@ -24,6 +24,7 @@ namespace XncOptimizer.Extensions
         public static void SetCodeValue(this XElement element, string value) => element.Attribute("code")!.Value = value;
         public static XAttribute? GetId(this XElement element) => element.Attribute("id");
         public static string? GetIdValue(this XElement element) => element.Attribute("id")!.Value;
+        public static int GetIdNumberValue(this XElement element) => Int32.Parse(element.Attribute("id")!.Value);
         public static void SetIdValue(this XElement element, string value) => element.Attribute("id")!.Value = value;
         public static XAttribute? GetTypeName(this XElement element) => element.Attribute("typeName");
         public static string? GetTypeNameValue(this XElement element) => element.Attribute("typeName")!.Value;

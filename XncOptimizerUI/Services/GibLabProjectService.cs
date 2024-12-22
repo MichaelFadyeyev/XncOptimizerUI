@@ -1,14 +1,14 @@
-﻿using System.IO;
+﻿using System.Collections.ObjectModel;
+using System.IO;
 using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
 using System.Xml.Linq;
-using XncOptimizer.Extensions;
+using XncOptimizerUI.Contracts;
+using XncOptimizerUI.Extensions;
+using XncOptimizerUI.MVVM.Models;
 
-namespace XmlOperator
+namespace XncOptimizerUI.Services
 {
-    public class XncOperator
+    public class GibLabProjectService : IProjectService
     {
         const string Optimized = "optimized";
 
@@ -18,9 +18,9 @@ namespace XmlOperator
         string _path = string.Empty;
         string _source = string.Empty;
 
-        public XncOperator() { }
+        public GibLabProjectService() { }
 
-        public void Optimize(ref string log)
+        public void GroupIdenticalElements(ref string log)
         {
 
             Dictionary<string, string> partOperations = [];
@@ -44,7 +44,7 @@ namespace XmlOperator
                 .ToList();
 
             var format = xncOperations.Count.ToString().Length;
-            var goods = _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product").ToList();
+            var goods = _project!.GetGoods().Where(e => e.GetTypeIdValue() == "").ToList();
 
             for (int i = 0; i < xncOperations.Count; i++)
             {
@@ -413,6 +413,44 @@ namespace XmlOperator
             _source = Path.GetFileName(_fullPath);
             _doc = XDocument.Load(_fullPath);
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
+        }
+
+        public ObservableCollection<Part> ReadParts()
+        {
+            if (_project == null)
+            {
+                return [];
+            }
+
+            var xmlParts = GetAllParts();
+            var parts = new List<Part>();
+
+            foreach (var part in xmlParts)
+            {
+                parts.Add(new Part()
+                {
+                    Id = part.GetIdNumberValue(),
+                    Name = part.GetNameValue()!,
+                    Count = (int)part.Attribute("count")!,
+                    Length = (int)part.Attribute("l")!,
+                    Width = (int)part.Attribute("w")!
+                });
+            }
+
+            return [.. parts];
+        }
+
+        List<XElement> GetAllParts()
+        {
+            var products = new List<XElement>();
+            var goods = _project!.GetGoods().Where(g=>g.GetTypeIdValue()=="product");
+
+            foreach (var good in goods)
+            {
+                products.AddRange( good.Elements("part"));
+            }
+
+            return products;   
         }
 
         void AppendDescription(string message)
