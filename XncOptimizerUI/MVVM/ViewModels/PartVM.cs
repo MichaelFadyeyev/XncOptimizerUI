@@ -1,0 +1,52 @@
+﻿using XncOptimizerUI.Core;
+using XncOptimizerUI.MVVM.Models;
+
+namespace XncOptimizerUI.MVVM.ViewModels
+{
+    public class PartVM(Part part) : ObservableObject
+    {
+        Part _part = part;
+
+        public int Id
+        {
+            get { return _part.Id; }
+            set { _part.Id = value; OnPropertyChanged(); }
+        }
+
+        public int GoodId
+        {
+            get { return _part.GoodId; }
+            set { _part.GoodId = value; OnPropertyChanged(); }
+        }
+
+        public string Name
+        {
+            get { return _part.Name; }
+            set { _part.Name = value; OnPropertyChanged(); }
+        }
+
+        public int Count
+        {
+            get { return _part.Count; }
+            set { _part.Count = value; OnPropertyChanged(); }
+        }
+
+        public decimal Length
+        {
+            get { return _part.Length; }
+            set { _part.Length = value; OnPropertyChanged(); }
+        }
+
+        public decimal Width
+        {
+            get { return _part.Width; }
+            set { _part.Width = value; OnPropertyChanged(); }
+        }
+
+        public bool ConsiderTexture
+        {
+            get { return _part.ConsiderTexture; }
+            set { _part.ConsiderTexture = value; OnPropertyChanged(); }
+        }
+    }
+}

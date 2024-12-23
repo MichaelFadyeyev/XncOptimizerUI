@@ -21,7 +21,7 @@ namespace XncOptimizerUI.MVVM.Views
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new AppViewModel(new Context());
+            DataContext = new AppViewModel();
         }
     }
 }

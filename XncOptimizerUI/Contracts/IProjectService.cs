@@ -8,7 +8,7 @@ namespace XncOptimizerUI.Contracts
         void OpenProject(string path);
         void GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string searchText);
-        public ObservableCollection<Part> ReadParts();
+        public List<Part> ReadParts();
 
     }
 }

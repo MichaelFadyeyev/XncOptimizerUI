@@ -1,37 +1,48 @@
 ﻿
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.Windows.Markup;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Core;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.Services;
+using AutoMapper;
+using XncOptimizerUI.Configuration;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
     public class AppViewModel : ObservableObject
     {
-        private Context _context;
+        private string _log = string.Empty;
+        private string _fullPath = string.Empty;
+        private ObservableCollection<PartVM> _parts = [];
         private RelayCommand? _openFile;
         private RelayCommand? _readParts;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private IProjectService _projectService = new GibLabProjectService();
+        private IMapper? _mapper;
+
+        public AppViewModel()
+        {
+            _mapper = AutoMapperConfiguration.InitializeAutoMapper();
+        }
 
         public string Log
         {
-            get { return _context.Log; }
-            set { _context.Log = value; OnPropertyChanged(); }
+            get { return _log; }
+            set { _log = value; OnPropertyChanged(); }
         }
         public string FullPath
         {
-            get { return _context.FullPath; }
-            set { _context.FullPath = value; OnPropertyChanged(); }
+            get { return _fullPath; }
+            set { _fullPath = value; OnPropertyChanged(); }
         }
 
-        public ObservableCollection<Part> Parts
+        public ObservableCollection<PartVM> Parts
         {
-            get { return _context.Parts; }
-            set { _context.Parts = value; OnPropertyChanged(); }
+            get { return _parts; }
+            set { _parts = value; OnPropertyChanged(); }
         }
 
         public RelayCommand OpenFile
@@ -68,7 +79,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _readParts ??= new RelayCommand(obj =>
                 {
-                    Parts = _projectService.ReadParts();
+                    var parts = _projectService.ReadParts().Select(p => new PartVM(p));
+                    Parts = new ObservableCollection<PartVM>(parts);
                 });
             }
         }
@@ -80,7 +92,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
                 return _executeOptimize ??= new RelayCommand(obj =>
                 {
-                    if (_context.FullPath == string.Empty)
+                    if (_fullPath == string.Empty)
                     {
                         Log += "No file selected!\n";
                         return;
@@ -101,7 +113,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _executePrepForSplitAlongX ??= new RelayCommand(obj =>
                 {
-                    if (_context.FullPath == string.Empty)
+                    if (_fullPath == string.Empty)
                     {
                         Log += "No file selected!\n";
                         return;
@@ -114,13 +126,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     Log = log;
                 });
             }
-        }
-
-
-
-        public AppViewModel(Context context)
-        {
-            _context = context;
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Xml.Linq;
+using System.Xml.XPath;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
@@ -415,42 +416,42 @@ namespace XncOptimizerUI.Services
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
         }
 
-        public ObservableCollection<Part> ReadParts()
+        private Part CreatePart(XElement partXElement)
         {
-            if (_project == null)
+            return new Part()
             {
-                return [];
-            }
-
-            var xmlParts = GetAllParts();
-            var parts = new List<Part>();
-
-            foreach (var part in xmlParts)
-            {
-                parts.Add(new Part()
-                {
-                    Id = part.GetIdNumberValue(),
-                    Name = part.GetNameValue()!,
-                    Count = (int)part.Attribute("count")!,
-                    Length = (int)part.Attribute("l")!,
-                    Width = (int)part.Attribute("w")!
-                });
-            }
-
-            return [.. parts];
+                Id = partXElement.GetIdNumberValue(),
+                Name = partXElement.GetNameValue()!,
+                Count = (int)partXElement.Attribute("count")!,
+                Length = (int)partXElement.Attribute("l")!,
+                Width = (int)partXElement.Attribute("w")!
+            };
         }
 
-        List<XElement> GetAllParts()
+        public List<Part> ReadParts()
         {
-            var products = new List<XElement>();
-            var goods = _project!.GetGoods().Where(g=>g.GetTypeIdValue()=="product");
+            var parts = new List<Part>();
 
-            foreach (var good in goods)
+            if(_project == null)
             {
-                products.AddRange( good.Elements("part"));
+                return parts;
             }
 
-            return products;   
+            var goods = _project!.GetGoods().Where(g => g.GetTypeIdValue() == "product");
+
+            foreach (var currentGood in goods)
+            {
+                var currentParts = currentGood.GetParts()
+                    .Select(x => CreatePart(x))
+                    .ToList();
+
+                var goodId = int.Parse(currentGood.GetIdValue()!);
+
+                currentParts.ForEach(part => part.GoodId = goodId);
+                parts.AddRange(currentParts);
+            }
+
+            return parts;
         }
 
         void AppendDescription(string message)
