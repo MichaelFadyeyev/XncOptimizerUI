@@ -5,7 +5,14 @@ namespace XncOptimizerUI.MVVM.ViewModels
 {
     public class PartVM(Part part) : ObservableObject
     {
-        Part _part = part;
+        private Part _part = part;
+        private int _number;
+
+        public int Number
+        {
+            get { return _number; }
+            set { _number = value; OnPropertyChanged(); }
+        }
 
         public int Id
         {
@@ -47,6 +54,30 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get { return _part.ConsiderTexture; }
             set { _part.ConsiderTexture = value; OnPropertyChanged(); }
+        }
+
+        public int? TopBandingId
+        {
+            get { return _part.TopBandingId; }
+            set { _part.TopBandingId = value; OnPropertyChanged(); }
+        }
+
+        public int? BottomBandingId
+        {
+            get { return _part.BottomBandingId; }
+            set { _part.BottomBandingId = value; OnPropertyChanged(); }
+        }
+
+        public int? LeftBandingId
+        {
+            get { return _part.LeftBandingId; }
+            set { _part.LeftBandingId = value; OnPropertyChanged(); }
+        }
+
+        public int? RightBandingId
+        {
+            get { return _part.RightBandingId; }
+            set { _part.RightBandingId = value; OnPropertyChanged(); }
         }
     }
 }

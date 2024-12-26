@@ -15,19 +15,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
     {
         private string _log = string.Empty;
         private string _fullPath = string.Empty;
+
         private ObservableCollection<PartVM> _parts = [];
+        private ObservableCollection<BandVM> _bands = [];
+        private PartVM? _selectedPart;
+        private BandVM? _selectedBand;
+
         private RelayCommand? _openFile;
         private RelayCommand? _readParts;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private IProjectService _projectService = new GibLabProjectService();
-        private IMapper? _mapper;
 
-        public AppViewModel()
-        {
-            _mapper = AutoMapperConfiguration.InitializeAutoMapper();
-        }
-
+        #region Props
         public string Log
         {
             get { return _log; }
@@ -44,6 +44,24 @@ namespace XncOptimizerUI.MVVM.ViewModels
             get { return _parts; }
             set { _parts = value; OnPropertyChanged(); }
         }
+
+        public ObservableCollection<BandVM> Bands
+        {
+            get { return _bands; }
+            set { _bands = value; OnPropertyChanged(); }
+        }
+
+        public PartVM? SelectedPart
+        {
+            get { return _selectedPart; }
+            set { _selectedPart = value; OnPropertyChanged(); }
+        }
+        public BandVM? SelectedBand
+        {
+            get { return _selectedBand; }
+            set { _selectedBand = value; OnPropertyChanged(); }
+        }
+        #endregion
 
         public RelayCommand OpenFile
         {
@@ -79,8 +97,16 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _readParts ??= new RelayCommand(obj =>
                 {
+                    var bands = _projectService.ReadBands().Select(b => new BandVM(b));
+                    Bands = new ObservableCollection<BandVM>(bands);
+
                     var parts = _projectService.ReadParts().Select(p => new PartVM(p));
                     Parts = new ObservableCollection<PartVM>(parts);
+
+                    for (var i = 0; i < Parts.Count; i++)
+                    {
+                        Parts[i].Number = i + 1;
+                    }
                 });
             }
         }
@@ -89,7 +115,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get
             {
-
                 return _executeOptimize ??= new RelayCommand(obj =>
                 {
                     if (_fullPath == string.Empty)

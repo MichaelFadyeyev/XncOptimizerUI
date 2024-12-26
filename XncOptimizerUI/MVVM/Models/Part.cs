@@ -4,6 +4,7 @@
     {
         public int Id { get; set; }
         public int GoodId { get; set; }
+        public int MaterialId { get; set; }
         public string Name { get; set; } = string.Empty;
         public int Count { get; set; }
         public decimal Length { get; set; }
@@ -19,15 +20,20 @@
         //public int Usedcount { get; set; }
 
         public bool ConsiderTexture { get; set; }
-        //public string? Elt { get; set; }
-        //public string? Elb { get; set; }
-        //public string? Ell { get; set; }
-        //public string? Elr { get; set; }
+        public int? TopBandingId { get; set; } // elt 
+        public int? BottomBandingId { get; set; } // elb
+        public int? LeftBandingId { get; set; } // ell
+        public int? RightBandingId { get; set; } // elr
 
-        //public string? EltMat { get; set; }
-        //public string? ElbMat { get; set; }
-        //public string? EllMat { get; set; }
-        //public string? ElrMat { get; set; }
+        //public string? TopBandingMat { get; set; } // EltMat
+        //public string? BottomBandingMat { get; set; } // ElbMat
+        //public string? LeftBandingMat { get; set; } // EllMat
+        //public string? RightBandingMat { get; set; } // ElrMat
+
+        //public string? TopBandingOperation { get; set; } // operation of type "EL"
+        //public string? BottomBandingOperation { get; set; } // operation of type "EL"
+        //public string? LeftBandingOperation { get; set; } // operation of type "EL"
+        //public string? RightBandingOperation { get; set; } // operation of type "EL"
 
 
     }

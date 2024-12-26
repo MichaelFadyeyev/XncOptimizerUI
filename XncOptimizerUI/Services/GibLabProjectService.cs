@@ -18,6 +18,11 @@ namespace XncOptimizerUI.Services
         XElement? _project;
         string _path = string.Empty;
         string _source = string.Empty;
+        List<XElement> _xncOperations = [];
+        List<XElement> _csOperations = [];
+        List<XElement> _elOperations = [];
+        List<XElement> _sheetGoods = [];
+        List<XElement> _bandGoods = [];
 
         public GibLabProjectService() { }
 
@@ -28,28 +33,17 @@ namespace XncOptimizerUI.Services
             Dictionary<string, string> partsOldNewIds = [];
             Dictionary<string, string> sheetOldNewIds = [];
 
-            var xncOperations = _project!.GetOperations() // XNC operations
-                .Where(e => e.GetTypeIdValue() == "XNC")
-                .ToList();
+            _xncOperations = GetXncOperations();
+            _csOperations = GetCsOperations();
+            _elOperations = GetElOperations();
+            _sheetGoods = GetSheetGoods();
 
-            var csOperations = _project!.GetOperations() // sheet operations
-                .Where(e => e.GetTypeIdValue() == "CS")
-                .ToList();
-
-            var elOperations = _project!.GetOperations() // band operations
-                .Where(e => e.GetTypeIdValue() == "EL")
-                .ToList();
-
-            var sheetGoods = _project!.GetGoods() // sheet materials
-                .Where(e => e.GetTypeIdValue() == "sheet")
-                .ToList();
-
-            var format = xncOperations.Count.ToString().Length;
+            var format = _xncOperations.Count.ToString().Length;
             var goods = _project!.GetGoods().Where(e => e.GetTypeIdValue() == "").ToList();
 
-            for (int i = 0; i < xncOperations.Count; i++)
+            for (int i = 0; i < _xncOperations.Count; i++)
             {
-                var operation = xncOperations[i];
+                var operation = _xncOperations[i];
 
                 if (operation.Attribute(Optimized) != null) continue;
 
@@ -59,11 +53,11 @@ namespace XncOptimizerUI.Services
                 AddToPartOperations(groupCode, partId);
                 AppendGroupCode(groupCode, operation);
 
-                if (i == xncOperations.Count - 1) continue;
+                if (i == _xncOperations.Count - 1) continue;
 
-                for (int j = i + 1; j < xncOperations.Count; j++)
+                for (int j = i + 1; j < _xncOperations.Count; j++)
                 {
-                    var comparedOperation = xncOperations[j];
+                    var comparedOperation = _xncOperations[j];
 
                     if (comparedOperation.Attribute(Optimized) != null) continue;
                     if (operation.GetProgramValue() != comparedOperation.GetProgramValue()) continue;
@@ -83,7 +77,7 @@ namespace XncOptimizerUI.Services
                 }
             }
 
-            List<XElement> orderedXncOperations = [.. xncOperations.OrderBy(o => o.GetGroupCodeValue())];
+            List<XElement> orderedXncOperations = [.. _xncOperations.OrderBy(o => o.GetGroupCodeValue())];
             _project!.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
 
             var operations = _project!.GetOperations().ToList();
@@ -144,9 +138,9 @@ namespace XncOptimizerUI.Services
 
             var partsCount = sortedParts.Count;
 
-            for (var i = 1; i <= csOperations.Count; i++) // assign new ids to csOperations
+            for (var i = 1; i <= _csOperations.Count; i++) // assign new ids to _csOperations
             {
-                var part = csOperations[i - 1].GetParts().Last();
+                var part = _csOperations[i - 1].GetParts().Last();
                 var oldId = part.GetIdValue()!;
                 var newId = (partsCount + i).ToString();
 
@@ -186,7 +180,7 @@ namespace XncOptimizerUI.Services
                 log += $"{part.GetIdValue()!.PadLeft(format, '0')} -> {part.GetNameValue()}\n";
             }
 
-            foreach (var operation in xncOperations)
+            foreach (var operation in _xncOperations)
             {
                 var parts = operation.GetParts().ToList();
 
@@ -199,7 +193,7 @@ namespace XncOptimizerUI.Services
                 }
             }
 
-            foreach (var operation in csOperations)
+            foreach (var operation in _csOperations)
             {
                 var parts = operation.GetParts().ToList();
 
@@ -227,7 +221,7 @@ namespace XncOptimizerUI.Services
                 operation.Add(orederedParts);
             }
 
-            foreach (var operation in elOperations)
+            foreach (var operation in _elOperations)
             {
                 var parts = operation.GetParts().ToList();
 
@@ -240,7 +234,7 @@ namespace XncOptimizerUI.Services
                 }
             }
 
-            foreach (var good in sheetGoods)
+            foreach (var good in _sheetGoods)
             {
                 var oldId = good.GetPart()!.GetIdValue()!;
                 var newId = sheetOldNewIds[oldId];
@@ -310,7 +304,7 @@ namespace XncOptimizerUI.Services
                 .Where(e => e.GetTypeIdValue() == "product")
                 .ToList();
 
-            var xncOperations = _project!.GetOperations() // XNC operations
+            var _xncOperations = _project!.GetOperations() // XNC operations
                 .Where(e => e.GetTypeIdValue() == "XNC")
                 .ToList();
 
@@ -338,7 +332,7 @@ namespace XncOptimizerUI.Services
 
                         part.Attribute("count")!.SetValue(newCount);
 
-                        var partXncOperations = xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
+                        var partXncOperations = _xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
 
                         foreach (var xncOperation in partXncOperations)
                         {
@@ -416,23 +410,58 @@ namespace XncOptimizerUI.Services
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
         }
 
-        private Part CreatePart(XElement partXElement)
+        private Part CreatePart(XElement element)
         {
             return new Part()
             {
-                Id = partXElement.GetIdNumberValue(),
-                Name = partXElement.GetNameValue()!,
-                Count = (int)partXElement.Attribute("count")!,
-                Length = (int)partXElement.Attribute("l")!,
-                Width = (int)partXElement.Attribute("w")!
+                Id = element.GetIdIntValue(),
+                Name = element.GetNameValue()!,
+                Count = int.Parse(element.Attribute("count")!.Value),
+                Length = decimal.Parse(element.Attribute("l")!.Value),
+                Width = decimal.Parse(element.Attribute("w")!.Value)
             };
+        }
+
+        private Band CreateBand(XElement element)
+        {
+            return new Band()
+            {
+                Id = element.GetIdIntValue(),
+                //Name = element.GetNameValue()!,
+                Thickness = decimal.Parse(element.Attribute("t")!.Value),
+                Width = decimal.Parse(element.Attribute("w")!.Value),
+                InternalSymbol = element.Attribute("elSymbol")!.Value,
+            };
+        }
+
+        public List<Band> ReadBands()
+        {
+            var bands = new List<Band>(); 
+
+            if (_project == null)
+            {
+                return bands;
+            }
+
+            _bandGoods = GetBandGoods();
+            _elOperations = GetElOperations();
+
+            foreach (var operation in _elOperations)
+            {
+                var band = CreateBand(operation);
+                band.Name = _bandGoods.Single(b=>b.GetIdValue() == operation.GetOperationMaterialIdValue())!
+                                    .GetNameValue()!;
+                bands.Add(band);
+            }
+
+            return bands;
         }
 
         public List<Part> ReadParts()
         {
             var parts = new List<Part>();
 
-            if(_project == null)
+            if (_project == null)
             {
                 return parts;
             }
@@ -446,12 +475,50 @@ namespace XncOptimizerUI.Services
                     .ToList();
 
                 var goodId = int.Parse(currentGood.GetIdValue()!);
+                //var materialid = int.Parse(currentGood.Attribute()
 
                 currentParts.ForEach(part => part.GoodId = goodId);
                 parts.AddRange(currentParts);
             }
 
+
+
             return parts;
+        }
+
+        private List<XElement> GetXncOperations() // XNC operations
+        {
+            return _project!.GetOperations()
+                .Where(o => o.GetTypeIdValue() == "XNC")
+                .ToList();
+        }
+
+        private List<XElement> GetCsOperations() // cut operations
+        {
+            return _project!.GetOperations()
+                .Where(o => o.GetTypeIdValue() == "CS")
+                .ToList();
+        }
+
+        private List<XElement> GetElOperations() // band operations
+        {
+            return _project!.GetOperations()
+                .Where(o => o.GetTypeIdValue() == "EL")
+                .ToList();
+        }
+
+        private List<XElement> GetSheetGoods() // sheet materials
+        {
+            return _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "sheet")
+                .ToList();
+        }
+
+        private List<XElement> GetBandGoods() // band materials
+        {
+            return _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "band")
+                .ToList();
         }
 
         void AppendDescription(string message)

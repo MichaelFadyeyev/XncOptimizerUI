@@ -9,6 +9,7 @@ namespace XncOptimizerUI.Contracts
         void GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string searchText);
         public List<Part> ReadParts();
+        public List<Band> ReadBands();
 
     }
 }
