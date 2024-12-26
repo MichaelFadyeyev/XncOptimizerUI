@@ -6,6 +6,7 @@ using System.Xml.XPath;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.ServiceModels;
 
 namespace XncOptimizerUI.Services
 {
@@ -23,6 +24,9 @@ namespace XncOptimizerUI.Services
         List<XElement> _elOperations = [];
         List<XElement> _sheetGoods = [];
         List<XElement> _bandGoods = [];
+        List<XElement> _productGoods = [];
+
+        List<Band> _bands = [];
 
         public GibLabProjectService() { }
 
@@ -39,7 +43,8 @@ namespace XncOptimizerUI.Services
             _sheetGoods = GetSheetGoods();
 
             var format = _xncOperations.Count.ToString().Length;
-            var goods = _project!.GetGoods().Where(e => e.GetTypeIdValue() == "").ToList();
+
+            _productGoods = GetProductGoods();
 
             for (int i = 0; i < _xncOperations.Count; i++)
             {
@@ -62,10 +67,10 @@ namespace XncOptimizerUI.Services
                     if (comparedOperation.Attribute(Optimized) != null) continue;
                     if (operation.GetProgramValue() != comparedOperation.GetProgramValue()) continue;
 
-                    var part1 = goods.GetParts().FirstOrDefault(e => e.GetIdValue()
+                    var part1 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
                         == operation.GetPart()!.GetIdValue());
 
-                    var part2 = goods.GetParts().FirstOrDefault(e => e.GetIdValue()
+                    var part2 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
                         == comparedOperation.GetPart()!.GetIdValue());
 
                     if (!CheckBendsAreIdentical(part1!, part2!)) continue;
@@ -100,7 +105,7 @@ namespace XncOptimizerUI.Services
             var xncFreeParts = new List<XElement>(); // new list for all parts without xnc
             var xncParts = new List<XElement>(); // new list for all parts with xnc
 
-            foreach (var good in goods)
+            foreach (var good in _productGoods)
             {
                 var parts = good.GetParts().ToList();
 
@@ -147,10 +152,10 @@ namespace XncOptimizerUI.Services
                 sheetOldNewIds.Add(oldId, newId);
             }
 
-            var id = goods.First().GetIdValue()!; // store id of first existed good
+            var id = _productGoods.First().GetIdValue()!; // store id of first existed good
 
             _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product")
-                    .Remove(); // remove all goods (is "products") with parts
+                    .Remove(); // remove all _productGoods (is "products") with parts
 
             // create new good is one for all parts; assign stored id
             var newGood =
@@ -300,7 +305,7 @@ namespace XncOptimizerUI.Services
 
         public void PrepForSplitAlongX(ref string log, string searchText)
         {
-            var goods = _project!.GetGoods()
+            var _productGoods = _project!.GetGoods()
                 .Where(e => e.GetTypeIdValue() == "product")
                 .ToList();
 
@@ -308,7 +313,7 @@ namespace XncOptimizerUI.Services
                 .Where(e => e.GetTypeIdValue() == "XNC")
                 .ToList();
 
-            foreach (var good in goods)
+            foreach (var good in _productGoods)
             {
                 var parts = good.GetParts().ToList();
 
@@ -410,7 +415,7 @@ namespace XncOptimizerUI.Services
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
         }
 
-        private Part CreatePart(XElement element)
+        private static Part CreatePart(XElement element)
         {
             return new Part()
             {
@@ -418,16 +423,19 @@ namespace XncOptimizerUI.Services
                 Name = element.GetNameValue()!,
                 Count = int.Parse(element.Attribute("count")!.Value),
                 Length = decimal.Parse(element.Attribute("l")!.Value),
-                Width = decimal.Parse(element.Attribute("w")!.Value)
+                Width = decimal.Parse(element.Attribute("w")!.Value),
+                TopBandingId = element.GetEltIdIntValue(),
+                BottomBandingId = element.GetElbIdIntValue(),
+                LeftBandingId = element.GetEllIdIntValue(),
+                RightBandingId = element.GetElbIdIntValue()
             };
         }
 
-        private Band CreateBand(XElement element)
+        private static Band CreateBand(XElement element)
         {
             return new Band()
             {
                 Id = element.GetIdIntValue(),
-                //Name = element.GetNameValue()!,
                 Thickness = decimal.Parse(element.Attribute("t")!.Value),
                 Width = decimal.Parse(element.Attribute("w")!.Value),
                 InternalSymbol = element.Attribute("elSymbol")!.Value,
@@ -436,11 +444,11 @@ namespace XncOptimizerUI.Services
 
         public List<Band> ReadBands()
         {
-            var bands = new List<Band>(); 
+            _bands = [];
 
             if (_project == null)
             {
-                return bands;
+                return _bands;
             }
 
             _bandGoods = GetBandGoods();
@@ -449,12 +457,27 @@ namespace XncOptimizerUI.Services
             foreach (var operation in _elOperations)
             {
                 var band = CreateBand(operation);
-                band.Name = _bandGoods.Single(b=>b.GetIdValue() == operation.GetOperationMaterialIdValue())!
-                                    .GetNameValue()!;
-                bands.Add(band);
+                var operationMatId = operation.GetOperationMaterialIdValue();
+
+                band.Name = _bandGoods.Single(b => b.GetIdValue() == operationMatId)!.GetNameValue()!;
+                band.Code = _bandGoods.Single(b => b.GetIdValue() == operationMatId)!.GetCodeValue()!;
+
+                _bands.Add(band);
             }
 
-            return bands;
+            var uniqueBandCodes = _bands.GroupBy(b => b.Code)
+                .Select(g => g.First().Code)
+                .ToList();
+
+            foreach (var band in _bands)
+            {
+                var index = uniqueBandCodes.IndexOf(band.Code);
+                var externalSymbol = Enum.GetNames(typeof(BandSymbols))[index];
+
+                band.ExternalSymbol = externalSymbol;
+            }
+
+            return _bands;
         }
 
         public List<Part> ReadParts()
@@ -466,22 +489,42 @@ namespace XncOptimizerUI.Services
                 return parts;
             }
 
-            var goods = _project!.GetGoods().Where(g => g.GetTypeIdValue() == "product");
+            var _productGoods = _project!.GetGoods().Where(g => g.GetTypeIdValue() == "product");
 
-            foreach (var currentGood in goods)
+            foreach (var currentGood in _productGoods)
             {
                 var currentParts = currentGood.GetParts()
                     .Select(x => CreatePart(x))
                     .ToList();
 
                 var goodId = int.Parse(currentGood.GetIdValue()!);
-                //var materialid = int.Parse(currentGood.Attribute()
 
                 currentParts.ForEach(part => part.GoodId = goodId);
                 parts.AddRange(currentParts);
             }
 
+            foreach (var part in parts)
+            {
+                if (part.TopBandingId != null)
+                {
+                    part.TopBandingMat = _bands.Find(b => b.Id == part.TopBandingId)!.Name;
+                }
 
+                if (part.BottomBandingId != null)
+                {
+                    part.BottomBandingMat = _bands.Find(b => b.Id == part.BottomBandingId)!.Name;
+                }
+
+                if (part.LeftBandingId != null)
+                {
+                    part.LeftBandingMat = _bands.Find(b => b.Id == part.LeftBandingId)!.Name;
+                }
+
+                if (part.RightBandingId != null)
+                {
+                    part.RightBandingMat = _bands.Find(b => b.Id == part.RightBandingId)!.Name;
+                }
+            }
 
             return parts;
         }
@@ -518,6 +561,13 @@ namespace XncOptimizerUI.Services
         {
             return _project!.GetGoods()
                 .Where(e => e.GetTypeIdValue() == "band")
+                .ToList();
+        }
+
+        private List<XElement> GetProductGoods() // product _productGoods
+        {
+            return _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "product")
                 .ToList();
         }
 

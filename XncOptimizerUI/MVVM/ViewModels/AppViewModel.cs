@@ -1,13 +1,12 @@
 ﻿
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
-using System.Windows.Markup;
+using System.IO;
+using System.Text;
+using System.Windows;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Core;
-using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.Services;
-using AutoMapper;
-using XncOptimizerUI.Configuration;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
@@ -25,6 +24,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private RelayCommand? _readParts;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
+        private RelayCommand? _exportPartsList;
+
         private IProjectService _projectService = new GibLabProjectService();
 
         #region Props
@@ -149,6 +150,40 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     _projectService.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
 
                     Log = log;
+                });
+            }
+        }
+
+        public RelayCommand ExportPartsList
+        {
+            get
+            {
+                return _exportPartsList ??= new RelayCommand(obj =>
+                {
+                    var partsCSV = string.Empty;
+
+                    foreach (var part in Parts)
+                    {
+                        partsCSV += $"{part.Length};";
+                        partsCSV += $"{part.Width};";
+                        partsCSV += $"{part.Count};";
+                        partsCSV += $"{part.TopBandingMat};";
+                        partsCSV += $"{part.BottomBandingMat};";
+                        partsCSV += $"{part.LeftBandingMat};";
+                        partsCSV += $"{part.RightBandingMat};";
+                        partsCSV += $"{part.Name};\n";
+                    }
+
+                    var saveDialog = new SaveFileDialog() {
+                        Filter = "CSV file (*.csv)|*.csv",
+                        Title = "Save CSV File"
+                    };
+
+                    if (saveDialog.ShowDialog() == true)
+                    {
+                        File.WriteAllText(saveDialog.FileName, partsCSV, Encoding.UTF8);
+                        MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
                 });
             }
         }

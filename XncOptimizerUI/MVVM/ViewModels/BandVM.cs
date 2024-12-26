@@ -20,6 +20,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
             set { _band.Name = value; OnPropertyChanged(); }
         }
 
+        public string Code
+        {
+            get { return _band.Code; }
+            set { _band.Code = value; OnPropertyChanged(); }
+        }
+
         public decimal Width
         {
             get { return _band.Width; }

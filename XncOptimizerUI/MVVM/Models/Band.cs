@@ -6,6 +6,7 @@ namespace XncOptimizerUI.MVVM.Models
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
         public decimal Width { get; set; }
         public decimal Thickness { get; set; }
         public string InternalSymbol { get; set; } = string.Empty;

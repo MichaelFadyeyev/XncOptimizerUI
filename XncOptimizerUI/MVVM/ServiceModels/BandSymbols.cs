@@ -1,6 +1,6 @@
 ﻿namespace XncOptimizerUI.MVVM.ServiceModels
 {
-    public enum BandSymbol
+    public enum BandSymbols
     {
         A,
         B,

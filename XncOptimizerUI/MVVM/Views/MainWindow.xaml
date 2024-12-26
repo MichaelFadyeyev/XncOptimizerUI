@@ -8,7 +8,11 @@
         d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel}"
         mc:Ignorable="d"
         Title="XncOptimizer" Height="450" Width="800">
-
+    <Window.Resources>
+        <Style x:Key="TextWrappingStyle" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="150"/>
@@ -34,37 +38,79 @@
                 <Button Height="50" 
                     Content="Read parts" 
                     Command="{Binding ReadParts}"/>
+                <Button Height="50" 
+                    Content="Save parts" 
+                    Command="{Binding ExportPartsList}"/>
             </StackPanel>
         </DockPanel>
-        <ListBox Grid.Column="1" x:Name="BandsList"
-                         ItemsSource="{Binding Bands}"
-                         SelectedItem="{Binding SelectedBand}" 
-                         HorizontalContentAlignment="Left"
-                         Margin="20"
-                 Height="125">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <WrapPanel HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding InternalSymbol}"/>
-                        <TextBlock Text=" | "/>
-                        <TextBlock Text="{Binding Name}"/>
-                    </WrapPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <DataGrid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                AutoGenerateColumns="False" 
-                      ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}" 
-                      CanUserAddRows="False">
+        <DataGrid Grid.Column="1" 
+                  AutoGenerateColumns="False"
+                  ItemsSource="{Binding Bands}"
+                  SelectedItem="{Binding SelectedBand}" 
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  HorizontalContentAlignment="Right"
+                  Height="Auto">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="No" Binding="{Binding Number}" Width="50" />
-                <DataGridTextColumn Header="Width" Binding="{Binding Width}" Width="75"/>
-                <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="75"/>
-                <DataGridTextColumn Header="Top Band" Binding="{Binding TopBandingId}" Width="100"/>
-                <DataGridTextColumn Header="Bottom Band" Binding="{Binding BottomBandingId}" Width="100"/>
-                <DataGridTextColumn Header="Left band" Binding="{Binding LeftBandingId}" Width="100"/>
-                <DataGridTextColumn Header="Right Band" Binding="{Binding RightmBandingId}" Width="100"/>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                <DataGridTextColumn Header="Ext. Sign" Binding="{Binding ExternalSymbol}" 
+                                    Width="5*">
+                    <!--<DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="HorizontalAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>-->
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Int. Sign" Binding="{Binding InternalSymbol}" 
+                                    Width="5*">
+                    <!--<DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="HorizontalAlignment" Value="Center" />
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>-->
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="20*"/>
+                <DataGridTextColumn Header="Vame" Binding="{Binding Name}" Width="70*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <DataGrid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                    AutoGenerateColumns="False" 
+                    ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}" 
+                    CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="No" Binding="{Binding Number}" Width="2*" />
+                <DataGridTextColumn Header="Width" Binding="{Binding Width}" Width="5*"/>
+                <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="5*"/>
+                <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="5*"/>
+                <DataGridTextColumn Header="Top Band" Binding="{Binding TopBandingMat}" Width="15*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextWrappingStyle}" />
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Bottom Band" Binding="{Binding BottomBandingMat}" Width="15*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextWrappingStyle}" />
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Left band" Binding="{Binding LeftBandingMat}" Width="15*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextWrappingStyle}" />
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Right Band" Binding="{Binding RightBandingMat}" Width="15*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextWrappingStyle}" />
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="22*"/>
             </DataGrid.Columns>
         </DataGrid>
         <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Height="60" 
