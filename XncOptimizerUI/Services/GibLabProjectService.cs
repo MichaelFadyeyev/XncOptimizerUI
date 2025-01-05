@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
+using System.Windows;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using XncOptimizerUI.Contracts;
@@ -27,6 +28,7 @@ namespace XncOptimizerUI.Services
         List<XElement> _productGoods = [];
 
         List<Band> _bands = [];
+        List<Sheet> _sheets = [];
 
         public GibLabProjectService() { }
 
@@ -442,6 +444,14 @@ namespace XncOptimizerUI.Services
             };
         }
 
+        private static Sheet CreateSheet(XElement element)
+        {
+            return new Sheet()
+            {
+                Id = element.GetMat()!.GetIdIntValue()
+            };
+        }
+
         public List<Band> ReadBands()
         {
             _bands = [];
@@ -478,6 +488,34 @@ namespace XncOptimizerUI.Services
             }
 
             return _bands;
+        }
+
+        public List<Sheet> ReadSheets()
+        {
+            _sheets = [];
+
+            if (_project == null)
+            {
+                return _sheets;
+            }
+
+            _sheetGoods = GetSheetGoods();
+            _csOperations = GetCsOperations();
+
+            foreach (var operation in _csOperations)
+            {
+                var sheet = CreateSheet(operation);
+                var operationMatId = operation.GetOperationMaterialIdValue();
+                var sheetGood = _sheetGoods.Single(b => b.GetIdValue() == operationMatId)!;
+
+                sheet.Name = sheetGood.GetNameValue()!;
+                sheet.Code = sheetGood!.GetCodeValue()!;
+                sheet.Thickness = decimal.Parse(sheetGood.Attribute("t")!.Value);
+
+                _sheets.Add(sheet);
+            }
+
+            return _sheets;
         }
 
         public List<Part> ReadParts()
@@ -524,9 +562,29 @@ namespace XncOptimizerUI.Services
                 {
                     part.RightBandingMat = _bands.Find(b => b.Id == part.RightBandingId)!.Name;
                 }
+
+                part.SheetId = GetPartSheetId(part);
             }
 
             return parts;
+        }
+
+        private int GetPartSheetId(Part part)
+        {
+            int? sheetId = default;
+
+            foreach (var operation in _csOperations)
+            {
+                var parts = operation.GetParts().SkipLast(1).ToList();
+
+                if (parts.Any(o => o.GetIdIntValue()! == part.Id))
+                {
+                    sheetId = operation.GetMat()!.GetIdIntValue();
+                    break;
+                }
+            }
+
+            return sheetId ?? throw new Exception($"No Sheet found for part with Id={part.Id}");
         }
 
         private List<XElement> GetXncOperations() // XNC operations
@@ -584,17 +642,17 @@ namespace XncOptimizerUI.Services
             _project!.Attribute("description")!.Value += description;
         }
 
-        bool ElementIsBore(string name)
+        private static bool ElementIsBore(string name)
         {
             return name is "bf" || name is "bt" || name is "bb" || name is "bl" || name is "br";
         }
 
-        string PointToComa(string text)
+        private string PointToComa(string text)
         {
             return text.Replace('.', ',');
         }
 
-        string ComaToPoint(decimal number)
+        private string ComaToPoint(decimal number)
         {
             return number.ToString().Replace(',', '.');
         }

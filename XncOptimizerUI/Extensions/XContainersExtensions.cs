@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 namespace XncOptimizerUI.Extensions
 {
@@ -101,6 +102,8 @@ namespace XncOptimizerUI.Extensions
             return
                 int.Parse(element.Element("material")!.Attribute("id")!.Value);
         }
+
+        public static XElement? GetMat(this XElement element) => element.Element("material");
 
     }
 }

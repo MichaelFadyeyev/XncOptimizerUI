@@ -10,6 +10,7 @@ namespace XncOptimizerUI.Contracts
         void PrepForSplitAlongX(ref string log, string searchText);
         public List<Part> ReadParts();
         public List<Band> ReadBands();
+        public List<Sheet> ReadSheets();
 
     }
 }

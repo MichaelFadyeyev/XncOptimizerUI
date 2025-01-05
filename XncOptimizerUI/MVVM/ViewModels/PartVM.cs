@@ -91,15 +91,23 @@ namespace XncOptimizerUI.MVVM.ViewModels
             get { return _part.BottomBandingMat; }
             set { _part.BottomBandingMat = value; OnPropertyChanged(); }
         }
+
         public string? LeftBandingMat
         {
             get { return _part.LeftBandingMat; }
             set { _part.LeftBandingMat = value; OnPropertyChanged(); }
         }
+
         public string? RightBandingMat
         {
             get { return _part.RightBandingMat; }
             set { _part.RightBandingMat = value; OnPropertyChanged(); }
+        }
+
+        public int SheetId
+        {
+            get { return _part.SheetId; }
+            set { _part.SheetId = value; OnPropertyChanged(); }
         }
     }
 }

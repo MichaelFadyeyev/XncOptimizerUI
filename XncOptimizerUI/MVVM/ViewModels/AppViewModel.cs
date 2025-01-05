@@ -17,6 +17,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private ObservableCollection<PartVM> _parts = [];
         private ObservableCollection<BandVM> _bands = [];
+        private ObservableCollection<SheetVM> _sheets = [];
         private PartVM? _selectedPart;
         private BandVM? _selectedBand;
 
@@ -50,6 +51,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get { return _bands; }
             set { _bands = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<SheetVM> Sheets
+        {
+            get { return _sheets; }
+            set { _sheets = value; OnPropertyChanged(); }
         }
 
         public PartVM? SelectedPart
@@ -100,6 +107,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 {
                     var bands = _projectService.ReadBands().Select(b => new BandVM(b));
                     Bands = new ObservableCollection<BandVM>(bands);
+
+                    var sheets = _projectService.ReadSheets().Select(s=> new SheetVM(s));
+                    Sheets = new ObservableCollection<SheetVM>(sheets);
 
                     var parts = _projectService.ReadParts().Select(p => new PartVM(p));
                     Parts = new ObservableCollection<PartVM>(parts);
@@ -167,11 +177,18 @@ namespace XncOptimizerUI.MVVM.ViewModels
                         partsCSV += $"{part.Length};";
                         partsCSV += $"{part.Width};";
                         partsCSV += $"{part.Count};";
-                        partsCSV += $"{part.TopBandingMat};";
-                        partsCSV += $"{part.BottomBandingMat};";
-                        partsCSV += $"{part.LeftBandingMat};";
-                        partsCSV += $"{part.RightBandingMat};";
+                        partsCSV += $"{GetBandingExternalSymbol(part.TopBandingId)};";
+                        partsCSV += $"{GetBandingExternalSymbol(part.BottomBandingId)};";
+                        partsCSV += $"{GetBandingExternalSymbol(part.LeftBandingId)};";
+                        partsCSV += $"{GetBandingExternalSymbol(part.RightBandingId)};";
                         partsCSV += $"{part.Name};\n";
+
+                        var partSheet = Sheets.First(s => s.Id == part.SheetId);
+
+                        if (partSheet.Name.Contains("Сращ.(2)"))
+                        {
+                            partsCSV += ";\n";
+                        }
                     }
 
                     var saveDialog = new SaveFileDialog() {
@@ -186,6 +203,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     }
                 });
             }
+        }
+
+        private string GetBandingExternalSymbol(int? bandingId)
+        {
+            return bandingId == null ? string.Empty : Bands.First(b=>b.Id == bandingId).ExternalSymbol;
         }
     }
 }

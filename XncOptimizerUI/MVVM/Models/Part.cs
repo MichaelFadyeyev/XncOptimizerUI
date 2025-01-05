@@ -35,6 +35,10 @@
         //public string? LeftBandingOperation { get; set; } // operation of type "EL"
         //public string? RightBandingOperation { get; set; } // operation of type "EL"
 
+        public int SheetId { get; set; }
+
+        //public virtual Sheet? Sheet { get; set; }
+
 
     }
 }
