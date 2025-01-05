@@ -429,7 +429,7 @@ namespace XncOptimizerUI.Services
                 TopBandingId = element.GetEltIdIntValue(),
                 BottomBandingId = element.GetElbIdIntValue(),
                 LeftBandingId = element.GetEllIdIntValue(),
-                RightBandingId = element.GetElbIdIntValue()
+                RightBandingId = element.GetElrIdIntValue()
             };
         }
 
