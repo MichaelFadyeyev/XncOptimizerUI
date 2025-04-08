@@ -41,6 +41,9 @@
                 <Button Height="50" 
                     Content="Save parts" 
                     Command="{Binding ExportPartsList}"/>
+                <Button Height="50" 
+                    Content="Copy parts" 
+                    Command="{Binding CopyPartsList}"/>
             </StackPanel>
         </DockPanel>
         <DataGrid Grid.Column="1" 

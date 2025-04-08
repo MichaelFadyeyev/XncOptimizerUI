@@ -26,6 +26,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private RelayCommand? _exportPartsList;
+        private RelayCommand? _copyPartsList;
 
         private IProjectService _projectService = new GibLabProjectService();
 
@@ -108,7 +109,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     var bands = _projectService.ReadBands().Select(b => new BandVM(b));
                     Bands = new ObservableCollection<BandVM>(bands);
 
-                    var sheets = _projectService.ReadSheets().Select(s=> new SheetVM(s));
+                    var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
                     Sheets = new ObservableCollection<SheetVM>(sheets);
 
                     var parts = _projectService.ReadParts().Select(p => new PartVM(p));
@@ -170,30 +171,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _exportPartsList ??= new RelayCommand(obj =>
                 {
-                    var partsCSV = string.Empty;
+                    var partsCSV = GetPartsList(';');
 
-                    foreach (var part in Parts)
+                    var saveDialog = new SaveFileDialog()
                     {
-                        partsCSV += $"{part.Length};";
-                        partsCSV += $"{part.Width};";
-                        partsCSV += $"{part.Count};";
-                        partsCSV += $"{GetBandingExternalSymbol(part.TopBandingId)};";
-                        partsCSV += $"{GetBandingExternalSymbol(part.BottomBandingId)};";
-                        partsCSV += $"{GetBandingExternalSymbol(part.LeftBandingId)};";
-                        partsCSV += $"{GetBandingExternalSymbol(part.RightBandingId)};";
-                        partsCSV += $"{part.Name};\n";
-
-                        var partSheet = Sheets.First(s => s.Id == part.SheetId);
-
-                        if (partSheet.Name.Contains("Сращ.(2)"))
-                        {
-                            partsCSV += ";\n";
-                        }
-                    }
-
-                    var saveDialog = new SaveFileDialog() {
                         Filter = "CSV file (*.csv)|*.csv",
-                        Title = "Save CSV File"
+                        Title = "Save CSV File",
+                        FileName = Path.GetFileNameWithoutExtension(_fullPath)
                     };
 
                     if (saveDialog.ShowDialog() == true)
@@ -205,9 +189,58 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        public RelayCommand CopyPartsList
+        {
+            get
+            {
+                return _copyPartsList ??= new(obj =>
+                {
+                    var partsList = GetPartsList('\t');
+
+                    Clipboard.SetText(partsList);
+                    MessageBox.Show("PartsList was copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
+            }
+        }
+
+        private string GetPartsList(char sep)
+        {
+            var partsList = new StringBuilder();
+            var newLine = '\n';
+
+            foreach (var part in Parts)
+            {
+                partsList.AppendFormat(
+                    "{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}",
+                    sep, 
+                    part.Length, 
+                    part.Width, 
+                    part.Count, 
+                    GetBandingExternalSymbol(part.TopBandingId), 
+                    GetBandingExternalSymbol(part.BottomBandingId), 
+                    GetBandingExternalSymbol(part.LeftBandingId), 
+                    GetBandingExternalSymbol(part.RightBandingId), 
+                    part.Name, 
+                    newLine
+                    );
+
+                var partSheet = Sheets.First(s => s.Id == part.SheetId);
+
+                if (partSheet.Name.Contains("Сращ.(2)"))
+                {
+                    partsList.AppendFormat("{0}{0}{0}{0}{0}{0}{0}-{1}", sep, newLine);
+                }
+
+            }
+
+            partsList.Remove(partsList.Length - 1, 1);
+
+            return partsList.ToString();
+        }
+
         private string GetBandingExternalSymbol(int? bandingId)
         {
-            return bandingId == null ? string.Empty : Bands.First(b=>b.Id == bandingId).ExternalSymbol;
+            return bandingId == null ? string.Empty : Bands.First(b => b.Id == bandingId).ExternalSymbol;
         }
     }
 }

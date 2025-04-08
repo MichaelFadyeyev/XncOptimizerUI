@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Windows;
@@ -327,12 +328,15 @@ namespace XncOptimizerUI.Services
                     {
                         var dw = part.Attribute("dw");
                         var cw = part.Attribute("cw");
+                        var w = part.Attribute("w");
 
                         // TODO support for decimal separator
                         var width = Decimal.Parse(PointToComa(dw!.Value)) * 2 + 4;
+                        var storedWidth = ComaToPoint(width);
 
-                        dw.SetValue(ComaToPoint(width));
-                        cw!.SetValue(width);
+                        dw.SetValue(storedWidth);
+                        cw!.SetValue(storedWidth);
+                        w!.SetValue(storedWidth);
 
                         var count = Int32.Parse(part.Attribute("count")!.Value);
                         var newCount = count / 2 + count % 2;
@@ -438,8 +442,8 @@ namespace XncOptimizerUI.Services
             return new Band()
             {
                 Id = element.GetIdIntValue(),
-                Thickness = decimal.Parse(element.Attribute("t")!.Value),
-                Width = decimal.Parse(element.Attribute("w")!.Value),
+                Thickness = element.GetThicknessDecimalValue(),
+                Width = element.GetWidthDecimalValue(),
                 InternalSymbol = element.Attribute("elSymbol")!.Value,
             };
         }
@@ -468,21 +472,28 @@ namespace XncOptimizerUI.Services
             {
                 var band = CreateBand(operation);
                 var operationMatId = operation.GetOperationMaterialIdValue();
+                var good = _bandGoods.Single(b => b.GetIdValue() == operationMatId);
 
-                band.Name = _bandGoods.Single(b => b.GetIdValue() == operationMatId)!.GetNameValue()!;
-                band.Code = _bandGoods.Single(b => b.GetIdValue() == operationMatId)!.GetCodeValue()!;
-
+                band.Name = good.GetNameValue()!;
+                band.Code = good.GetCodeValue()!;
+                //* for compatibility with original converter
+                band.Thickness = good.GetThicknessDecimalValue()!;
+                band.Width = good.GetWidthDecimalValue()!; 
+                //->
                 _bands.Add(band);
             }
 
-            var uniqueBandCodes = _bands.GroupBy(b => b.Code)
+            var uniqueBandCodes = _bands.OrderBy(b=>b.Thickness)
+                .GroupBy(b => b.Code)
                 .Select(g => g.First().Code)
                 .ToList();
 
-            foreach (var band in _bands)
+            var orderedBands = _bands.OrderBy(b => b.Thickness).ToList();
+
+            foreach (var band in orderedBands)
             {
                 var index = uniqueBandCodes.IndexOf(band.Code);
-                var externalSymbol = Enum.GetNames(typeof(BandSymbols))[index];
+                var externalSymbol = Enum.GetNames<BandSymbols>()[index];
 
                 band.ExternalSymbol = externalSymbol;
             }
@@ -658,11 +669,6 @@ namespace XncOptimizerUI.Services
         }
 
         #endregion
-
-
-
-
-
     }
 }
 
