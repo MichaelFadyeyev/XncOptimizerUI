@@ -86,6 +86,14 @@ namespace XncOptimizerUI.Services
                     }
                 }
 
+                if (partOperations.Count == 0)
+                {
+                    var message = "File seems to be already optimized or contains no XNC.";
+                    MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    log += $"***\n{message}";
+                    return;
+                }
+
                 List<XElement> orderedXncOperations = [.. _xncOperations.OrderBy(o => o.GetGroupCodeValue())];
                 _project!.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
 
@@ -434,7 +442,7 @@ namespace XncOptimizerUI.Services
             var regex1 = new Regex(@"_opt\.project$");
             var regex2 = new Regex(@"_opt\((\d*)\)\.project$");
 
-            if( !regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
             {
                 return _source.Replace(".project", "_opt.project");
             }
