@@ -1,4 +1,4 @@
-﻿namespace XncOptimizerUI.MVVM.ServiceModels
+﻿namespace XncOptimizerUI.Helpers.Enums
 {
     public enum BandSymbols
     {

@@ -72,7 +72,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         }
         #endregion
 
-        public RelayCommand OpenFile
+        public RelayCommand OpenFileCommand
         {
             get
             {
@@ -96,34 +96,24 @@ namespace XncOptimizerUI.MVVM.ViewModels
                             Log = e.Message;
                         }
                     }
+
+                    ReadParts();
                 });
             }
         }
 
-        public RelayCommand ReadParts
+        public RelayCommand ReadPartsCommand
         {
             get
             {
                 return _readParts ??= new RelayCommand(obj =>
                 {
-                    var bands = _projectService.ReadBands().Select(b => new BandVM(b));
-                    Bands = new ObservableCollection<BandVM>(bands);
-
-                    var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
-                    Sheets = new ObservableCollection<SheetVM>(sheets);
-
-                    var parts = _projectService.ReadParts().Select(p => new PartVM(p));
-                    Parts = new ObservableCollection<PartVM>(parts);
-
-                    for (var i = 0; i < Parts.Count; i++)
-                    {
-                        Parts[i].Number = i + 1;
-                    }
+                    ReadParts();
                 });
             }
         }
 
-        public RelayCommand ExecuteOptimize
+        public RelayCommand ExecuteOptimizeCommand
         {
             get
             {
@@ -144,7 +134,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        public RelayCommand ExecutePrepForSplitAlongX
+        public RelayCommand ExecutePrepForSplitAlongXCommand
         {
             get
             {
@@ -165,7 +155,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        public RelayCommand ExportPartsList
+        public RelayCommand ExportPartsListCommand
         {
             get
             {
@@ -189,7 +179,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        public RelayCommand CopyPartsList
+        public RelayCommand CopyPartsListCommand
         {
             get
             {
@@ -200,6 +190,23 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     Clipboard.SetText(partsList);
                     MessageBox.Show("PartsList was copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 });
+            }
+        }
+
+        private void ReadParts()
+        {
+            var bands = _projectService.ReadBands().Select(b => new BandVM(b));
+            Bands = new ObservableCollection<BandVM>(bands);
+
+            var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
+            Sheets = new ObservableCollection<SheetVM>(sheets);
+
+            var parts = _projectService.ReadParts().Select(p => new PartVM(p));
+            Parts = new ObservableCollection<PartVM>(parts);
+
+            for (var i = 0; i < Parts.Count; i++)
+            {
+                Parts[i].Number = i + 1;
             }
         }
 

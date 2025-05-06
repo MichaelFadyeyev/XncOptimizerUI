@@ -28,22 +28,22 @@
             <StackPanel DockPanel.Dock="Top">
                 <Button Height="50"
                     Content="Open file" 
-                    Command="{Binding OpenFile}"/>
+                    Command="{Binding OpenFileCommand}"/>
                 <Button Height="50" 
                     Content="Optimize" 
-                    Command="{Binding ExecuteOptimize}"/>
+                    Command="{Binding ExecuteOptimizeCommand}"/>
                 <Button Height="50" 
                     Content="Prep. For Split Along X" 
-                    Command="{Binding ExecutePrepForSplitAlongX}"/>
+                    Command="{Binding ExecutePrepForSplitAlongXCommand}"/>
                 <Button Height="50" 
                     Content="Read parts" 
-                    Command="{Binding ReadParts}"/>
+                    Command="{Binding ReadPartsCommand}"/>
                 <Button Height="50" 
                     Content="Save parts" 
-                    Command="{Binding ExportPartsList}"/>
+                    Command="{Binding ExportPartsListCommand}"/>
                 <Button Height="50" 
                     Content="Copy parts" 
-                    Command="{Binding CopyPartsList}"/>
+                    Command="{Binding CopyPartsListCommand}"/>
             </StackPanel>
         </DockPanel>
         <DataGrid Grid.Column="1" 

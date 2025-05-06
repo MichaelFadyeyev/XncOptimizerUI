@@ -7,7 +7,7 @@ using System.Xml.Linq;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
-using XncOptimizerUI.MVVM.ServiceModels;
+using XncOptimizerUI.Helpers.Enums;
 
 namespace XncOptimizerUI.Services
 {
