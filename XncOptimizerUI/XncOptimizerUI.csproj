@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyName>$(MSBuildProjectName)-0.002</AssemblyName>
+    <AssemblyName>$(MSBuildProjectName)-0.002.1</AssemblyName>
     <ApplicationIcon>xnc_logo.ico</ApplicationIcon>
   </PropertyGroup>
 

@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.IO;
+﻿using System.IO;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Xml;
 using System.Xml.Linq;
-using System.Xml.XPath;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
@@ -47,219 +46,228 @@ namespace XncOptimizerUI.Services
 
             var format = _xncOperations.Count.ToString().Length;
 
-            _productGoods = GetProductGoods();
-
-            for (int i = 0; i < _xncOperations.Count; i++)
+            try
             {
-                var operation = _xncOperations[i];
+                _productGoods = GetProductGoods();
 
-                if (operation.Attribute(Optimized) != null) continue;
-
-                var groupCode = (i + 1).ToString().PadLeft(format, '0');
-                var partId = operation.GetPart()!.GetIdValue()!;
-
-                AddToPartOperations(groupCode, partId);
-                AppendGroupCode(groupCode, operation);
-
-                if (i == _xncOperations.Count - 1) continue;
-
-                for (int j = i + 1; j < _xncOperations.Count; j++)
+                for (int i = 0; i < _xncOperations.Count; i++)
                 {
-                    var comparedOperation = _xncOperations[j];
+                    var operation = _xncOperations[i];
 
-                    if (comparedOperation.Attribute(Optimized) != null) continue;
-                    if (operation.GetProgramValue() != comparedOperation.GetProgramValue()) continue;
+                    if (operation.Attribute(Optimized) != null) continue;
 
-                    var part1 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
-                        == operation.GetPart()!.GetIdValue());
-
-                    var part2 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
-                        == comparedOperation.GetPart()!.GetIdValue());
-
-                    if (!CheckBendsAreIdentical(part1!, part2!)) continue;
-
-                    partId = comparedOperation.GetPart()!.GetIdValue()!;
+                    var groupCode = (i + 1).ToString().PadLeft(format, '0');
+                    var partId = operation.GetPart()!.GetIdValue()!;
 
                     AddToPartOperations(groupCode, partId);
-                    AppendGroupCode(groupCode, comparedOperation);
-                }
-            }
+                    AppendGroupCode(groupCode, operation);
 
-            List<XElement> orderedXncOperations = [.. _xncOperations.OrderBy(o => o.GetGroupCodeValue())];
-            _project!.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
+                    if (i == _xncOperations.Count - 1) continue;
 
-            var operations = _project!.GetOperations().ToList();
-            var maxOpIndex = 0;
-
-            foreach (var operation in operations)
-            {
-                var intId = int.Parse(operation.GetIdValue()!);
-                if (intId > maxOpIndex) maxOpIndex = intId;
-            }
-
-            maxOpIndex++;
-
-            for (var i = 0; i < orderedXncOperations.Count; i++)
-            {
-                orderedXncOperations[i].SetIdValue((maxOpIndex + i).ToString());
-                _project!.Add(orderedXncOperations[i]);
-            }
-
-            var xncFreeParts = new List<XElement>(); // new list for all parts without xnc
-            var xncParts = new List<XElement>(); // new list for all parts with xnc
-
-            foreach (var good in _productGoods)
-            {
-                var parts = good.GetParts().ToList();
-
-                foreach (var part in parts)
-                {
-                    var partId = part.GetIdValue()!;
-                    partOperations.TryGetValue(partId, out string? groupCode);
-                    var name = part.GetNameValue();
-
-                    if (groupCode != null)
+                    for (int j = i + 1; j < _xncOperations.Count; j++)
                     {
-                        part.SetNameValue($"[{groupCode}]{name}");
-                        xncParts.Add(part);
-                    }
-                    else
-                    {
-                        xncFreeParts.Add(part);
+                        var comparedOperation = _xncOperations[j];
+
+                        if (comparedOperation.Attribute(Optimized) != null) continue;
+                        if (operation.GetProgramValue() != comparedOperation.GetProgramValue()) continue;
+
+                        var part1 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
+                            == operation.GetPart()!.GetIdValue());
+
+                        var part2 = _productGoods.GetParts().FirstOrDefault(e => e.GetIdValue()
+                            == comparedOperation.GetPart()!.GetIdValue());
+
+                        if (!CheckBendsAreIdentical(part1!, part2!)) continue;
+
+                        partId = comparedOperation.GetPart()!.GetIdValue()!;
+
+                        AddToPartOperations(groupCode, partId);
+                        AppendGroupCode(groupCode, comparedOperation);
                     }
                 }
-            }
 
-            var sortedParts = new List<XElement>();
+                List<XElement> orderedXncOperations = [.. _xncOperations.OrderBy(o => o.GetGroupCodeValue())];
+                _project!.GetOperations().Where(e => e.GetTypeIdValue() == "XNC").Remove();
 
-            foreach (var operation in orderedXncOperations) // add ordered xncParts
-            {
-                var operationPartId = operation.GetPart()!.GetIdValue();
-                var part = xncParts.First(p => p.GetIdValue() == operationPartId);
-                if (!sortedParts.Exists(p => p.GetIdValue() == operationPartId))
+                var operations = _project!.GetOperations().ToList();
+                var maxOpIndex = 0;
+
+                foreach (var operation in operations)
                 {
-                    sortedParts.Add(new XElement(part));
-                }
-            }
-
-            sortedParts.AddRange([.. xncFreeParts]); // add unordered parts without xnc
-
-            var partsCount = sortedParts.Count;
-
-            for (var i = 1; i <= _csOperations.Count; i++) // assign new ids to _csOperations
-            {
-                var part = _csOperations[i - 1].GetParts().Last();
-                var oldId = part.GetIdValue()!;
-                var newId = (partsCount + i).ToString();
-
-                sheetOldNewIds.Add(oldId, newId);
-            }
-
-            var id = _productGoods.First().GetIdValue()!; // store id of first existed good
-
-            _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product")
-                    .Remove(); // remove all _productGoods (is "products") with parts
-
-            // create new good is one for all parts; assign stored id
-            var newGood =
-                new XElement("good",
-                        new XAttribute("typeId", "product"),
-                        new XAttribute("code", "09"),
-                        new XAttribute("cost", "0"),
-                        new XAttribute("costMaterial", "0"),
-                        new XAttribute("costOperation", "0"),
-                        new XAttribute("count", "1"),
-                        new XAttribute("id", id),
-                        new XAttribute("name", "09"),
-                        new XAttribute("product.import", "bm.1.84")
-                    );
-
-            log += $"Parts count: {sortedParts.Count}\n";
-
-            for (var i = 1; i <= sortedParts.Count; i++)
-            {
-                var part = sortedParts[i - 1];
-                var oldId = part.GetIdValue()!;
-                var newId = (i).ToString();
-
-                part.SetIdValue(newId);
-                newGood.Add(part);
-                partsOldNewIds.Add(oldId, newId);
-                log += $"{part.GetIdValue()!.PadLeft(format, '0')} -> {part.GetNameValue()}\n";
-            }
-
-            foreach (var operation in _xncOperations)
-            {
-                var parts = operation.GetParts().ToList();
-
-                for (var i = 0; i < parts.Count; i++)
-                {
-                    var oldId = parts[i].GetIdValue()!;
-                    var newId = partsOldNewIds[oldId];
-
-                    parts[i].SetIdValue(newId);
-                }
-            }
-
-            foreach (var operation in _csOperations)
-            {
-                var parts = operation.GetParts().ToList();
-
-                for (var i = 0; i < parts.Count - 1; i++)
-                {
-                    var oldId = parts[i].GetIdValue()!;
-                    var newId = partsOldNewIds[oldId];
-
-                    parts[i].SetIdValue(newId);
+                    var intId = int.Parse(operation.GetIdValue()!);
+                    if (intId > maxOpIndex) maxOpIndex = intId;
                 }
 
-                var sheetOldId = parts.Last().GetIdValue()!;
-                var sheetNewId = sheetOldNewIds[sheetOldId];
+                maxOpIndex++;
 
-                parts.Last().SetIdValue(sheetNewId);
-
-                var sheetPart = new XElement(parts.Last());
-
-                parts.Last().Remove();
-
-                List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!))];
-
-                operation.GetParts().Remove();
-                orederedParts.Add(sheetPart);
-                operation.Add(orederedParts);
-            }
-
-            foreach (var operation in _elOperations)
-            {
-                var parts = operation.GetParts().ToList();
-
-                for (var i = 0; i < parts.Count; i++)
+                for (var i = 0; i < orderedXncOperations.Count; i++)
                 {
-                    var oldId = parts[i].GetIdValue()!;
-                    var newId = partsOldNewIds[oldId];
-
-                    parts[i].SetIdValue(newId);
+                    orderedXncOperations[i].SetIdValue((maxOpIndex + i).ToString());
+                    _project!.Add(orderedXncOperations[i]);
                 }
-            }
 
-            foreach (var good in _sheetGoods)
+                var xncFreeParts = new List<XElement>(); // new list for all parts without xnc
+                var xncParts = new List<XElement>(); // new list for all parts with xnc
+
+                foreach (var good in _productGoods)
+                {
+                    var parts = good.GetParts().ToList();
+
+                    foreach (var part in parts)
+                    {
+                        var partId = part.GetIdValue()!;
+                        partOperations.TryGetValue(partId, out string? groupCode);
+                        var name = part.GetNameValue();
+
+                        if (groupCode != null)
+                        {
+                            part.SetNameValue($"[{groupCode}]{name}");
+                            xncParts.Add(part);
+                        }
+                        else
+                        {
+                            xncFreeParts.Add(part);
+                        }
+                    }
+                }
+
+                var sortedParts = new List<XElement>();
+
+                foreach (var operation in orderedXncOperations) // add ordered xncParts
+                {
+                    var operationPartId = operation.GetPart()!.GetIdValue();
+                    var part = xncParts.First(p => p.GetIdValue() == operationPartId);
+                    if (!sortedParts.Exists(p => p.GetIdValue() == operationPartId))
+                    {
+                        sortedParts.Add(new XElement(part));
+                    }
+                }
+
+                sortedParts.AddRange([.. xncFreeParts]); // add unordered parts without xnc
+
+                var partsCount = sortedParts.Count;
+
+                for (var i = 1; i <= _csOperations.Count; i++) // assign new ids to _csOperations
+                {
+                    var part = _csOperations[i - 1].GetParts().Last();
+                    var oldId = part.GetIdValue()!;
+                    var newId = (partsCount + i).ToString();
+
+                    sheetOldNewIds.Add(oldId, newId);
+                }
+
+                var id = _productGoods.First().GetIdValue()!; // store id of first existed good
+
+                _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product")
+                        .Remove(); // remove all _productGoods (is "products") with parts
+
+                // create new good is one for all parts; assign stored id
+                var newGood =
+                    new XElement("good",
+                            new XAttribute("typeId", "product"),
+                            new XAttribute("code", "000"),
+                            new XAttribute("cost", "0"),
+                            new XAttribute("costMaterial", "0"),
+                            new XAttribute("costOperation", "0"),
+                            new XAttribute("count", "1"),
+                            new XAttribute("id", id),
+                            new XAttribute("name", "000"),
+                            new XAttribute("product.import", "bm.1.84")
+                        );
+
+                log += $"Parts count: {sortedParts.Count}\n";
+
+                for (var i = 1; i <= sortedParts.Count; i++)
+                {
+                    var part = sortedParts[i - 1];
+                    var oldId = part.GetIdValue()!;
+                    var newId = (i).ToString();
+
+                    part.SetIdValue(newId);
+                    newGood.Add(part);
+                    partsOldNewIds.Add(oldId, newId);
+                    log += $"{part.GetIdValue()!.PadLeft(format, '0')} -> {part.GetNameValue()}\n";
+                }
+
+                foreach (var operation in _xncOperations)
+                {
+                    var parts = operation.GetParts().ToList();
+
+                    for (var i = 0; i < parts.Count; i++)
+                    {
+                        var oldId = parts[i].GetIdValue()!;
+                        var newId = partsOldNewIds[oldId];
+
+                        parts[i].SetIdValue(newId);
+                    }
+                }
+
+                foreach (var operation in _csOperations)
+                {
+                    var parts = operation.GetParts().ToList();
+
+                    for (var i = 0; i < parts.Count - 1; i++)
+                    {
+                        var oldId = parts[i].GetIdValue()!;
+                        var newId = partsOldNewIds[oldId];
+
+                        parts[i].SetIdValue(newId);
+                    }
+
+                    var sheetOldId = parts.Last().GetIdValue()!;
+                    var sheetNewId = sheetOldNewIds[sheetOldId];
+
+                    parts.Last().SetIdValue(sheetNewId);
+
+                    var sheetPart = new XElement(parts.Last());
+
+                    parts.Last().Remove();
+
+                    List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!))];
+
+                    operation.GetParts().Remove();
+                    orederedParts.Add(sheetPart);
+                    operation.Add(orederedParts);
+                }
+
+                foreach (var operation in _elOperations)
+                {
+                    var parts = operation.GetParts().ToList();
+
+                    for (var i = 0; i < parts.Count; i++)
+                    {
+                        var oldId = parts[i].GetIdValue()!;
+                        var newId = partsOldNewIds[oldId];
+
+                        parts[i].SetIdValue(newId);
+                    }
+                }
+
+                foreach (var good in _sheetGoods)
+                {
+                    var oldId = good.GetPart()!.GetIdValue()!;
+                    var newId = sheetOldNewIds[oldId];
+
+                    good.GetPart()!.SetIdValue(newId);
+                }
+
+                _project!.Add(newGood);
+
+                AppendDescription("grouped by XNC");
+
+                var result = GetNewFileName();
+
+
+                _fullPath = Path.Combine(_path, result);
+                _doc!.Save(_fullPath);
+
+                log += $"***\nStored to: {_fullPath}";
+            }
+            catch (Exception e)
             {
-                var oldId = good.GetPart()!.GetIdValue()!;
-                var newId = sheetOldNewIds[oldId];
-
-                good.GetPart()!.SetIdValue(newId);
+                MessageBox.Show(e.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                log += $"***\n{e.Message}";
             }
-
-            _project!.Add(newGood);
-
-            AppendDescription("grouped by XNC");
-
-            var result = _source.Replace(".project", "_opt.project");
-
-            _fullPath = Path.Combine(_path, result);
-            _doc!.Save(_fullPath);
-
-            log += $"***\nStored to: {_fullPath}";
 
             #region LOCAL_FUNCTIONS
 
@@ -330,9 +338,8 @@ namespace XncOptimizerUI.Services
                         var cw = part.Attribute("cw");
                         var w = part.Attribute("w");
 
-                        // TODO support for decimal separator
-                        var width = Decimal.Parse(PointToComa(dw!.Value)) * 2 + 4;
-                        var storedWidth = ComaToPoint(width);
+                        var width = XmlConvert.ToDecimal(dw?.Value ?? throw new ArgumentException()) * 2 + 4;
+                        var storedWidth = XmlConvert.ToString(width);
 
                         dw.SetValue(storedWidth);
                         cw!.SetValue(storedWidth);
@@ -355,7 +362,7 @@ namespace XncOptimizerUI.Services
                             program!.Attribute("dy")!.SetValue(width);
 
                             var bores = program!.Elements().Where(e => ElementIsBore(e.Name.ToString())).ToList();
-                            var boreCount = bores.Count();
+                            var boreCount = bores.Count;
 
                             foreach (var bore in bores)
                             {
@@ -368,9 +375,9 @@ namespace XncOptimizerUI.Services
                                         {
                                             var newBore = new XElement(bore);
                                             var y = bore.Attribute("y");
-                                            var yValue = Decimal.Parse(PointToComa(y.Value));
+                                            var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException());
 
-                                            y.SetValue(ComaToPoint(width - yValue));
+                                            y.SetValue(XmlConvert.ToString(width - yValue));
                                             program.Add(newBore);
                                             boreCount++;
                                         }
@@ -402,7 +409,7 @@ namespace XncOptimizerUI.Services
 
             AppendDescription("specified parts prep for split along X");
 
-            var result = _source.Replace(".project", "_opt.project");
+            var result = GetNewFileName();
 
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
@@ -419,6 +426,27 @@ namespace XncOptimizerUI.Services
             _source = Path.GetFileName(_fullPath);
             _doc = XDocument.Load(_fullPath);
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
+        }
+
+        private string GetNewFileName()
+        {
+            var regex1 = new Regex(@"_opt\.project$");
+            var regex2 = new Regex(@"_opt\((\d*)\)\.project$");
+
+            if( !regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            {
+                return _source.Replace(".project", "_opt.project");
+            }
+
+            if (regex1.IsMatch(_source))
+            {
+                return regex1.Replace(_source, "_opt(1).project");
+            }
+
+            var collection = regex2.Matches(_source);
+            var version = int.Parse(collection[0].Groups[1].Value);
+
+            return regex2.Replace(_source, $"_opt({version + 1}).project");
         }
 
         private static Part CreatePart(XElement element)
@@ -478,12 +506,12 @@ namespace XncOptimizerUI.Services
                 band.Code = good.GetCodeValue()!;
                 //* for compatibility with original converter
                 band.Thickness = good.GetThicknessDecimalValue()!;
-                band.Width = good.GetWidthDecimalValue()!; 
+                band.Width = good.GetWidthDecimalValue()!;
                 //->
                 _bands.Add(band);
             }
 
-            var uniqueBandCodes = _bands.OrderBy(b=>b.Thickness)
+            var uniqueBandCodes = _bands.OrderBy(b => b.Thickness)
                 .GroupBy(b => b.Code)
                 .Select(g => g.First().Code)
                 .ToList();
@@ -656,16 +684,6 @@ namespace XncOptimizerUI.Services
         private static bool ElementIsBore(string name)
         {
             return name is "bf" || name is "bt" || name is "bb" || name is "bl" || name is "br";
-        }
-
-        private string PointToComa(string text)
-        {
-            return text.Replace('.', ',');
-        }
-
-        private string ComaToPoint(decimal number)
-        {
-            return number.ToString().Replace(',', '.');
         }
 
         #endregion
