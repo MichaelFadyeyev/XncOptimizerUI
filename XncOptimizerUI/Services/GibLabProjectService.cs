@@ -430,6 +430,7 @@ namespace XncOptimizerUI.Services
 
         private string GetNewFileName()
         {
+            // TODO Implement check if file exists
             var regex1 = new Regex(@"_opt\.project$");
             var regex2 = new Regex(@"_opt\((\d*)\)\.project$");
 
