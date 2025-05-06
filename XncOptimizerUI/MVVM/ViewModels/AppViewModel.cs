@@ -84,12 +84,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     };
                     if (openDialog.ShowDialog() == true)
                     {
+                        var fullPath = openDialog.FileName;
                         try
                         {
-                            _projectService.OpenProject(openDialog.FileName);
-                            Log = string.Empty;
-                            FullPath = openDialog.FileName;
-                            Log += $"Opened file: {FullPath}\n";
+                            OpenFile(fullPath, true);
                         }
                         catch (Exception e)
                         {
@@ -101,6 +99,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 });
             }
         }
+
+
 
         public RelayCommand ReadPartsCommand
         {
@@ -130,6 +130,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     _projectService.GroupIdenticalElements(ref log);
 
                     Log = log;
+
+                    OpenFile(_projectService.FullPath);
+                    ReadParts();
                 });
             }
         }
@@ -151,6 +154,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     _projectService.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
 
                     Log = log;
+
+                    OpenFile(_projectService.FullPath);
+                    ReadParts();
                 });
             }
         }
@@ -193,6 +199,23 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        private void OpenFile(string fullPath, bool firstTimeOpen = default)
+        {
+            _projectService.OpenProject(fullPath);
+
+            if (firstTimeOpen)
+            {
+                Log = string.Empty;
+            }
+            else
+            {
+                Log += "\n***\n";
+            }
+
+            FullPath = fullPath;
+            Log += $"Opened file: {FullPath}\n";
+        }
+
         private void ReadParts()
         {
             var bands = _projectService.ReadBands().Select(b => new BandVM(b));
@@ -219,15 +242,15 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 partsList.AppendFormat(
                     "{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}",
-                    sep, 
-                    part.Length, 
-                    part.Width, 
-                    part.Count, 
-                    GetBandingExternalSymbol(part.TopBandingId), 
-                    GetBandingExternalSymbol(part.BottomBandingId), 
-                    GetBandingExternalSymbol(part.LeftBandingId), 
-                    GetBandingExternalSymbol(part.RightBandingId), 
-                    part.Name, 
+                    sep,
+                    part.Length,
+                    part.Width,
+                    part.Count,
+                    GetBandingExternalSymbol(part.TopBandingId),
+                    GetBandingExternalSymbol(part.BottomBandingId),
+                    GetBandingExternalSymbol(part.LeftBandingId),
+                    GetBandingExternalSymbol(part.RightBandingId),
+                    part.Name,
                     newLine
                     );
 

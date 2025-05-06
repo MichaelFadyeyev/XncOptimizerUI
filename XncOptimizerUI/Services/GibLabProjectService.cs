@@ -30,6 +30,11 @@ namespace XncOptimizerUI.Services
         List<Band> _bands = [];
         List<Sheet> _sheets = [];
 
+        public string FullPath
+        {
+            get => _fullPath;
+        }
+
         public GibLabProjectService() { }
 
         public void GroupIdenticalElements(ref string log)

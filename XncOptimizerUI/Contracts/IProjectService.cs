@@ -11,6 +11,7 @@ namespace XncOptimizerUI.Contracts
         public List<Part> ReadParts();
         public List<Band> ReadBands();
         public List<Sheet> ReadSheets();
+        public string FullPath { get; }
 
     }
 }
