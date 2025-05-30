@@ -106,6 +106,9 @@ namespace XncOptimizerUI.Extensions
 
         public static XElement? GetMat(this XElement element) => element.Element("material");
 
+        public static string? GetLengthValue(this XElement element) => element.Attribute("l")?.Value;
+        public static decimal GetLengthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("l")?.Value ?? "0");
+
         public static string? GetWidthValue(this XElement element) => element.Attribute("w")?.Value;
         public static decimal GetWidthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("w")?.Value ?? "0");
 
