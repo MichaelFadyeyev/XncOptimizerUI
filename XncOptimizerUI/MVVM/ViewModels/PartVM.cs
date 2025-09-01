@@ -8,6 +8,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private Part _part = part;
         private int _number;
 
+        public Part Part
+        {
+            get { return _part; }
+        }
+
         public int Number
         {
             get { return _number; }

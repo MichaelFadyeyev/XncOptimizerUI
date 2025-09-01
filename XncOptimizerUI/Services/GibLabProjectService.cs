@@ -8,6 +8,7 @@ using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.Helpers.Enums;
+using XncOptimizerUI.Configuration;
 
 namespace XncOptimizerUI.Services
 {
@@ -184,7 +185,7 @@ namespace XncOptimizerUI.Services
                             new XAttribute("costOperation", "0"),
                             new XAttribute("count", "1"),
                             new XAttribute("id", id),
-                            new XAttribute("name", "000"),
+                            new XAttribute("xncTypeName", "000"),
                             new XAttribute("product.import", "bm.1.84")
                         );
 
@@ -339,84 +340,80 @@ namespace XncOptimizerUI.Services
 
             foreach (var good in _productGoods)
             {
-                var parts = good.GetParts().ToList();
+                var parts = good.GetParts().Where(p => p.GetPartNameValue()!.Contains(searchText));
 
                 foreach (var part in parts)
                 {
                     var name = part.GetPartNameValue();
 
-                    if (name!.Contains(searchText))
+                    var dw = part.Attribute("dw");
+                    var cw = part.Attribute("cw");
+                    var w = part.Attribute("w");
+
+                    var width = XmlConvert.ToDecimal(dw?.Value ?? throw new ArgumentException()) * 2 + ConfigService.SawWidth;
+                    var storedWidth = XmlConvert.ToString(width);
+
+                    dw.SetValue(storedWidth);
+                    cw!.SetValue(storedWidth);
+                    w!.SetValue(storedWidth);
+
+                    var count = Int32.Parse(part.Attribute("count")!.Value);
+                    var newCount = count / 2 + count % 2;
+
+                    part.Attribute("count")!.SetValue(newCount);
+
+                    var partXncOperations = _xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
+
+                    foreach (var xncOperation in partXncOperations)
                     {
-                        var dw = part.Attribute("dw");
-                        var cw = part.Attribute("cw");
-                        var w = part.Attribute("w");
+                        var programAttribute = xncOperation.GetProgram();
+                        var programInnerXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute!.Value!));
+                        var program = programInnerXml.Element("program");
+                        var dy = program!.Attribute("dy")!.Value;
 
-                        var width = XmlConvert.ToDecimal(dw?.Value ?? throw new ArgumentException()) * 2 + 4;
-                        var storedWidth = XmlConvert.ToString(width);
+                        program!.Attribute("dy")!.SetValue(width);
 
-                        dw.SetValue(storedWidth);
-                        cw!.SetValue(storedWidth);
-                        w!.SetValue(storedWidth);
+                        var bores = program!.Elements().Where(e => ElementIsBore(e.Name.ToString())).ToList();
+                        var boreCount = bores.Count;
 
-                        var count = Int32.Parse(part.Attribute("count")!.Value);
-                        var newCount = count / 2 + count % 2;
-
-                        part.Attribute("count")!.SetValue(newCount);
-
-                        var partXncOperations = _xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
-
-                        foreach (var xncOperation in partXncOperations)
+                        foreach (var bore in bores)
                         {
-                            var programAttribute = xncOperation.GetProgram();
-                            var programInnerXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute!.Value!));
-                            var program = programInnerXml.Element("program");
-                            var dy = program!.Attribute("dy")!.Value;
-
-                            program!.Attribute("dy")!.SetValue(width);
-
-                            var bores = program!.Elements().Where(e => ElementIsBore(e.Name.ToString())).ToList();
-                            var boreCount = bores.Count;
-
-                            foreach (var bore in bores)
+                            var boreType = bore.Name.ToString();
+                            switch (boreType)
                             {
-                                var boreType = bore.Name.ToString();
-                                switch (boreType)
-                                {
-                                    case "bf":
-                                    case "bl":
-                                    case "br":
-                                        {
-                                            var newBore = new XElement(bore);
-                                            var y = bore.Attribute("y");
-                                            var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException());
+                                case "bf":
+                                case "bl":
+                                case "br":
+                                    {
+                                        var newBore = new XElement(bore);
+                                        var y = bore.Attribute("y");
+                                        var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException());
 
-                                            y.SetValue(XmlConvert.ToString(width - yValue));
-                                            program.Add(newBore);
-                                            boreCount++;
-                                        }
-                                        break;
-                                    case "bt":
-                                    case "bb":
-                                        {
-                                            var attributes = bore.Attributes();
-                                            var newBore = new XElement(boreType == "bt" ? "bb" : "bt", attributes);
+                                        y.SetValue(XmlConvert.ToString(width - yValue));
+                                        program.Add(newBore);
+                                        boreCount++;
+                                    }
+                                    break;
+                                case "bt":
+                                case "bb":
+                                    {
+                                        var attributes = bore.Attributes();
+                                        var newBore = new XElement(boreType == "bt" ? "bb" : "bt", attributes);
 
-                                            program.Add(newBore);
-                                            boreCount++;
-                                        }
-                                        break;
-                                }
+                                        program.Add(newBore);
+                                        boreCount++;
+                                    }
+                                    break;
                             }
-
-                            xncOperation.Attribute("count")!.SetValue($"{newCount}");
-                            xncOperation.Attribute("countBore")!.SetValue($"{boreCount}");
-
-                            programAttribute.Value = program.ToString();
                         }
 
-                        log += $"{name} resized to 84; count changed: {count} -> {newCount}\n";
+                        xncOperation.Attribute("count")!.SetValue($"{newCount}");
+                        xncOperation.Attribute("countBore")!.SetValue($"{boreCount}");
 
+                        programAttribute.Value = program.ToString();
                     }
+
+                    log += $"{name} resized to {storedWidth}; count changed: {count} -> {newCount}\n";
                 }
             }
 
@@ -430,6 +427,105 @@ namespace XncOptimizerUI.Services
             log += $"***\nStored to: {_fullPath}";
         }
 
+        public void PrepForSplitAlongX(ref string log, string[] selectedPartsIds)
+        {
+            var _productGoods = _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "product");
+
+            var _xncOperations = _project!.GetOperations() // XNC operations
+                .Where(e => e.GetTypeIdValue() == "XNC");
+
+            foreach (var good in _productGoods)
+            {
+                var parts = good.GetParts().Where(p => selectedPartsIds.Contains(p.GetIdValue()!));
+                foreach (var part in parts)
+                {
+                    var name = part.GetPartNameValue();
+
+                    var dw = part.Attribute("dw");
+                    var cw = part.Attribute("cw");
+                    var w = part.Attribute("w");
+
+                    var width = XmlConvert.ToDecimal(dw?.Value
+                        ?? throw new ArgumentException("""XAttribute "dw" not found or has no value""")) * 2 + ConfigService.SawWidth;
+                    var storedWidth = XmlConvert.ToString(width);
+
+                    dw.SetValue(storedWidth);
+                    cw!.SetValue(storedWidth);
+                    w!.SetValue(storedWidth);
+
+                    var count = Int32.Parse(part.Attribute("count")!.Value);
+                    var newCount = count / 2 + count % 2;
+
+                    part.Attribute("count")!.SetValue(newCount);
+
+                    var partXncOperations = _xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
+
+                    foreach (var xncOperation in partXncOperations)
+                    {
+                        var programAttribute = xncOperation.GetProgram();
+                        var programInnerXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute!.Value!));
+                        var program = programInnerXml.Element("program");
+                        var dy = program!.Attribute("dy")!.Value;
+
+                        program!.Attribute("dy")!.SetValue(width);
+
+                        var bores = program!.Elements().Where(e => ElementIsBore(e.Name.ToString())).ToList();
+                        var boreCount = bores.Count;
+
+                        foreach (var bore in bores)
+                        {
+                            var boreType = bore.Name.ToString();
+                            switch (boreType)
+                            {
+                                case "bf":
+                                case "bl":
+                                case "br":
+                                    {
+                                        var newBore = new XElement(bore);
+                                        var y = bore.Attribute("y");
+                                        var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException());
+
+                                        y.SetValue(XmlConvert.ToString(width - yValue));
+                                        program.Add(newBore);
+                                        boreCount++;
+                                    }
+                                    break;
+                                case "bt":
+                                case "bb":
+                                    {
+                                        var attributes = bore.Attributes();
+                                        var newBore = new XElement(boreType == "bt" ? "bb" : "bt", attributes);
+
+                                        program.Add(newBore);
+                                        boreCount++;
+                                    }
+                                    break;
+                            }
+                        }
+
+                        xncOperation.Attribute("count")!.SetValue($"{newCount}");
+                        xncOperation.Attribute("countBore")!.SetValue($"{boreCount}");
+
+                        programAttribute.Value = program.ToString();
+                    }
+
+                    log += $"{name} resized to {storedWidth}; count changed: {count} -> {newCount}\n";
+                }
+
+            }
+
+            AppendDescription("specified parts prep for split along X");
+
+            var result = GetNewFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nStored to: {_fullPath}";
+        }
+
+
         #region GLOBAL_METHODES
 
         public void OpenProject(string fullPath)
@@ -439,6 +535,31 @@ namespace XncOptimizerUI.Services
             _source = Path.GetFileName(_fullPath);
             _doc = XDocument.Load(_fullPath);
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
+        }
+
+
+        public void CloseProject()
+        {
+            _fullPath = string.Empty;
+            _doc = null;
+            _project = null;
+            _xncOperations = [];
+            _csOperations = [];
+            _elOperations = [];
+            _sheetGoods = [];
+            _bandGoods = [];
+            _productGoods = [];
+            _bands = [];
+            _sheets = [];
+        }
+
+        public void SaveProject()
+        {
+            if (string.IsNullOrEmpty(_fullPath) || _doc == null)
+            {
+                throw new Exception("No project is opened");
+            }
+            _doc.Save(_fullPath);
         }
 
         private string GetNewFileName()
@@ -477,6 +598,37 @@ namespace XncOptimizerUI.Services
                 LeftBandingId = element.GetEllIdIntValue(),
                 RightBandingId = element.GetElrIdIntValue()
             };
+        }
+
+        public bool UpdatePart(Part part)
+        {
+            var partToUpdate = GetProductGoods()
+                .SelectMany(g => g.GetParts())
+                .FirstOrDefault(p => p.GetIdIntValue() == part.Id);
+
+            if (partToUpdate == null || partToUpdate.GetNameValue() == part.Name) return false;
+
+            var xncsToUPdate = GetXncOperations()
+                 .Where(o => o.GetPart()?.GetIdIntValue() == part.Id);
+
+            foreach (var xnc in xncsToUPdate)
+            {
+                var xncTypeName = xnc.GetTypeNameValue()!;
+                if (TrySetNewXncTypeName(ref xncTypeName, part.Name))
+
+                {
+                    xnc.SetTypeNameValue(xncTypeName);
+                    continue;
+                }
+
+                MessageBox.Show($"""Cannot set new XNC typeName for part "{part.Name}" with old XNC typeName "{xnc.GetTypeNameValue()}".""",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            }
+
+            partToUpdate.SetNameValue(part.Name);
+
+            return true;
         }
 
         private static Band CreateBand(XElement element)
@@ -698,6 +850,30 @@ namespace XncOptimizerUI.Services
         private static bool ElementIsBore(string name)
         {
             return name is "bf" || name is "bt" || name is "bb" || name is "bl" || name is "br";
+        }
+
+        private static readonly Regex BracketRegex = new(@"^(\[.*?\])(.*)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static bool TrySetNewXncTypeName(ref string xncName, string partName)
+        {
+            var partMatch = BracketRegex.Match(partName);
+            var xncMatch = BracketRegex.Match(xncName);
+
+            //TODO consider case when both have brackets but different
+
+            if (partMatch.Success && xncMatch.Success)
+            {
+                xncName = xncMatch.Groups[1].Value + partMatch.Groups[2].Value;
+                return true;
+            }
+
+            if (!partMatch.Success && !xncMatch.Success)
+            {
+                xncName = partName;
+                return true;
+            }
+
+            return false;
+
         }
 
         #endregion

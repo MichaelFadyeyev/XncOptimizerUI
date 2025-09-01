@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using System.Collections.ObjectModel;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.ViewModels;
 

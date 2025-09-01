@@ -6,12 +6,16 @@ namespace XncOptimizerUI.Contracts
     public interface IProjectService
     {
         void OpenProject(string path);
+        void CloseProject();
         void GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string searchText);
-        public List<Part> ReadParts();
-        public List<Band> ReadBands();
-        public List<Sheet> ReadSheets();
-        public string FullPath { get; }
+        void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
+        void SaveProject();
+        bool UpdatePart(Part part);
+        List<Part> ReadParts();
+        List<Band> ReadBands();
+        List<Sheet> ReadSheets();
+        string FullPath { get; }
 
     }
 }
