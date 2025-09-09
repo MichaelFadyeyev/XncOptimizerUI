@@ -82,9 +82,6 @@
                             Command="{Binding DeleteLabelCommand}"/>
                 </Grid>
                 <Button Style="{StaticResource CommandButtonStyle}" 
-                    Content="Read parts" 
-                    Command="{Binding ReadPartsCommand}"/>
-                <Button Style="{StaticResource CommandButtonStyle}" 
                     Content="Copy parts" 
                     Command="{Binding CopyPartsListCommand}"/>
                 <Button Style="{StaticResource CommandButtonStyle}" 

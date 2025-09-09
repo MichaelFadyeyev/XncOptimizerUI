@@ -36,7 +36,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private BandVM? _selectedBand;
 
         private RelayCommand? _openFile;
-        private RelayCommand? _readParts;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private RelayCommand? _executePrepForSplitAlongX2;
@@ -244,26 +243,14 @@ namespace XncOptimizerUI.MVVM.ViewModels
                         return;
                     }
 
+                    if (_selectedPart != null)
+                    {
+                        _ = _projectService.UpdatePart(_selectedPart!.Part);
+                    }
+
                     _projectService.SaveProject();
 
-                    Log += $"Saved file: {FullPath}\n";
-                });
-            }
-        }
-
-        public RelayCommand ReadPartsCommand
-        {
-            get
-            {
-                return _readParts ??= new RelayCommand(obj =>
-                {
-                    if(_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-                    //FilterName = string.Empty;
-                    ReadItems();
+                    Log += $"Saved file: {FullPath} at {DateTime.Now.ToLocalTime()}\n";
                 });
             }
         }
