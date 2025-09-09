@@ -8,7 +8,6 @@ using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.Helpers.Enums;
-using XncOptimizerUI.Configuration;
 
 namespace XncOptimizerUI.Services
 {
@@ -606,7 +605,11 @@ namespace XncOptimizerUI.Services
                 .SelectMany(g => g.GetParts())
                 .FirstOrDefault(p => p.GetIdIntValue() == part.Id);
 
-            if (partToUpdate == null || partToUpdate.GetNameValue() == part.Name) return false;
+            if (partToUpdate == null) return false;
+            if (partToUpdate.GetNameValue() == part.Name
+                && partToUpdate.GetLengthDecimalValue() == part.Length
+                && partToUpdate.GetWidthDecimalValue() == part.Width
+                ) return false;
 
             var xncsToUPdate = GetXncOperations()
                  .Where(o => o.GetPart()?.GetIdIntValue() == part.Id);
@@ -623,10 +626,13 @@ namespace XncOptimizerUI.Services
 
                 MessageBox.Show($"""Cannot set new XNC typeName for part "{part.Name}" with old XNC typeName "{xnc.GetTypeNameValue()}".""",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
             }
 
             partToUpdate.SetNameValue(part.Name);
+            partToUpdate.SetLengthValue(part.Length);
+            partToUpdate.SetDLengthValue(part.Length);
+            partToUpdate.SetWidthValue(part.Width);
+            partToUpdate.SetDWidthValue(part.Width);
 
             return true;
         }

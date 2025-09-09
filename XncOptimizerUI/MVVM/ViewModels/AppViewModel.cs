@@ -40,6 +40,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private RelayCommand? _executePrepForSplitAlongX2;
+        private RelayCommand? _executePrepForSplitAlongX3;
         private RelayCommand? _exportPartsList;
         private RelayCommand? _copyPartsList;
 
@@ -121,24 +122,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 _applyPartsFilter = true;
             }
         }
-
-        private static decimal? TryParseToDecimal(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return null;
-            }
-            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var width))
-            {
-                return width;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-
         public string NewLabelToProcess
         {
             get { return _newLabelToProcess; }
@@ -274,6 +257,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _readParts ??= new RelayCommand(obj =>
                 {
+                    if(_fullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
                     //FilterName = string.Empty;
                     ReadItems();
                 });
@@ -357,12 +345,48 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        public RelayCommand ExecutePrepForSplitAlongXCommand3
+        {
+            get
+            {
+
+                return _executePrepForSplitAlongX3 ?? new RelayCommand(obj =>
+                {
+                    if (_fullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
+
+                    var log = Log;
+
+                    var ids = Parts
+                        .Where(p => p.Name.Contains(SelectedLabel))
+                        .Select(p => p.Id.ToString())
+                        .ToArray() ?? [];
+
+                    _projectService.PrepForSplitAlongX(ref log, ids);
+
+                    Log = log;
+
+                    OpenFile(_projectService.FullPath);
+                    ReadItems();
+                });
+            }
+        }
+
         public RelayCommand ExportPartsListCommand
         {
             get
             {
                 return _exportPartsList ??= new RelayCommand(obj =>
                 {
+                    if (Parts.Count == 0)
+                    {
+                        Log += "No parts to export!\n";
+                        return;
+                    }
+
                     var partsCSV = GetPartsList(';');
 
                     var saveDialog = new SaveFileDialog()
@@ -387,6 +411,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 return _copyPartsList ??= new(obj =>
                 {
+                    if (Parts.Count == 0)
+                    {
+                        Log += "No parts to copy!\n";
+                        return;
+                    }
+
                     var partsList = GetPartsList('\t');
 
                     Clipboard.SetText(partsList);
@@ -440,13 +470,17 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     Log = string.Empty;
                     FullPath = string.Empty;
                     FilterName = string.Empty;
-                    FilterLength = null;
-                    FilterWidth = null;
+                    FilterLength = string.Empty;
+                    FilterWidth = string.Empty;
                     NewLabelToProcess = string.Empty;
+
+                    _selectedPart = null;
+                    _selectedBand = null;
 
                     Parts = [];
                     Bands = [];
                     Sheets = [];
+
                 });
             }
         }
@@ -466,7 +500,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        public RelayCommand ApplyFilter
+        public RelayCommand ApplyFilterCommand
         {
             get
             {
@@ -577,6 +611,22 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private string GetBandingExternalSymbol(int? bandingId)
         {
             return bandingId == null ? string.Empty : Bands.First(b => b.Id == bandingId).ExternalSymbol;
+        }
+
+        private static decimal? TryParseToDecimal(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var width))
+            {
+                return width;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         #endregion

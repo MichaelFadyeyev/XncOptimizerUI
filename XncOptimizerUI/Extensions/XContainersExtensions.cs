@@ -108,9 +108,15 @@ namespace XncOptimizerUI.Extensions
 
         public static string? GetLengthValue(this XElement element) => element.Attribute("l")?.Value;
         public static decimal GetLengthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("l")?.Value ?? "0");
+        public static void SetLengthValue(this XElement element, decimal value) => element.SetAttributeValue("l", value.ToString());
+        public static void SetDLengthValue(this XElement element, decimal value) => element.SetAttributeValue("dl", value.ToString());
+
 
         public static string? GetWidthValue(this XElement element) => element.Attribute("w")?.Value;
         public static decimal GetWidthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("w")?.Value ?? "0");
+        public static void SetWidthValue(this XElement element, decimal value) => element.SetAttributeValue("w", value.ToString());
+        public static void SetDWidthValue(this XElement element, decimal value) => element.SetAttributeValue("dw", value.ToString());
+
 
         public static string? GetThicknessValue(this XElement element) => element.Attribute("t")?.Value;
         public static decimal GetThicknessDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("t")?.Value ?? "0");
