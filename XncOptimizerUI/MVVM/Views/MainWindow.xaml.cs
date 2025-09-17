@@ -1,15 +1,6 @@
-﻿using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using XncOptimizerUI.MVVM.Models;
+﻿using System.Windows;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.MVVM.Views
 {
@@ -20,8 +11,15 @@ namespace XncOptimizerUI.MVVM.Views
     {
         public MainWindow()
         {
-            InitializeComponent();
-            DataContext = new AppViewModel();
+            try
+            {
+                InitializeComponent();
+                DataContext = new AppViewModel();
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"{ex.Message}: {ex.InnerException?.Message}\n{ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }
