@@ -20,8 +20,15 @@ namespace XncOptimizerUI.MVVM.Views
     {
         public MainWindow()
         {
-            InitializeComponent();
-            DataContext = new AppViewModel();
+            try
+            {
+                InitializeComponent();
+                DataContext = new AppViewModel();
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show($"{ex.Message}: {ex.InnerException?.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

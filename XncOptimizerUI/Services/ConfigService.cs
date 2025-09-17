@@ -9,12 +9,15 @@ namespace XncOptimizerUI.Services
     public static class ConfigService
     {
         private static AppOptions _options;
-        private static string _path = "configuration.json";
+        private static readonly string _path;
         private static JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
 
         static ConfigService()
         {
+            var appFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+
+            _path = Path.Combine(Path.GetDirectoryName(appFilePath)!, "configuration.json");
+
             if (File.Exists(_path))
             {
                 string loadedJson = File.ReadAllText(_path);
