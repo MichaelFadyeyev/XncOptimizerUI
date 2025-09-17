@@ -14,8 +14,6 @@ namespace XncOptimizerUI.Services
 
         static ConfigService()
         {
-            _path = Path.Combine(Directory.GetCurrentDirectory(), "configuration.json");
-
             if (File.Exists(_path))
             {
                 string loadedJson = File.ReadAllText(_path);
