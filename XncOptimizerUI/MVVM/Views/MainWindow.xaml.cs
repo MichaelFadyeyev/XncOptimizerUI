@@ -13,6 +13,7 @@ namespace XncOptimizerUI.MVVM.Views
         {
             try
             {
+                ConfigService.LoadConfiguration();
                 InitializeComponent();
                 DataContext = new AppViewModel();
             }
