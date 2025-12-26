@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.MVVM.Views
@@ -15,9 +14,8 @@ namespace XncOptimizerUI.MVVM.Views
             {
                 ConfigService.LoadConfiguration();
                 InitializeComponent();
-                DataContext = new AppViewModel();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"{ex.Message}: {ex.InnerException?.Message}\n{ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }

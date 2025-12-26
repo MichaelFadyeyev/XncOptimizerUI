@@ -70,7 +70,6 @@ namespace XncOptimizerUI.Services
             File.WriteAllText(_path!, json);
         }
 
-
         public static void AddLabelToProcess(string newLabel)
         {
             _options!.LabelsToProcess.Add(newLabel);
@@ -81,6 +80,8 @@ namespace XncOptimizerUI.Services
 
         public static void DeleteLabelToProcess(string labelToRemove)
         {
+            if (_options!.LabelsToProcess.Count == 1) return;
+
             _options!.LabelsToProcess.Remove(labelToRemove);
             _options.LastLabelToProcessSelectedIndex = 0;
             SaveOptions();
@@ -88,11 +89,8 @@ namespace XncOptimizerUI.Services
 
         public static void UpdateSawWidth(decimal newWidth)
         {
-            if (File.Exists(_path))
-            {
-                _options.SawWidth = newWidth;
-                SaveOptions();
-            }
+            _options!.SawWidth = newWidth;
+            SaveOptions();
         }
 
         public static void UpdateLastLabelToProcessSelectedIndex(string label)

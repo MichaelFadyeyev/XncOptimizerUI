@@ -721,7 +721,7 @@ namespace XncOptimizerUI.Services
 
                 sheet.Name = sheetGood.GetNameValue()!;
                 sheet.Code = sheetGood!.GetCodeValue()!;
-                sheet.Thickness = decimal.Parse(sheetGood.Attribute("t")!.Value);
+                sheet.Thickness = sheetGood.GetThicknessDecimalValue()!;
 
                 _sheets.Add(sheet);
             }

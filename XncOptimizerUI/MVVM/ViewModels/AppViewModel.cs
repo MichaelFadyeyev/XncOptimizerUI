@@ -63,7 +63,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 void SetWindowTitle()
                 {
                     var fileName = string.IsNullOrEmpty(FullPath) ? "No file selected" : Path.GetFileName(FullPath);
-                    WindowTile = $"{_assembly} - {fileName}";
+                    WindowTitle = $"{_assembly} - {fileName}";
                 }
             }
         }
@@ -136,7 +136,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 OnPropertyChanged();
             }
         }
-        public string WindowTile
+        public string WindowTitle
         {
             get
             {
