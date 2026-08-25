@@ -20,4 +20,8 @@
 		<PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Include=".claude\code-analysis.md" />
+	</ItemGroup>
+
 </Project>
