@@ -113,6 +113,10 @@
                         Style="{StaticResource SetOptionButtonStyle}" />
                 </Grid>
                 <Button
+                    Command="{Binding ReplaceXNCsCommand}"
+                    Content="Replace XNCs"
+                    Style="{StaticResource CommandButtonStyle}" />
+                <Button
                     Command="{Binding CopyPartsListCommand}"
                     Content="Copy parts"
                     Style="{StaticResource CommandButtonStyle}" />
@@ -255,12 +259,45 @@
                         Content="{Binding Parts.Count}" />
                 </StackPanel>
             </Grid>
+            <Grid Margin="5,2,5,2" DockPanel.Dock="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Text="{Binding SourcePartInfo, StringFormat='Source: {0}'}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTip="{Binding SourcePartInfo}" />
+                <Button
+                    Grid.Column="1"
+                    Command="{Binding SetSourcePartCommand}"
+                    Content="SET"
+                    Style="{StaticResource SetOptionButtonStyle}" />
+                <Button
+                    Grid.Column="2"
+                    Width="50"
+                    Command="{Binding ResetSourcePartCommand}"
+                    Content="RESET"
+                    Style="{StaticResource SetOptionButtonStyle}" />
+            </Grid>
             <DataGrid
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
                 SelectedItem="{Binding SelectedPart}">
                 <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="Auto" Header="Sel">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox
+                                    HorizontalAlignment="Center"
+                                    IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn
                         Width="2*"
                         Binding="{Binding Number}"

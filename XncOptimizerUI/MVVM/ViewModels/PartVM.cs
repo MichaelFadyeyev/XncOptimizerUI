@@ -7,6 +7,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
     {
         private Part _part = part;
         private int _number;
+        private bool _isSelected;
 
         public Part Part
         {
@@ -17,6 +18,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get { return _number; }
             set { _number = value; OnPropertyChanged(); }
+        }
+
+        public bool IsSelected
+        {
+            get { return _isSelected; }
+            set { _isSelected = value; OnPropertyChanged(); }
         }
 
         public int Id

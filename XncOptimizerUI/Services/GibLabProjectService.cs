@@ -524,6 +524,174 @@ namespace XncOptimizerUI.Services
             log += $"***\nStored to: {_fullPath}";
         }
 
+        public bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)
+        {
+            if (targetParts == null || targetParts.Count == 0)
+            {
+                var message = "No target parts selected for XNC replacement.";
+                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                log += $"***\n{message}";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+
+            // A part can carry more than one XNC operation (one per face), distinguished by (side, turn).
+            var sourceOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == sourcePart.Id).ToList();
+
+            if (sourceOps.Count == 0)
+            {
+                var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has no XNC operation.""";
+                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                log += $"***\n{message}";
+                return false;
+            }
+
+            if (sourceOps.GroupBy(GetXncFaceKey).Any(g => g.Count() > 1))
+            {
+                var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has ambiguous XNC operations (duplicate face).""";
+                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                log += $"***\n{message}";
+                return false;
+            }
+
+            var sourceOpsByFace = sourceOps.ToDictionary(GetXncFaceKey);
+
+            // Validation phase: every target must be identical to the source, own an XNC operation,
+            // and expose exactly the same set of faces so each program has a matching source.
+            var problems = new List<string>();
+
+            foreach (var target in targetParts)
+            {
+                var targetOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == target.Id).ToList();
+
+                if (targetOps.Count == 0)
+                {
+                    problems.Add($"""Part "{target.Name}" (id={target.Id}) has no XNC operation.""");
+                    continue;
+                }
+
+                if (!PartsAreIdentical(sourcePart, target, out var reason))
+                {
+                    problems.Add($"""Part "{target.Name}" (id={target.Id}) differs from source: {reason}.""");
+                    continue;
+                }
+
+                var targetFaces = targetOps.Select(GetXncFaceKey).OrderBy(k => k).ToList();
+                var sourceFaces = sourceOpsByFace.Keys.OrderBy(k => k).ToList();
+
+                if (!targetFaces.SequenceEqual(sourceFaces))
+                {
+                    problems.Add($"""Part "{target.Name}" (id={target.Id}) has different XNC faces/turn than the source — source [{DescribeXncFaces(sourceOps)}] vs target [{DescribeXncFaces(targetOps)}].""");
+                }
+            }
+
+            if (problems.Count > 0)
+            {
+                var message = "Copy aborted. The following parts are not identical to the source part:\n\n"
+                    + string.Join("\n", problems);
+                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                log += $"***\n{message}";
+                return false;
+            }
+
+            // Apply phase: replace each target program (and its bore count) with the source's matching face.
+            foreach (var target in targetParts)
+            {
+                var targetOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == target.Id).ToList();
+
+                foreach (var targetOp in targetOps)
+                {
+                    var sourceOp = sourceOpsByFace[GetXncFaceKey(targetOp)];
+
+                    targetOp.GetProgram()!.Value = sourceOp.GetProgramValue()!;
+
+                    var sourceCountBore = sourceOp.Attribute("countBore")?.Value;
+                    if (sourceCountBore != null)
+                    {
+                        targetOp.Attribute("countBore")?.SetValue(sourceCountBore);
+                    }
+                }
+
+                log += $"XNC replaced: \"{target.Name}\" <- \"{sourcePart.Name}\" ({targetOps.Count} face(s))\n";
+            }
+
+            AppendDescription("replaced XNC programs with source part");
+
+            var result = GetRenamedFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nStored to: {_fullPath}";
+
+            return true;
+        }
+
+        public int GetXncProgramsCount(int partId)
+        {
+            if (_project == null) return 0;
+
+            return GetXncOperations().Count(o => o.GetPart()?.GetIdIntValue() == partId);
+        }
+
+        // A part's XNC operations are matched by both the drilled face ("side", front/back) and the
+        // part's rotation in the layout ("turn"): the program's bore coordinates are only valid when
+        // the target is oriented the same way, so a differing turn must block the copy.
+        private static string GetXncFaceKey(XElement xncOperation)
+        {
+            return $"{xncOperation.Attribute("side")?.Value ?? string.Empty}|{xncOperation.Attribute("turn")?.Value ?? string.Empty}";
+        }
+
+        private static string DescribeXncFaces(IEnumerable<XElement> ops)
+        {
+            return string.Join("; ", ops
+                .OrderBy(GetXncFaceKey)
+                .Select(o => $"side={o.Attribute("side")?.Value ?? "?"},turn={o.Attribute("turn")?.Value ?? "?"}"));
+        }
+
+        private static bool PartsAreIdentical(Part source, Part target, out string reason)
+        {
+            if (source.Length != target.Length)
+            {
+                reason = $"length {target.Length} != {source.Length}";
+                return false;
+            }
+
+            if (source.Width != target.Width)
+            {
+                reason = $"width {target.Width} != {source.Width}";
+                return false;
+            }
+
+            if (source.TopBandingId != target.TopBandingId)
+            {
+                reason = "top band differs";
+                return false;
+            }
+
+            if (source.BottomBandingId != target.BottomBandingId)
+            {
+                reason = "bottom band differs";
+                return false;
+            }
+
+            if (source.LeftBandingId != target.LeftBandingId)
+            {
+                reason = "left band differs";
+                return false;
+            }
+
+            if (source.RightBandingId != target.RightBandingId)
+            {
+                reason = "right band differs";
+                return false;
+            }
+
+            reason = string.Empty;
+            return true;
+        }
+
 
         #region GLOBAL_METHODES
 
@@ -581,6 +749,27 @@ namespace XncOptimizerUI.Services
             var version = int.Parse(collection[0].Groups[1].Value);
 
             return regex2.Replace(_source, $"_opt({version + 1}).project");
+        }
+
+        private string GetRenamedFileName()
+        {
+            var regex1 = new Regex(@"_ren\.project$");
+            var regex2 = new Regex(@"_ren\((\d*)\)\.project$");
+
+            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            {
+                return _source.Replace(".project", "_ren.project");
+            }
+
+            if (regex1.IsMatch(_source))
+            {
+                return regex1.Replace(_source, "_ren(1).project");
+            }
+
+            var collection = regex2.Matches(_source);
+            var version = int.Parse(collection[0].Groups[1].Value);
+
+            return regex2.Replace(_source, $"_ren({version + 1}).project");
         }
 
         private static Part CreatePart(XElement element)

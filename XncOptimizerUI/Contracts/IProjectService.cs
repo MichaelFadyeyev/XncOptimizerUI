@@ -10,6 +10,8 @@ namespace XncOptimizerUI.Contracts
         void GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string searchText);
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
+        bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts);
+        int GetXncProgramsCount(int partId);
         void SaveProject();
         bool UpdatePart(Part part);
         List<Part> ReadParts();

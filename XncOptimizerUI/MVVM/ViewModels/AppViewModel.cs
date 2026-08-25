@@ -33,9 +33,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private ObservableCollection<BandVM> _bands = [];
         private ObservableCollection<SheetVM> _sheets = [];
         private PartVM? _selectedPart;
+        private PartVM? _sourcePart;
+        private int _sourceXncCount;
         private BandVM? _selectedBand;
 
         private RelayCommand? _openFile;
+        private RelayCommand? _replaceXncs;
         private RelayCommand? _executeOptimize;
         private RelayCommand? _executePrepForSplitAlongX;
         private RelayCommand? _executePrepForSplitAlongX2;
@@ -196,6 +199,35 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get { return _selectedBand; }
             set { _selectedBand = value; OnPropertyChanged(); }
+        }
+
+        public PartVM? SourcePart
+        {
+            get { return _sourcePart; }
+            set
+            {
+                _sourcePart = value;
+                _sourceXncCount = value == null ? 0 : _projectService.GetXncProgramsCount(value.Id);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SourcePartInfo));
+            }
+        }
+
+        public string SourcePartInfo
+        {
+            get
+            {
+                if (_sourcePart == null) return "(none)";
+
+                var p = _sourcePart;
+
+                string Band(int? id) => id == null ? "-" : GetBandingExternalSymbol(id);
+
+                return $"{p.Name}  |  {p.Length}×{p.Width}  |  "
+                    + $"bands T:{Band(p.TopBandingId)} B:{Band(p.BottomBandingId)} "
+                    + $"L:{Band(p.LeftBandingId)} R:{Band(p.RightBandingId)}  |  "
+                    + $"XNC programs: {_sourceXncCount}";
+            }
         }
 
 
@@ -412,6 +444,77 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        public RelayCommand SetSourcePartCommand
+        {
+            get
+            {
+                return new RelayCommand(obj =>
+                {
+                    if (_selectedPart == null)
+                    {
+                        Log += "No part selected to set as source!\n";
+                        return;
+                    }
+
+                    SourcePart = _selectedPart;
+                    Log += $"Source part set: {_selectedPart.Name}\n";
+                });
+            }
+        }
+
+        public RelayCommand ResetSourcePartCommand
+        {
+            get
+            {
+                return new RelayCommand(obj => SourcePart = null);
+            }
+        }
+
+        public RelayCommand ReplaceXNCsCommand
+        {
+            get
+            {
+                return _replaceXncs ??= new RelayCommand(obj =>
+                {
+                    if (_fullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
+
+                    if (_sourcePart == null)
+                    {
+                        Log += "No source part set!\n";
+                        return;
+                    }
+
+                    var targets = _allParts
+                        .Where(p => p.IsSelected && p != _sourcePart)
+                        .Select(p => p.Part)
+                        .ToList();
+
+                    if (targets.Count == 0)
+                    {
+                        Log += "No parts selected to replace XNCs for!\n";
+                        return;
+                    }
+
+                    var log = Log;
+
+                    var success = _projectService.ReplaceXncPrograms(ref log, _sourcePart.Part, targets);
+
+                    Log = log;
+
+                    if (success)
+                    {
+                        SourcePart = null;
+                        OpenFile(_projectService.FullPath);
+                        ReadItems();
+                    }
+                });
+            }
+        }
+
         public RelayCommand AddNewLabelCommand
         {
             get
@@ -463,6 +566,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
                     _selectedPart = null;
                     _selectedBand = null;
+                    SourcePart = null;
 
                     Parts = [];
                     Bands = [];
