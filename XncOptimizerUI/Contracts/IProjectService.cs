@@ -6,8 +6,11 @@ namespace XncOptimizerUI.Contracts
     public interface IProjectService
     {
         void OpenProject(string path);
+        void OpenTemplate(string path);
         void CloseProject();
         void GroupIdenticalElements(ref string log);
+        void RenameGoods(ref string log);
+
         void PrepForSplitAlongX(ref string log, string searchText);
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
         void SaveProject();

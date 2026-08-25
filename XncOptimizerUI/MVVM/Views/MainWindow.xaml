@@ -124,6 +124,10 @@
                     Command="{Binding CloseFileCommand}"
                     Content="CloseFile"
                     Style="{StaticResource CommandButtonStyle}" />
+                <Button
+                    Command="{Binding OpenTemplateFileCommand}"
+                    Content="Open Template"
+                    Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
         </DockPanel>
         <DataGrid
@@ -259,7 +263,8 @@
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
-                SelectedItem="{Binding SelectedPart}">
+                SelectedItem="{Binding SelectedPart}"
+                SelectionMode="Extended">
                 <DataGrid.Columns>
                     <DataGridTextColumn
                         Width="2*"

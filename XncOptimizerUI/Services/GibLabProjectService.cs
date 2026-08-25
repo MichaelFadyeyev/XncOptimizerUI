@@ -26,6 +26,7 @@ namespace XncOptimizerUI.Services
         List<XElement> _sheetGoods = [];
         List<XElement> _bandGoods = [];
         List<XElement> _productGoods = [];
+        List<string> _templates = [];
 
         List<Band> _bands = [];
         List<Sheet> _sheets = [];
@@ -172,7 +173,7 @@ namespace XncOptimizerUI.Services
                 var id = _productGoods.First().GetIdValue()!; // store id of first existed good
 
                 _project!.GetGoods().Where(e => e.GetTypeIdValue() == "product")
-                        .Remove(); // remove all _productGoods (is "products") with parts
+                        .Remove(); // remove all goods (is "products") with parts
 
                 // create new good is one for all parts; assign stored id
                 var newGood =
@@ -524,6 +525,34 @@ namespace XncOptimizerUI.Services
             log += $"***\nStored to: {_fullPath}";
         }
 
+        public void RenameGoods(ref string log)
+        {
+            var goods = _project!.GetGoods()
+                .Where(e => e.GetTypeIdValue() == "product").ToList();
+
+            if (goods.Count() != _templates.Count)
+            {
+                log += $"Count of goods and templates not equol!\n";
+                return;
+            }
+
+            for(var i=0; i< _templates.Count; i++)
+            {
+                var code = goods[i].GetCodeValue()!;
+                var name = goods[i].GetNameValue()!;
+                var subs = _templates[i];
+
+                goods[i].SetCodeValue(subs);
+                goods[i].SetNameValue(name.Replace(code, subs));
+                log += $"Good with id={goods[i].GetIdValue()} change code {code} to {subs}\n";
+            }
+
+            var result = GetNewFileName();
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+            log += $"***\nStored to: {_fullPath}";
+        }
+
 
         #region GLOBAL_METHODES
 
@@ -534,6 +563,11 @@ namespace XncOptimizerUI.Services
             _source = Path.GetFileName(_fullPath);
             _doc = XDocument.Load(_fullPath);
             _project = _doc.GetProject() ?? throw new Exception($"""File "{_fullPath}" contains wrong data""");
+        }
+
+        public void OpenTemplate(string fullPath)
+        {
+            _templates = File.ReadAllLines(fullPath).ToList();
         }
 
 
@@ -833,7 +867,7 @@ namespace XncOptimizerUI.Services
                 .ToList();
         }
 
-        private List<XElement> GetProductGoods() // product _productGoods
+        private List<XElement> GetProductGoods() // product goods
         {
             return _project!.GetGoods()
                 .Where(e => e.GetTypeIdValue() == "product")

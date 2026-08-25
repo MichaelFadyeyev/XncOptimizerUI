@@ -230,6 +230,36 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        public RelayCommand OpenTemplateFileCommand
+        {
+            get
+            {
+                return new RelayCommand(obj =>
+                {
+                    var openDialog = new OpenFileDialog()
+                    {
+                        Filter = "csv files (*.csv)|*.csv"
+                    };
+                    if (openDialog.ShowDialog() == true)
+                    {
+                        var fullPath = openDialog.FileName;
+                        try
+                        {
+                            OpenTemplateFile(fullPath);
+                        }
+                        catch (Exception e)
+                        {
+                            Log = e.Message;
+                        }
+                    }
+
+                    _projectService!.RenameGoods(ref _log);
+                });
+
+            }
+
+        }
+
         public RelayCommand SaveFileCommand
         {
             get
@@ -522,6 +552,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             FullPath = fullPath;
             Log += $"Opened file: {FullPath}\n";
+        }
+
+        private void OpenTemplateFile(string fullPath)
+        {
+            _projectService.OpenTemplate(fullPath);
+            if (string.IsNullOrEmpty(FullPath))
+            {
+                Log = string.Empty;
+            }
+            else
+            {
+                Log += "\n***\n";
+            }
+            FullPath = fullPath;
+            Log += $"Opened template file: {FullPath}\n";
         }
 
         private void ReadItems()
