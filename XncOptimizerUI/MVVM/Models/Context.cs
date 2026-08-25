@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+﻿using System.Collections.ObjectModel;
 
 namespace XncOptimizerUI.MVVM.Models
 {
@@ -12,6 +7,6 @@ namespace XncOptimizerUI.MVVM.Models
         public string Log { get; set; } = string.Empty;
         public string FullPath { get; set; } = string.Empty;
         public string SearchText { get; set; } = string.Empty;
-        public XDocument? Document { get; set; }
-    }
+        public ObservableCollection<Part> Parts { get; set; } = [];
+}
 }
