@@ -362,6 +362,28 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
+        public RelayCommand RoundCoordsCommand
+        {
+            get {                 return new RelayCommand(obj =>
+                {
+                    if (_fullPath == string.Empty)
+                    {
+                        Log += "No file selected!\n";
+                        return;
+                    }
+
+                    var log = Log;
+
+                    _projectService.RoundCoords(ref log);
+
+                    Log = log;
+
+                    OpenFile(_projectService.FullPath);
+                    ReadItems();
+                });
+            }
+        }
+
         public RelayCommand ExportPartsListCommand
         {
             get

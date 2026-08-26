@@ -637,6 +637,43 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
+        public bool RoundCoords(ref string log)
+        {
+            _xncOperations = GetXncOperations();
+
+            var bores = _xncOperations.SelectMany(o =>
+                {
+                    var programAttribute = o.GetProgram();
+                    var programInnerXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute!.Value!));
+                    var program = programInnerXml.Element("program");
+                    return program!.Elements().Where(e => ElementIsBore(e.Name.ToString()));
+                });
+
+            foreach (var o in _xncOperations) { 
+
+            }
+
+            foreach (var bore in bores)
+            {
+                var xAttr = bore.Attribute("x");
+                var yAttr = bore.Attribute("y");
+                if (xAttr != null)
+                {
+                    var xValue = XmlConvert.ToDecimal(xAttr.Value);
+                    var roundedX = Math.Round(xValue, 1);
+                    xAttr.SetValue(XmlConvert.ToString(roundedX));
+                }
+                if (yAttr != null)
+                {
+                    var yValue = XmlConvert.ToDecimal(yAttr.Value);
+                    var roundedY = Math.Round(yValue, 1);
+                    yAttr.SetValue(XmlConvert.ToString(roundedY));
+                }
+            }
+
+            return true;
+        }
+
         private static Band CreateBand(XElement element)
         {
             return new Band()

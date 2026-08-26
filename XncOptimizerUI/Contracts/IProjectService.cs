@@ -7,6 +7,7 @@ namespace XncOptimizerUI.Contracts
     {
         void OpenProject(string path);
         void CloseProject();
+        bool RoundCoords(ref string log);
         void GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string searchText);
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
