@@ -7,12 +7,12 @@ namespace XncOptimizerUI.Contracts
     {
         void OpenProject(string path);
         void CloseProject();
-        void GroupIdenticalElements(ref string log);
+        bool GroupIdenticalElements(ref string log);
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
         bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts);
         int GetXncProgramsCount(int partId);
         void SaveProject();
-        bool UpdatePart(Part part);
+        bool UpdatePart(ref string log, Part part);
         List<Part> ReadParts();
         List<Band> ReadBands();
         List<Sheet> ReadSheets();

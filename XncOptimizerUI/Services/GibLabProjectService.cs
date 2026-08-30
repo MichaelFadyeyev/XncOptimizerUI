@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Windows;
 using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Contracts;
@@ -42,7 +41,7 @@ namespace XncOptimizerUI.Services
             _config = config;
         }
 
-        public void GroupIdenticalElements(ref string log)
+        public bool GroupIdenticalElements(ref string log)
         {
 
             Dictionary<string, string> partOperations = [];
@@ -99,9 +98,8 @@ namespace XncOptimizerUI.Services
                 if (partOperations.Count == 0)
                 {
                     var message = "File seems to be already optimized or contains no XNC.";
-                    MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     log += $"***\n{message}";
-                    return;
+                    return false;
                 }
 
                 List<XElement> orderedXncOperations = [.. _xncOperations.OrderBy(o => o.GetGroupCodeValue())];
@@ -283,9 +281,11 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 log += $"***\n{e.Message}";
+                return false;
             }
+
+            return true;
 
             #region LOCAL_FUNCTIONS
 
@@ -435,7 +435,6 @@ namespace XncOptimizerUI.Services
             if (targetParts == null || targetParts.Count == 0)
             {
                 var message = "No target parts selected for XNC replacement.";
-                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 log += $"***\n{message}";
                 return false;
             }
@@ -448,7 +447,6 @@ namespace XncOptimizerUI.Services
             if (sourceOps.Count == 0)
             {
                 var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has no XNC operation.""";
-                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 log += $"***\n{message}";
                 return false;
             }
@@ -456,7 +454,6 @@ namespace XncOptimizerUI.Services
             if (sourceOps.GroupBy(GetXncFaceKey).Any(g => g.Count() > 1))
             {
                 var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has ambiguous XNC operations (duplicate face).""";
-                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 log += $"***\n{message}";
                 return false;
             }
@@ -496,7 +493,6 @@ namespace XncOptimizerUI.Services
             {
                 var message = "Copy aborted. The following parts are not identical to the source part:\n\n"
                     + string.Join("\n", problems);
-                MessageBox.Show(message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 log += $"***\n{message}";
                 return false;
             }
@@ -694,7 +690,7 @@ namespace XncOptimizerUI.Services
             };
         }
 
-        public bool UpdatePart(Part part)
+        public bool UpdatePart(ref string log, Part part)
         {
             var partToUpdate = GetProductGoods()
                 .SelectMany(g => g.GetParts())
@@ -719,8 +715,7 @@ namespace XncOptimizerUI.Services
                     continue;
                 }
 
-                MessageBox.Show($"""Cannot set new XNC typeName for part "{part.Name}" with old XNC typeName "{xnc.GetTypeNameValue()}".""",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                log += $"""Cannot set new XNC typeName for part "{part.Name}" with old XNC typeName "{xnc.GetTypeNameValue()}".{'\n'}""";
             }
 
             partToUpdate.SetNameValue(part.Name);

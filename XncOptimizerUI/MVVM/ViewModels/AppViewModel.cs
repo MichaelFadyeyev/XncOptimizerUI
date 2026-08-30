@@ -140,11 +140,15 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             if (_selectedPart != null)
             {
-                if (_projectService.UpdatePart(_selectedPart.Part))
+                var log = Log;
+
+                if (_projectService.UpdatePart(ref log, _selectedPart.Part))
                 {
                     _projectService.SaveProject();
-                    Log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
+                    log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
                 }
+
+                Log = log;
             }
         }
 
@@ -213,7 +217,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             if (SelectedPart != null)
             {
-                _ = _projectService.UpdatePart(SelectedPart.Part);
+                var log = Log;
+                _ = _projectService.UpdatePart(ref log, SelectedPart.Part);
+                Log = log;
             }
 
             _projectService.SaveProject();
@@ -231,10 +237,17 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             var log = Log;
+            var logStart = log.Length;
 
-            _projectService.GroupIdenticalElements(ref log);
+            var success = _projectService.GroupIdenticalElements(ref log);
 
             Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
 
             LoadProject(_projectService.FullPath);
             ReadItems();
@@ -345,17 +358,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             var log = Log;
+            var logStart = log.Length;
 
             var success = _projectService.ReplaceXncPrograms(ref log, SourcePart.Part, targets);
 
             Log = log;
 
-            if (success)
+            if (!success)
             {
-                SourcePart = null;
-                LoadProject(_projectService.FullPath);
-                ReadItems();
+                WarnFromLogDelta(logStart);
+                return;
             }
+
+            SourcePart = null;
+            LoadProject(_projectService.FullPath);
+            ReadItems();
         }
 
         [RelayCommand]
@@ -463,6 +480,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             Parts = new ObservableCollection<PartVM>(_allParts);
             FilterName = string.Empty;
+        }
+
+        /// <summary>
+        /// The service layer reports failures by appending to the log rather than
+        /// popping its own dialog, so the text it just appended is what the user
+        /// needs to see.
+        /// </summary>
+        private void WarnFromLogDelta(int logStart)
+        {
+            var message = Log[logStart..].Replace("***\n", string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                _dialogs.ShowWarning(message);
+            }
         }
 
         private void FilterParts()
