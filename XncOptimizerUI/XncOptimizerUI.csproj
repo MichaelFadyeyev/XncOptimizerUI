@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
-		<AssemblyName>$(MSBuildProjectName)-0.002.3.10</AssemblyName>
+		<AssemblyName>$(MSBuildProjectName)-0.002.5.10</AssemblyName>
 		<ApplicationIcon>xnc_logo.ico</ApplicationIcon>
 	</PropertyGroup>
 
@@ -15,7 +15,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="13.0.1" />
 		<PackageReference Include="NUnit" Version="3.13.3" />
 		<PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
 	</ItemGroup>
@@ -23,5 +22,4 @@
 	<ItemGroup>
 	  <None Include=".claude\code-analysis.md" />
 	</ItemGroup>
-
 </Project>
