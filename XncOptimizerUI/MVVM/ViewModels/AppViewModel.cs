@@ -1,15 +1,12 @@
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Windows;
 using XncOptimizerUI.Contracts;
-using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
@@ -26,11 +23,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private readonly IProjectService _projectService;
         private readonly IConfigService _config;
+        private readonly IDialogService _dialogs;
 
-        public AppViewModel(IProjectService projectService, IConfigService config)
+        public AppViewModel(IProjectService projectService, IConfigService config, IDialogService dialogs)
         {
             _projectService = projectService;
             _config = config;
+            _dialogs = dialogs;
 
             // Assign the backing fields, not the generated properties: the setters
             // would fire OnSelectedLabelChanged and write config back to disk on
@@ -185,13 +184,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [RelayCommand]
         private void OpenFile()
         {
-            var openDialog = new OpenFileDialog()
+            var fullPath = _dialogs.ShowOpenProjectDialog();
+
+            if (fullPath != null)
             {
-                Filter = "GibLab project files (*.project)|*.project"
-            };
-            if (openDialog.ShowDialog() == true)
-            {
-                var fullPath = openDialog.FileName;
                 try
                 {
                     LoadProject(fullPath, true);
@@ -279,17 +275,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             var partsCSV = GetPartsList(';');
 
-            var saveDialog = new SaveFileDialog()
-            {
-                Filter = "CSV file (*.csv)|*.csv",
-                Title = "Save CSV File",
-                FileName = Path.GetFileNameWithoutExtension(FullPath)
-            };
+            var savePath = _dialogs.ShowSaveCsvDialog(Path.GetFileNameWithoutExtension(FullPath));
 
-            if (saveDialog.ShowDialog() == true)
+            if (savePath != null)
             {
-                File.WriteAllText(saveDialog.FileName, partsCSV, Encoding.UTF8);
-                MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogs.SaveTextFile(savePath, partsCSV);
+                _dialogs.ShowInfo("File saved successfully!");
             }
         }
 
@@ -304,8 +295,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             var partsList = GetPartsList('\t');
 
-            Clipboard.SetText(partsList);
-            MessageBox.Show("PartsList was copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.SetClipboardText(partsList);
+            _dialogs.ShowInfo("PartsList was copied to clipboard!");
         }
 
         [RelayCommand]
