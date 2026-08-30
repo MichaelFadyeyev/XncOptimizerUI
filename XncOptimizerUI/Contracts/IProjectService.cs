@@ -8,7 +8,6 @@ namespace XncOptimizerUI.Contracts
         void OpenProject(string path);
         void CloseProject();
         void GroupIdenticalElements(ref string log);
-        void PrepForSplitAlongX(ref string log, string searchText);
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
         bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts);
         int GetXncProgramsCount(int partId);

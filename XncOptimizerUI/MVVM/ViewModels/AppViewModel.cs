@@ -315,59 +315,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get
             {
-                return _executePrepForSplitAlongX ??= new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-
-                    var log = Log;
-
-                    _projectService.PrepForSplitAlongX(ref log, "_поріз.2х40мм");
-
-                    Log = log;
-
-                    OpenFile(_projectService.FullPath);
-                    ReadItems();
-                });
-            }
-        }
-
-        public RelayCommand ExecutePrepForSplitAlongXCommand2
-        {
-            get
-            {
-
-                return _executePrepForSplitAlongX2 ?? new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-
-                    var log = Log;
-
-                    var ids = Parts
-                        .Select(p => p.Id.ToString())
-                        .ToArray() ?? [];
-
-                    _projectService.PrepForSplitAlongX(ref log, ids);
-
-                    Log = log;
-
-                    OpenFile(_projectService.FullPath);
-                    ReadItems();
-                });
-            }
-        }
-
-        public RelayCommand ExecutePrepForSplitAlongXCommand3
-        {
-            get
-            {
 
                 return _executePrepForSplitAlongX3 ?? new RelayCommand(obj =>
                 {
