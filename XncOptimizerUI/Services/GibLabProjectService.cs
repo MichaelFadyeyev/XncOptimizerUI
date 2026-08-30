@@ -349,17 +349,33 @@ namespace XncOptimizerUI.Services
                 {
                     var name = part.GetPartNameValue();
 
+                    var w = part.Attribute("w");
                     var dw = part.Attribute("dw");
                     var cw = part.Attribute("cw");
-                    var w = part.Attribute("w");
+                    var jw = part.Attribute("jw");
 
-                    var width = XmlConvert.ToDecimal(dw?.Value
-                        ?? throw new ArgumentException("""XAttribute "dw" not found or has no value""")) * 2 + _config.SawWidth;
-                    var storedWidth = XmlConvert.ToString(width);
+                    var wValue = XmlConvert.ToDecimal(w?.Value 
+                        ?? throw new ArgumentException("""XAttribute "w" not found or has no value"""));
 
-                    dw.SetValue(storedWidth);
-                    cw!.SetValue(storedWidth);
-                    w!.SetValue(storedWidth);
+                    var width = wValue * 2 + _config.SawWidth;
+                    var widthStringValue = XmlConvert.ToString(width);
+
+                    var jwValue = XmlConvert.ToDecimal(jw?.Value
+                        ?? throw new ArgumentException("""XAttribute "jw" not found or has no value"""));
+                    var jwStringValue = XmlConvert.ToString(wValue - (wValue - jwValue));
+
+                    var dwValue = XmlConvert.ToDecimal(dw?.Value
+                        ?? throw new ArgumentException("""XAttribute "dw" not found or has no value"""));
+                    var dwStringValue = XmlConvert.ToString(dwValue - (wValue - jwValue));
+
+                    var cwValue = XmlConvert.ToDecimal(cw?.Value
+                        ?? throw new ArgumentException("""XAttribute "cw" not found or has no value"""));
+                    var cwStringValue = XmlConvert.ToString(cwValue - (wValue - jwValue));
+
+                    w!.SetValue(widthStringValue);
+                    cw!.SetValue(cwStringValue);
+                    dw.SetValue(dwStringValue);
+                    jw!.SetValue(jwStringValue);
 
                     var count = Int32.Parse(part.Attribute("count")!.Value);
                     var newCount = count / 2 + count % 2;
@@ -417,7 +433,7 @@ namespace XncOptimizerUI.Services
                         programAttribute.Value = program.ToString();
                     }
 
-                    log += $"{name} resized to {storedWidth}; count changed: {count} -> {newCount}\n";
+                    log += $"{name} resized to {widthStringValue}; count changed: {count} -> {newCount}\n";
                 }
 
             }
