@@ -35,10 +35,12 @@ namespace XncOptimizerUI.Services
         }
 
         private readonly IConfigService _config;
+        private readonly TimeProvider _timeProvider;
 
-        public GibLabProjectService(IConfigService config)
+        public GibLabProjectService(IConfigService config, TimeProvider timeProvider)
         {
             _config = config;
+            _timeProvider = timeProvider;
         }
 
         public bool GroupIdenticalElements(ref string log)
@@ -932,7 +934,9 @@ namespace XncOptimizerUI.Services
 
         void AppendDescription(string message)
         {
-            var description = $"{DateTime.Now:yyyy-MM-dd hh:mm:ss} -> {message}\n";
+            // Format string kept byte-identical: this timestamp is written into the
+            // saved project XML, so changing it would change output files.
+            var description = $"{_timeProvider.GetLocalNow().DateTime:yyyy-MM-dd hh:mm:ss} -> {message}\n";
 
             if (_project!.Attribute("description") == null)
             {

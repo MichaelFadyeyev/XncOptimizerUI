@@ -42,6 +42,7 @@ namespace XncOptimizerUI
         {
             var services = new ServiceCollection();
 
+            services.AddSingleton(TimeProvider.System);
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IProjectService, GibLabProjectService>();
