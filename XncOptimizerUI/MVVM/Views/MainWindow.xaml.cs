@@ -1,5 +1,5 @@
-﻿using System.Windows;
-using XncOptimizerUI.Services;
+using System.Windows;
+using XncOptimizerUI.MVVM.ViewModels;
 
 namespace XncOptimizerUI.MVVM.Views
 {
@@ -8,17 +8,10 @@ namespace XncOptimizerUI.MVVM.Views
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(AppViewModel viewModel)
         {
-            try
-            {
-                ConfigService.LoadConfiguration();
-                InitializeComponent();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"{ex.Message}: {ex.InnerException?.Message}\n{ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            DataContext = viewModel;
+            InitializeComponent();
         }
     }
 }

@@ -24,7 +24,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private List<PartVM> _allParts = [];
         private int _sourceXncCount;
 
-        private IProjectService _projectService = new GibLabProjectService();
+        private readonly IProjectService _projectService;
+
+        public AppViewModel(IProjectService projectService)
+        {
+            _projectService = projectService;
+        }
 
         #region Props
         [ObservableProperty]

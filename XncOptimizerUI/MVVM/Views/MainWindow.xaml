@@ -10,12 +10,8 @@
     Title="{Binding WindowTitle}"
     Width="800"
     Height="450"
-    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel}"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel, IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
-
-    <Window.DataContext>
-        <viewmodels:AppViewModel />
-    </Window.DataContext>
 
     <Window.Resources>
         <Style x:Key="TextWrappingStyle" TargetType="TextBlock">

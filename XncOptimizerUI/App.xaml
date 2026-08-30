@@ -1,9 +1,8 @@
 ﻿<Application x:Class="XncOptimizerUI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:XncOptimizerUI"
-             StartupUri="MVVM/Views/MainWindow.xaml">
+             xmlns:local="clr-namespace:XncOptimizerUI">
     <Application.Resources>
-         
+
     </Application.Resources>
 </Application>
