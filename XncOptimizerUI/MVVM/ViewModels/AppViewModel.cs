@@ -1,4 +1,6 @@
-﻿
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -6,70 +8,37 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows;
-using System.Windows.Controls;
 using XncOptimizerUI.Contracts;
-using XncOptimizerUI.Core;
 using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
-    public class AppViewModel : ObservableObject
+    public partial class AppViewModel : ObservableObject
     {
         private readonly static string _assembly = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
-        private string _log = string.Empty;
-        private string _fullPath = string.Empty;
         private string _filterName = string.Empty;
         private decimal? _filterLength;
         private decimal? _filterWidth;
-        private string _selectedLabel = ConfigService.GetLastLabelToProcessSelected();
-        private string _newLabelToProcess = string.Empty;
-        private string _windowTitle = _assembly + " - No file selected";
         private bool _applyPartsFilter = true;
 
         private List<PartVM> _allParts = [];
-        private ObservableCollection<string> _labelsToProcess = [.. ConfigService.LabelsToProcess];
-
-        private ObservableCollection<PartVM> _parts = [];
-        private ObservableCollection<BandVM> _bands = [];
-        private ObservableCollection<SheetVM> _sheets = [];
-        private PartVM? _selectedPart;
-        private PartVM? _sourcePart;
         private int _sourceXncCount;
-        private BandVM? _selectedBand;
-
-        private RelayCommand? _openFile;
-        private RelayCommand? _replaceXncs;
-        private RelayCommand? _executeOptimize;
-        private RelayCommand? _executePrepForSplitAlongX;
-        private RelayCommand? _executePrepForSplitAlongX2;
-        private RelayCommand? _executePrepForSplitAlongX3;
-        private RelayCommand? _exportPartsList;
-        private RelayCommand? _copyPartsList;
 
         private IProjectService _projectService = new GibLabProjectService();
 
         #region Props
-        public string Log
-        {
-            get { return _log; }
-            set { _log = value; OnPropertyChanged(); }
-        }
-        public string FullPath
-        {
-            get { return _fullPath; }
-            set
-            {
-                _fullPath = value;
-                SetWindowTitle();
-                OnPropertyChanged();
+        [ObservableProperty]
+        private string _log = string.Empty;
 
-                void SetWindowTitle()
-                {
-                    var fileName = string.IsNullOrEmpty(FullPath) ? "No file selected" : Path.GetFileName(FullPath);
-                    WindowTitle = $"{_assembly} - {fileName}";
-                }
-            }
+        [ObservableProperty]
+        private string _fullPath = string.Empty;
+
+        partial void OnFullPathChanged(string value)
+        {
+            var fileName = string.IsNullOrEmpty(value) ? "No file selected" : Path.GetFileName(value);
+            WindowTitle = $"{_assembly} - {fileName}";
         }
+
         public string FilterName
         {
             get { return _filterName; }
@@ -124,102 +93,67 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 _applyPartsFilter = true;
             }
         }
-        public string NewLabelToProcess
+
+        [ObservableProperty]
+        private string _newLabelToProcess = string.Empty;
+
+        [ObservableProperty]
+        private string _selectedLabel = ConfigService.GetLastLabelToProcessSelected();
+
+        partial void OnSelectedLabelChanged(string value)
         {
-            get { return _newLabelToProcess; }
-            set { _newLabelToProcess = value; OnPropertyChanged(); }
+            ConfigService.UpdateLastLabelToProcessSelectedIndex(value);
         }
-        public string SelectedLabel
+
+        [ObservableProperty]
+        private string _windowTitle = _assembly + " - No file selected";
+
+        [ObservableProperty]
+        private ObservableCollection<PartVM> _parts = [];
+
+        [ObservableProperty]
+        private ObservableCollection<BandVM> _bands = [];
+
+        [ObservableProperty]
+        private ObservableCollection<SheetVM> _sheets = [];
+
+        [ObservableProperty]
+        private ObservableCollection<string> _labelsToProcess = [.. ConfigService.LabelsToProcess];
+
+        [ObservableProperty]
+        private PartVM? _selectedPart;
+
+        partial void OnSelectedPartChanging(PartVM? value)
         {
-            get { return _selectedLabel; }
-            set
+            if (_selectedPart != null)
             {
-                _selectedLabel = value;
-                ConfigService.UpdateLastLabelToProcessSelectedIndex(_selectedLabel);
-                OnPropertyChanged();
-            }
-        }
-        public string WindowTitle
-        {
-            get
-            {
-                return _windowTitle;
-            }
-            set
-            {
-                _windowTitle = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public ObservableCollection<PartVM> Parts
-        {
-            get { return _parts; }
-            set { _parts = value; OnPropertyChanged(); }
-        }
-
-        public ObservableCollection<BandVM> Bands
-        {
-            get { return _bands; }
-            set { _bands = value; OnPropertyChanged(); }
-        }
-
-        public ObservableCollection<SheetVM> Sheets
-        {
-            get { return _sheets; }
-            set { _sheets = value; OnPropertyChanged(); }
-        }
-
-        public ObservableCollection<string> LabelsToProcess
-        {
-            get { return _labelsToProcess; }
-            set { _labelsToProcess = value; OnPropertyChanged(); }
-        }
-
-        public PartVM? SelectedPart
-        {
-            get { return _selectedPart; }
-
-            set
-            {
-                if (_selectedPart != null)
+                if (_projectService.UpdatePart(_selectedPart.Part))
                 {
-                    if (_projectService.UpdatePart(_selectedPart!.Part))
-                    {
-                        _projectService.SaveProject();
-                        Log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
-                    }
+                    _projectService.SaveProject();
+                    Log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
                 }
-
-                _selectedPart = value; OnPropertyChanged();
             }
         }
 
-        public BandVM? SelectedBand
-        {
-            get { return _selectedBand; }
-            set { _selectedBand = value; OnPropertyChanged(); }
-        }
+        [ObservableProperty]
+        private BandVM? _selectedBand;
 
-        public PartVM? SourcePart
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SourcePartInfo))]
+        private PartVM? _sourcePart;
+
+        partial void OnSourcePartChanged(PartVM? value)
         {
-            get { return _sourcePart; }
-            set
-            {
-                _sourcePart = value;
-                _sourceXncCount = value == null ? 0 : _projectService.GetXncProgramsCount(value.Id);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(SourcePartInfo));
-            }
+            _sourceXncCount = value == null ? 0 : _projectService.GetXncProgramsCount(value.Id);
         }
 
         public string SourcePartInfo
         {
             get
             {
-                if (_sourcePart == null) return "(none)";
+                if (SourcePart == null) return "(none)";
 
-                var p = _sourcePart;
+                var p = SourcePart;
 
                 string Band(int? id) => id == null ? "-" : GetBandingExternalSymbol(id);
 
@@ -234,331 +168,261 @@ namespace XncOptimizerUI.MVVM.ViewModels
         #endregion
 
         #region Commands
-        public RelayCommand OpenFileCommand
+        [RelayCommand]
+        private void OpenFile()
         {
-            get
+            var openDialog = new OpenFileDialog()
             {
-                return _openFile ??= new RelayCommand(obj =>
+                Filter = "GibLab project files (*.project)|*.project"
+            };
+            if (openDialog.ShowDialog() == true)
+            {
+                var fullPath = openDialog.FileName;
+                try
                 {
-                    var openDialog = new OpenFileDialog()
-                    {
-                        Filter = "GibLab project files (*.project)|*.project"
-                    };
-                    if (openDialog.ShowDialog() == true)
-                    {
-                        var fullPath = openDialog.FileName;
-                        try
-                        {
-                            OpenFile(fullPath, true);
-                        }
-                        catch (Exception e)
-                        {
-                            Log = e.Message;
-                        }
-                    }
+                    LoadProject(fullPath, true);
+                }
+                catch (Exception e)
+                {
+                    Log = e.Message;
+                }
+            }
 
-                    ReadItems();
-                });
+            ReadItems();
+        }
+
+        [RelayCommand]
+        private void SaveFile()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+
+                return;
+            }
+
+            if (SelectedPart != null)
+            {
+                _ = _projectService.UpdatePart(SelectedPart.Part);
+            }
+
+            _projectService.SaveProject();
+
+            Log += $"Saved file: {FullPath} at {DateTime.Now.ToLocalTime()}\n";
+        }
+
+        [RelayCommand]
+        private void ExecuteOptimize()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var log = Log;
+
+            _projectService.GroupIdenticalElements(ref log);
+
+            Log = log;
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        [RelayCommand]
+        private void ExecutePrepForSplitAlongX()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var log = Log;
+
+            var ids = Parts
+                .Where(p => p.Name.Contains(SelectedLabel))
+                .Select(p => p.Id.ToString())
+                .ToArray() ?? [];
+
+            _projectService.PrepForSplitAlongX(ref log, ids);
+
+            Log = log;
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        [RelayCommand]
+        private void ExportPartsList()
+        {
+            if (Parts.Count == 0)
+            {
+                Log += "No parts to export!\n";
+                return;
+            }
+
+            var partsCSV = GetPartsList(';');
+
+            var saveDialog = new SaveFileDialog()
+            {
+                Filter = "CSV file (*.csv)|*.csv",
+                Title = "Save CSV File",
+                FileName = Path.GetFileNameWithoutExtension(FullPath)
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                File.WriteAllText(saveDialog.FileName, partsCSV, Encoding.UTF8);
+                MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
-        public RelayCommand SaveFileCommand
+        [RelayCommand]
+        private void CopyPartsList()
         {
-            get
+            if (Parts.Count == 0)
             {
-                return new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
+                Log += "No parts to copy!\n";
+                return;
+            }
 
-                        return;
-                    }
+            var partsList = GetPartsList('\t');
 
-                    if (_selectedPart != null)
-                    {
-                        _ = _projectService.UpdatePart(_selectedPart!.Part);
-                    }
+            Clipboard.SetText(partsList);
+            MessageBox.Show("PartsList was copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
-                    _projectService.SaveProject();
+        [RelayCommand]
+        private void SetSourcePart()
+        {
+            if (SelectedPart == null)
+            {
+                Log += "No part selected to set as source!\n";
+                return;
+            }
 
-                    Log += $"Saved file: {FullPath} at {DateTime.Now.ToLocalTime()}\n";
-                });
+            SourcePart = SelectedPart;
+            Log += $"Source part set: {SelectedPart.Name}\n";
+        }
+
+        [RelayCommand]
+        private void ResetSourcePart()
+        {
+            SourcePart = null;
+        }
+
+        [RelayCommand]
+        private void ReplaceXNCs()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            if (SourcePart == null)
+            {
+                Log += "No source part set!\n";
+                return;
+            }
+
+            var targets = _allParts
+                .Where(p => p.IsSelected && p != SourcePart)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (targets.Count == 0)
+            {
+                Log += "No parts selected to replace XNCs for!\n";
+                return;
+            }
+
+            var log = Log;
+
+            var success = _projectService.ReplaceXncPrograms(ref log, SourcePart.Part, targets);
+
+            Log = log;
+
+            if (success)
+            {
+                SourcePart = null;
+                LoadProject(_projectService.FullPath);
+                ReadItems();
             }
         }
 
-        public RelayCommand ExecuteOptimizeCommand
+        [RelayCommand]
+        private void AddNewLabel()
         {
-            get
+            if (!string.IsNullOrEmpty(NewLabelToProcess))
             {
-                return _executeOptimize ??= new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-
-                    var log = Log;
-
-                    _projectService.GroupIdenticalElements(ref log);
-
-                    Log = log;
-
-                    OpenFile(_projectService.FullPath);
-                    ReadItems();
-                });
+                ConfigService.AddLabelToProcess(NewLabelToProcess);
+                LabelsToProcess = [.. ConfigService.LabelsToProcess];
+                SelectedLabel = NewLabelToProcess;
+                NewLabelToProcess = string.Empty;
             }
         }
 
-        public RelayCommand ExecutePrepForSplitAlongXCommand
+        [RelayCommand]
+        private void DeleteLabel()
         {
-            get
+            if (LabelsToProcess.Count > 1)
             {
-
-                return _executePrepForSplitAlongX3 ?? new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-
-                    var log = Log;
-
-                    var ids = Parts
-                        .Where(p => p.Name.Contains(SelectedLabel))
-                        .Select(p => p.Id.ToString())
-                        .ToArray() ?? [];
-
-                    _projectService.PrepForSplitAlongX(ref log, ids);
-
-                    Log = log;
-
-                    OpenFile(_projectService.FullPath);
-                    ReadItems();
-                });
+                ConfigService.DeleteLabelToProcess(SelectedLabel);
+                LabelsToProcess = [.. ConfigService.LabelsToProcess];
+                SelectedLabel = ConfigService.LabelsToProcess.First();
             }
         }
 
-        public RelayCommand ExportPartsListCommand
+        [RelayCommand]
+        private void CloseFile()
         {
-            get
-            {
-                return _exportPartsList ??= new RelayCommand(obj =>
-                {
-                    if (Parts.Count == 0)
-                    {
-                        Log += "No parts to export!\n";
-                        return;
-                    }
+            _projectService.CloseProject();
 
-                    var partsCSV = GetPartsList(';');
+            Log = string.Empty;
+            FullPath = string.Empty;
+            FilterName = string.Empty;
+            FilterLength = string.Empty;
+            FilterWidth = string.Empty;
+            NewLabelToProcess = string.Empty;
 
-                    var saveDialog = new SaveFileDialog()
-                    {
-                        Filter = "CSV file (*.csv)|*.csv",
-                        Title = "Save CSV File",
-                        FileName = Path.GetFileNameWithoutExtension(_fullPath)
-                    };
+            SelectedPart = null;
+            SelectedBand = null;
+            SourcePart = null;
 
-                    if (saveDialog.ShowDialog() == true)
-                    {
-                        File.WriteAllText(saveDialog.FileName, partsCSV, Encoding.UTF8);
-                        MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                });
-            }
+            Parts = [];
+            Bands = [];
+            Sheets = [];
         }
 
-        public RelayCommand CopyPartsListCommand
+        [RelayCommand]
+        private void ClearFilters()
         {
-            get
-            {
-                return _copyPartsList ??= new(obj =>
-                {
-                    if (Parts.Count == 0)
-                    {
-                        Log += "No parts to copy!\n";
-                        return;
-                    }
-
-                    var partsList = GetPartsList('\t');
-
-                    Clipboard.SetText(partsList);
-                    MessageBox.Show("PartsList was copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                });
-            }
+            _applyPartsFilter = false;
+            FilterName = string.Empty;
+            FilterLength = string.Empty;
+            FilterWidth = string.Empty;
+            Parts = new ObservableCollection<PartVM>(_allParts);
         }
 
-        public RelayCommand SetSourcePartCommand
+        [RelayCommand]
+        private void ApplyFilter()
         {
-            get
+            if (_applyPartsFilter)
             {
-                return new RelayCommand(obj =>
-                {
-                    if (_selectedPart == null)
-                    {
-                        Log += "No part selected to set as source!\n";
-                        return;
-                    }
-
-                    SourcePart = _selectedPart;
-                    Log += $"Source part set: {_selectedPart.Name}\n";
-                });
+                FilterParts();
+                return;
             }
-        }
 
-        public RelayCommand ResetSourcePartCommand
-        {
-            get
-            {
-                return new RelayCommand(obj => SourcePart = null);
-            }
-        }
-
-        public RelayCommand ReplaceXNCsCommand
-        {
-            get
-            {
-                return _replaceXncs ??= new RelayCommand(obj =>
-                {
-                    if (_fullPath == string.Empty)
-                    {
-                        Log += "No file selected!\n";
-                        return;
-                    }
-
-                    if (_sourcePart == null)
-                    {
-                        Log += "No source part set!\n";
-                        return;
-                    }
-
-                    var targets = _allParts
-                        .Where(p => p.IsSelected && p != _sourcePart)
-                        .Select(p => p.Part)
-                        .ToList();
-
-                    if (targets.Count == 0)
-                    {
-                        Log += "No parts selected to replace XNCs for!\n";
-                        return;
-                    }
-
-                    var log = Log;
-
-                    var success = _projectService.ReplaceXncPrograms(ref log, _sourcePart.Part, targets);
-
-                    Log = log;
-
-                    if (success)
-                    {
-                        SourcePart = null;
-                        OpenFile(_projectService.FullPath);
-                        ReadItems();
-                    }
-                });
-            }
-        }
-
-        public RelayCommand AddNewLabelCommand
-        {
-            get
-            {
-                return new RelayCommand(obj =>
-                {
-                    if (!string.IsNullOrEmpty(NewLabelToProcess))
-                    {
-                        ConfigService.AddLabelToProcess(NewLabelToProcess);
-                        LabelsToProcess = [.. ConfigService.LabelsToProcess];
-                        SelectedLabel = NewLabelToProcess;
-                        NewLabelToProcess = string.Empty;
-                    }
-                });
-            }
-        }
-
-        public RelayCommand DeleteLabelCommand
-        {
-            get
-            {
-                return new RelayCommand(obj =>
-                {
-                    if (LabelsToProcess.Count > 1)
-                    {
-                        ConfigService.DeleteLabelToProcess(SelectedLabel);
-                        LabelsToProcess = [.. ConfigService.LabelsToProcess];
-                        SelectedLabel = ConfigService.LabelsToProcess.First();
-                    }
-                });
-            }
-        }
-
-        public RelayCommand CloseFileCommand
-        {
-            get
-            {
-                return new RelayCommand(obj =>
-                {
-
-                    _projectService.CloseProject();
-
-                    Log = string.Empty;
-                    FullPath = string.Empty;
-                    FilterName = string.Empty;
-                    FilterLength = string.Empty;
-                    FilterWidth = string.Empty;
-                    NewLabelToProcess = string.Empty;
-
-                    _selectedPart = null;
-                    _selectedBand = null;
-                    SourcePart = null;
-
-                    Parts = [];
-                    Bands = [];
-                    Sheets = [];
-
-                });
-            }
-        }
-
-        public RelayCommand ClearFiltersCommand
-        {
-            get
-            {
-                return new RelayCommand(obj =>
-                {
-                    _applyPartsFilter = false;
-                    FilterName = string.Empty;
-                    FilterLength = string.Empty;
-                    FilterWidth = string.Empty;
-                    Parts = new ObservableCollection<PartVM>(_allParts);
-                });
-            }
-        }
-
-        public RelayCommand ApplyFilterCommand
-        {
-            get
-            {
-                return new RelayCommand(obj =>
-                {
-                    if (_applyPartsFilter)
-                    {
-                        FilterParts();
-                        return;
-                    }
-
-                    _applyPartsFilter = true;
-                });
-            }
+            _applyPartsFilter = true;
         }
 
         #endregion
 
         #region Methods
-        private void OpenFile(string fullPath, bool firstTimeOpen = default)
+        private void LoadProject(string fullPath, bool firstTimeOpen = default)
         {
             _projectService.OpenProject(fullPath);
 
@@ -583,7 +447,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
             Sheets = new ObservableCollection<SheetVM>(sheets);
 
-            _selectedPart = null;
+            SelectedPart = null;
             _applyPartsFilter = false;
             _allParts = [.. _projectService.ReadParts().Select(p => new PartVM(p))];
 
@@ -593,7 +457,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             Parts = new ObservableCollection<PartVM>(_allParts);
-            //_applyPartsFilter = false;
             FilterName = string.Empty;
         }
 
