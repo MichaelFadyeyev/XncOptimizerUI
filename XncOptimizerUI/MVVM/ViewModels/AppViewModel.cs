@@ -25,10 +25,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private int _sourceXncCount;
 
         private readonly IProjectService _projectService;
+        private readonly IConfigService _config;
 
-        public AppViewModel(IProjectService projectService)
+        public AppViewModel(IProjectService projectService, IConfigService config)
         {
             _projectService = projectService;
+            _config = config;
+
+            // Assign the backing fields, not the generated properties: the setters
+            // would fire OnSelectedLabelChanged and write config back to disk on
+            // every launch. LabelsToProcess must be populated before SelectedLabel
+            // so the ComboBox's SelectedItem is always present in its ItemsSource.
+            _labelsToProcess = [.. _config.LabelsToProcess];
+            _selectedLabel = _config.GetLastLabelToProcessSelected();
         }
 
         #region Props
@@ -103,11 +112,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private string _newLabelToProcess = string.Empty;
 
         [ObservableProperty]
-        private string _selectedLabel = ConfigService.GetLastLabelToProcessSelected();
+        private string _selectedLabel;
 
         partial void OnSelectedLabelChanged(string value)
         {
-            ConfigService.UpdateLastLabelToProcessSelectedIndex(value);
+            _config.UpdateLastLabelToProcessSelectedIndex(value);
         }
 
         [ObservableProperty]
@@ -123,7 +132,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private ObservableCollection<SheetVM> _sheets = [];
 
         [ObservableProperty]
-        private ObservableCollection<string> _labelsToProcess = [.. ConfigService.LabelsToProcess];
+        private ObservableCollection<string> _labelsToProcess;
 
         [ObservableProperty]
         private PartVM? _selectedPart;
@@ -363,8 +372,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             if (!string.IsNullOrEmpty(NewLabelToProcess))
             {
-                ConfigService.AddLabelToProcess(NewLabelToProcess);
-                LabelsToProcess = [.. ConfigService.LabelsToProcess];
+                _config.AddLabelToProcess(NewLabelToProcess);
+                LabelsToProcess = [.. _config.LabelsToProcess];
                 SelectedLabel = NewLabelToProcess;
                 NewLabelToProcess = string.Empty;
             }
@@ -375,9 +384,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             if (LabelsToProcess.Count > 1)
             {
-                ConfigService.DeleteLabelToProcess(SelectedLabel);
-                LabelsToProcess = [.. ConfigService.LabelsToProcess];
-                SelectedLabel = ConfigService.LabelsToProcess.First();
+                _config.DeleteLabelToProcess(SelectedLabel);
+                LabelsToProcess = [.. _config.LabelsToProcess];
+                SelectedLabel = _config.LabelsToProcess.First();
             }
         }
 

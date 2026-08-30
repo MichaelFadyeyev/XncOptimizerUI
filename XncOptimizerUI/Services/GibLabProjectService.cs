@@ -35,7 +35,12 @@ namespace XncOptimizerUI.Services
             get => _fullPath;
         }
 
-        public GibLabProjectService() { }
+        private readonly IConfigService _config;
+
+        public GibLabProjectService(IConfigService config)
+        {
+            _config = config;
+        }
 
         public void GroupIdenticalElements(ref string log)
         {
@@ -347,7 +352,7 @@ namespace XncOptimizerUI.Services
                     var w = part.Attribute("w");
 
                     var width = XmlConvert.ToDecimal(dw?.Value
-                        ?? throw new ArgumentException("""XAttribute "dw" not found or has no value""")) * 2 + ConfigService.SawWidth;
+                        ?? throw new ArgumentException("""XAttribute "dw" not found or has no value""")) * 2 + _config.SawWidth;
                     var storedWidth = XmlConvert.ToString(width);
 
                     dw.SetValue(storedWidth);

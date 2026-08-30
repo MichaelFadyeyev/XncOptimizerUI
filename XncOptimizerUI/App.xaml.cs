@@ -42,6 +42,7 @@ namespace XncOptimizerUI
         {
             var services = new ServiceCollection();
 
+            services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IProjectService, GibLabProjectService>();
             services.AddSingleton<AppViewModel>();
             services.AddSingleton<MainWindow>();

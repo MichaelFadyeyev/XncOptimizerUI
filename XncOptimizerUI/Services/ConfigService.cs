@@ -1,108 +1,130 @@
-﻿
-using XncOptimizerUI.Configuration;
-using System.Text.Json;
 using System.IO;
-using System.ComponentModel.DataAnnotations;
-
+using System.Text.Json;
+using XncOptimizerUI.Configuration;
+using XncOptimizerUI.Contracts;
 
 namespace XncOptimizerUI.Services
 {
-    public static class ConfigService
+    public class ConfigService : IConfigService
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-        private static AppOptions? _options;
+        private readonly string _path;
 
-        private static string? _path;
+        private AppOptions _options;
 
-        private static JsonSerializerOptions? _jsonOptions;
-
-        static ConfigService()
+        public ConfigService() : this(GetDefaultPath())
         {
-            LoadConfiguration();
         }
 
-        public static void LoadConfiguration()
+        /// <summary>
+        /// Test seam: lets a test point the service at a temporary file
+        /// instead of the real per-user configuration.
+        /// </summary>
+        public ConfigService(string configFilePath)
+        {
+            _path = configFilePath;
+            _options = LoadConfiguration();
+        }
+
+        private static string GetDefaultPath()
         {
             var appConfigFullPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _path = Path.Combine(appConfigFullPath, "XncOptimizerUI", "configuration.json");
-            _jsonOptions = new() { WriteIndented = true };
 
-            if (File.Exists(_path))
+            return Path.Combine(appConfigFullPath, "XncOptimizerUI", "configuration.json");
+        }
+
+        private AppOptions LoadConfiguration()
+        {
+            if (!File.Exists(_path))
+            {
+                return InitOptions();
+            }
+
+            try
             {
                 string loadedJson = File.ReadAllText(_path);
-                _options = JsonSerializer.Deserialize<AppOptions>(loadedJson) ?? InitOptions();
+
+                return JsonSerializer.Deserialize<AppOptions>(loadedJson) ?? InitOptions();
             }
-            else
+            catch (JsonException)
             {
-                _options = InitOptions();
+                // A malformed file used to surface as a TypeInitializationException
+                // thrown out of the static constructor. Fall back to defaults instead.
+                return InitOptions();
             }
         }
 
-        private static AppOptions InitOptions()
+        private AppOptions InitOptions()
         {
-            var defaultOptions = new AppOptions();
-            var json = JsonSerializer.Serialize(defaultOptions, _jsonOptions);
-            var appConfigDirectory = Path.GetDirectoryName(_path ?? "XncOptimizerUI");
-
-            if (!Directory.Exists(appConfigDirectory!))
-            {
-                Directory.CreateDirectory(appConfigDirectory!);
-            }
-
-            File.WriteAllText(_path ?? "configuration.json", json);
-
-            return defaultOptions;
-        }
-
-        public static decimal SawWidth
-        {
-            get { return _options!.SawWidth; }
-        }
-
-        public static List<string> LabelsToProcess
-        {
-            get { return _options!.LabelsToProcess; }
-        }
-
-        private static void SaveOptions()
-        {
-            var json = JsonSerializer.Serialize(_options, _jsonOptions);
-            File.WriteAllText(_path!, json);
-        }
-
-        public static void AddLabelToProcess(string newLabel)
-        {
-            _options!.LabelsToProcess.Add(newLabel);
-            _options.LastLabelToProcessSelectedIndex = _options.LabelsToProcess.Count - 1;
+            _options = new AppOptions();
             SaveOptions();
 
+            return _options;
         }
 
-        public static void DeleteLabelToProcess(string labelToRemove)
+        private void SaveOptions()
         {
-            if (_options!.LabelsToProcess.Count == 1) return;
+            var appConfigDirectory = Path.GetDirectoryName(_path);
 
-            _options!.LabelsToProcess.Remove(labelToRemove);
+            if (!string.IsNullOrEmpty(appConfigDirectory) && !Directory.Exists(appConfigDirectory))
+            {
+                Directory.CreateDirectory(appConfigDirectory);
+            }
+
+            var json = JsonSerializer.Serialize(_options, _jsonOptions);
+
+            File.WriteAllText(_path, json);
+        }
+
+        public decimal SawWidth
+        {
+            get { return _options.SawWidth; }
+        }
+
+        public IReadOnlyList<string> LabelsToProcess
+        {
+            get { return _options.LabelsToProcess; }
+        }
+
+        public void AddLabelToProcess(string newLabel)
+        {
+            _options.LabelsToProcess.Add(newLabel);
+            _options.LastLabelToProcessSelectedIndex = _options.LabelsToProcess.Count - 1;
+            SaveOptions();
+        }
+
+        public void DeleteLabelToProcess(string labelToRemove)
+        {
+            if (_options.LabelsToProcess.Count == 1) return;
+
+            _options.LabelsToProcess.Remove(labelToRemove);
             _options.LastLabelToProcessSelectedIndex = 0;
             SaveOptions();
         }
 
-        public static void UpdateSawWidth(decimal newWidth)
+        public void UpdateSawWidth(decimal newWidth)
         {
-            _options!.SawWidth = newWidth;
+            _options.SawWidth = newWidth;
             SaveOptions();
         }
 
-        public static void UpdateLastLabelToProcessSelectedIndex(string label)
+        public void UpdateLastLabelToProcessSelectedIndex(string label)
         {
-            _options!.LastLabelToProcessSelectedIndex = _options.LabelsToProcess.IndexOf(label);
-            SaveOptions();
+            var index = _options.LabelsToProcess.IndexOf(label);
 
+            // WPF resets SelectedItem to null when it is not present in ItemsSource,
+            // which would otherwise persist -1 here and make the next launch throw
+            // out of GetLastLabelToProcessSelected().
+            if (index < 0) return;
+
+            _options.LastLabelToProcessSelectedIndex = index;
+            SaveOptions();
         }
 
-        public static string GetLastLabelToProcessSelected()
+        public string GetLastLabelToProcessSelected()
         {
-            return _options!.LabelsToProcess[_options.LastLabelToProcessSelectedIndex];
+            return _options.LabelsToProcess[_options.LastLabelToProcessSelectedIndex];
         }
     }
 }
