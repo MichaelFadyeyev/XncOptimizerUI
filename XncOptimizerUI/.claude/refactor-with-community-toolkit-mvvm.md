@@ -27,8 +27,12 @@ keep using `Core.ObservableObject` and are out of scope.
 - All bound property names must stay identical: `Log`, `FullPath`, `FilterName`, `FilterLength`,
   `FilterWidth`, `NewLabelToProcess`, `SelectedLabel`, `WindowTitle`, `Parts`, `Bands`, `Sheets`,
   `LabelsToProcess`, `SelectedPart`, `SelectedBand`, `SourcePart`, `SourcePartInfo`.
-- The parameterless constructor must remain (used by `d:DataContext` design instance and
-  `<viewmodels:AppViewModel />` in `MainWindow.xaml`).
+- ~~The parameterless constructor must remain (used by `d:DataContext` design instance and
+  `<viewmodels:AppViewModel />` in `MainWindow.xaml`).~~ **Lifted by the DI refactor (branch
+  `008_Implement-DI`).** `AppViewModel` is now resolved from the container and takes
+  `IProjectService`, `IConfigService` and `IDialogService`; `MainWindow` sets `DataContext`
+  in its constructor, and the designer uses `d:DesignInstance ... IsDesignTimeCreatable=False`,
+  which needs no constructor at all.
 - No command currently defines `CanExecute`, so buttons never disable — behavior must stay the same.
 
 ## Steps
