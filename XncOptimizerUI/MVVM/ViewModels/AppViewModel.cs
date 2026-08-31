@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using XncOptimizerUI.Contracts;
 
@@ -12,7 +11,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 {
     public partial class AppViewModel : ObservableObject
     {
-        private readonly static string _assembly = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
+        private readonly string _assembly;
         private string _filterName = string.Empty;
         private decimal? _filterLength;
         private decimal? _filterWidth;
@@ -25,18 +24,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private readonly IConfigService _config;
         private readonly IDialogService _dialogs;
 
-        public AppViewModel(IProjectService projectService, IConfigService config, IDialogService dialogs)
+        public AppViewModel(
+            IProjectService projectService,
+            IConfigService config,
+            IDialogService dialogs,
+            string assembly,
+            ObservableCollection<string> labelsToProcess,
+            string selectedLabel)
         {
             _projectService = projectService;
             _config = config;
             _dialogs = dialogs;
-
-            // Assign the backing fields, not the generated properties: the setters
-            // would fire OnSelectedLabelChanged and write config back to disk on
-            // every launch. LabelsToProcess must be populated before SelectedLabel
-            // so the ComboBox's SelectedItem is always present in its ItemsSource.
-            _labelsToProcess = [.. _config.LabelsToProcess];
-            _selectedLabel = _config.GetLastLabelToProcessSelected();
+            _assembly = assembly;
+            _windowTitle = _assembly + " - No file selected";
+            _labelsToProcess = labelsToProcess;
+            _selectedLabel = selectedLabel;
         }
 
         #region Props
@@ -119,7 +121,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         }
 
         [ObservableProperty]
-        private string _windowTitle = _assembly + " - No file selected";
+        private string _windowTitle = string.Empty;
 
         [ObservableProperty]
         private ObservableCollection<PartVM> _parts = [];
@@ -553,10 +555,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private static decimal? TryParseToDecimal(string value)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                return null;
-            }
             if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var width))
             {
                 return width;

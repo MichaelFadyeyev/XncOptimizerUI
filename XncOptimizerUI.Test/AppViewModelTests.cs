@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
@@ -30,7 +31,13 @@ namespace XncOptimizerUI.Test
             _config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
         }
 
-        private AppViewModel CreateViewModel() => new(_projectService, _config, _dialogs);
+        private AppViewModel CreateViewModel() => new(
+            _projectService,
+            _config,
+            _dialogs,
+            "TestAssembly",
+            new ObservableCollection<string>(_config.LabelsToProcess),
+            _config.GetLastLabelToProcessSelected());
 
         [Test]
         public void Constructor_SeedsLabelsFromConfig_WithoutWritingBack()
@@ -46,6 +53,14 @@ namespace XncOptimizerUI.Test
             // Seeding must assign the backing fields; going through the generated
             // setters would fire OnSelectedLabelChanged and save config on launch.
             _config.DidNotReceive().UpdateLastLabelToProcessSelectedIndex(Arg.Any<string>());
+        }
+
+        [Test]
+        public void Constructor_UsesInjectedAssemblyNameInWindowTitle()
+        {
+            var vm = CreateViewModel();
+
+            Assert.That(vm.WindowTitle, Is.EqualTo("TestAssembly - No file selected"));
         }
 
         [Test]

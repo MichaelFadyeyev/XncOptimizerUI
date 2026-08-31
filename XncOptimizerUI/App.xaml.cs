@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using XncOptimizerUI.Contracts;
@@ -46,7 +48,18 @@ namespace XncOptimizerUI
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IProjectService, GibLabProjectService>();
-            services.AddSingleton<AppViewModel>();
+            services.AddSingleton<AppViewModel>(serviceProvider =>
+            {
+                var config = serviceProvider.GetRequiredService<IConfigService>();
+
+                return new AppViewModel(
+                    serviceProvider.GetRequiredService<IProjectService>(),
+                    config,
+                    serviceProvider.GetRequiredService<IDialogService>(),
+                    Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty,
+                    new ObservableCollection<string>(config.LabelsToProcess),
+                    config.GetLastLabelToProcessSelected());
+            });
             services.AddSingleton<MainWindow>();
 
             return services;
