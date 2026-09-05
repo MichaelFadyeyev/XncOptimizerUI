@@ -30,9 +30,9 @@ namespace XncOptimizerUI.Test
             _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_directory);
 
-            // Work on a copy so the checked-in fixture is never mutated.
-            var source = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "test-data.project");
-            _projectPath = Path.Combine(_directory, "test-data.project");
+            // Work on a copy so the fixture is never mutated.
+            var source = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "td.project");
+            _projectPath = Path.Combine(_directory, "td.project");
             File.Copy(source, _projectPath);
         }
 
