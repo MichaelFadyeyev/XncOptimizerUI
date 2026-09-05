@@ -121,5 +121,37 @@ namespace XncOptimizerUI.Extensions
         public static string? GetThicknessValue(this XElement element) => element.Attribute("t")?.Value;
         public static decimal GetThicknessDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("t")?.Value ?? "0");
 
+        #region XNC program sub-document
+        // Raw attribute readers for the inline <program> elements (tool / var / ms / ml / mac / gr / bf..br).
+        // Values are returned as strings because many are expressions (e.g. "dy-35-40") resolved later
+        // by XncExpressionEvaluator, not plain numbers.
+        public static string? GetDxValue(this XElement element) => element.Attribute("dx")?.Value;
+        public static string? GetDyValue(this XElement element) => element.Attribute("dy")?.Value;
+        public static string? GetDzValue(this XElement element) => element.Attribute("dz")?.Value;
+        public static string? GetSideValue(this XElement element) => element.Attribute("side")?.Value;
+        public static string? GetDValue(this XElement element) => element.Attribute("d")?.Value;
+        public static string? GetExprValue(this XElement element) => element.Attribute("expr")?.Value;
+        public static string? GetCommentValue(this XElement element) => element.Attribute("comment")?.Value;
+        public static string? GetXValue(this XElement element) => element.Attribute("x")?.Value;
+        public static string? GetYValue(this XElement element) => element.Attribute("y")?.Value;
+        public static string? GetZValue(this XElement element) => element.Attribute("z")?.Value;
+        public static string? GetX1Value(this XElement element) => element.Attribute("x1")?.Value;
+        public static string? GetY1Value(this XElement element) => element.Attribute("y1")?.Value;
+        public static string? GetX2Value(this XElement element) => element.Attribute("x2")?.Value;
+        public static string? GetY2Value(this XElement element) => element.Attribute("y2")?.Value;
+        public static string? GetCxValue(this XElement element) => element.Attribute("cx")?.Value;
+        public static string? GetCyValue(this XElement element) => element.Attribute("cy")?.Value;
+        public static string? GetDpValue(this XElement element) => element.Attribute("dp")?.Value;
+        public static string? GetTValue(this XElement element) => element.Attribute("t")?.Value;
+        public static string? GetCValue(this XElement element) => element.Attribute("c")?.Value;
+        public static string? GetInValue(this XElement element) => element.Attribute("in")?.Value;
+        public static string? GetOutValue(this XElement element) => element.Attribute("out")?.Value;
+        public static string? GetSxyValue(this XElement element) => element.Attribute("sxy")?.Value;
+        public static string? GetDirValue(this XElement element) => element.Attribute("dir")?.Value;
+        public static string? GetAvValue(this XElement element) => element.Attribute("av")?.Value;
+        public static string? GetAValue(this XElement element) => element.Attribute("a")?.Value;
+        public static string? GetRValue(this XElement element) => element.Attribute("r")?.Value;
+        // <mr> length/width reuse GetLengthValue ("l") and GetWidthValue ("w") above.
+        #endregion
     }
 }

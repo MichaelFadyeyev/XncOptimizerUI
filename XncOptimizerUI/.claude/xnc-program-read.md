@@ -2,12 +2,14 @@
 name: xnc-program-read
 description: >
   How to read XNC machining-program data (tools, bores, groovings, milling entry
-  points, milling line/arc segments, variables and expressions) out of the inline
-  `program` attribute on `operation[typeId="XNC"]` elements in a GibLab `.project`
-  file. Reflects `TestData/td-programs.project` as of 2026-09-05; element/attribute
-  vocabulary cross-checked against the larger `TestData/td-2.project` (523 program
-  sub-documents). Background reference for branch `009_Read-and-display-xnc-programs`,
-  not ground truth for every dialect variation.
+  points, milling line/arc segments, rectangular milling pockets, variables and
+  expressions) out of the inline `program` attribute on `operation[typeId="XNC"]`
+  elements in a GibLab `.project` file. Reflects `TestData/td-programs.project` as of
+  2026-09-05; element/attribute vocabulary cross-checked against the larger
+  `TestData/td-2.project` (523 program sub-documents). Implemented by
+  `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs`, surfaced as
+  `IProjectService.ReadXncPrograms(int partId)`. Not ground truth for every dialect
+  variation.
 ---
 
 # Reading XNC machining programs
@@ -25,6 +27,7 @@ element it contains:
 - **groovings** — side, tool, start/end coordinates, depth, width, tool-to-centre-line position
 - **milling entry points** — side, tool, coordinates, depth, tool-to-centre-line position
 - **milling segments** — straight (`<ml>`) and arc (`<mac>`) and their parameters
+- **milling rectangles** — the `<mr>` pocket/frame primitive (length, width, angle, corner radius)
 - **variables / expressions** — `dx`, `dy`, `dz`, `tool.dia`, and custom `<var>` such as
   `contMillDepth`; all identifiers are **case-insensitive**
 
@@ -41,9 +44,10 @@ project
     └── part id="1"   ← references <good typeId="product">/<part id="1">
 ```
 
-`TestData/td-programs.project` has two XNC operations: `id=3` (`side="true"`, has bores +
-groove + milled circle) and `id=4` (`side="false"`, face bores only). **One XNC operation per
-machined face.**
+`TestData/td-programs.project` has two XNC operations. `id=3` (`side="true"`) is the coverage
+fixture: 4 edge bores, 3 groovings (one per `c` position), 3 straight milling contours, 1 arc
+milling contour (a full circle) and 1 `<mr>` rectangle pocket. `id=4` (`side="false"`) is face
+bores only. **One XNC operation per machined face.**
 
 ### Operation-level attributes worth reading
 
@@ -108,15 +112,18 @@ LINQ-to-XML has already decoded the entities, but harmless — keep it for parit
    | `<ms>` | **open a new milling contour**; its `name` is the contour tool → set `tool.dia` = that tool's `d` for the contour and its segments |
    | `<ml>` | append a line segment to the open contour |
    | `<mac>` | append an arc segment to the open contour |
-   | `<gr>` | emit a standalone grooving |
-   | `<bf> <bt> <bb> <bl> <br>` | emit a standalone bore (surface = element name) |
+   | `<gr>` | close any open contour; emit a standalone grooving |
+   | `<mr>` | close any open contour; emit a standalone rectangle pocket |
+   | `<bf> <bt> <bb> <bl> <br>` | close any open contour; emit a standalone bore (surface = element name) |
+
+   Any element other than `<ml>` / `<mac>` closes the open contour (as does end of program).
 
 4. For every coordinate / depth attribute, **resolve the value** (§5): a plain number, or an
    expression string, or a bare variable name.
 
 ## 5. Value resolution — literals, variables, expressions
 
-Any of `x y x1 y1 x2 y2 cx cy dp z t sxy` (and `<var expr>`) is **either**:
+Any of `x y x1 y1 x2 y2 cx cy dp z t l w a r sxy` (and `<var expr>`) is **either**:
 
 - a numeric literal — `-10`, `382.5`, `65` — parse directly (invariant culture, `.` decimal);
 - **or** an expression string — `dy-35-40`, `dx+10`, `tool.dia/2`, `dz+2.00`;
@@ -134,8 +141,8 @@ Any of `x y x1 y1 x2 y2 cx cy dp z t sxy` (and `<var expr>`) is **either**:
 
 ### Operators
 
-`+  -  *  /` and parentheses. Unary minus occurs (`-10`). A small evaluator is required — see
-§8; there is **no** expression evaluator in the repo today.
+`+  -  *  /` and parentheses. Unary minus occurs (`-10`). Evaluated by
+`Services/Xnc/XncExpressionEvaluator.cs` (§8).
 
 ### `<var>` attributes
 
@@ -214,7 +221,7 @@ centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `
 | `x2`, `y2` | **end** point (literal or expression) |
 | `dp` | groove **depth**, mm |
 | `t` | groove **width**, mm (may exceed the tool `d` → machine makes multiple passes) |
-| `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left |
+| `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left (all three occur in the fixture) |
 | `p` | secondary pass / position flag (seen `0`) |
 | `comment` | free-text label, e.g. `Паз15 ()` |
 
@@ -244,7 +251,9 @@ bore / groove / tool / var / end of program) belongs to it.
 | `sxy` | optional start offset in the XY plane, expression, e.g. `tool.dia/2` |
 | `fwd` | optional contour-direction flag (bool, seen `true`) |
 
-**side** comes from the operation's `side`.
+**side** comes from the operation's `side`. A program may contain several `<ms>` contours in a
+row (the fixture has three straight ones followed by the circle); each `<ms>` closes the
+previous contour and opens a new one.
 
 ### 6.5 Milling segments
 
@@ -287,6 +296,29 @@ There is **no explicit radius, sweep angle, or start point**. Derive them:
 
 `td-2.project` contains only `ml` and `mac` segment element types (no others).
 
+### 6.6 Milling rectangles — `<mr>`
+
+A self-contained rectangular milling primitive (a pocket or frame), **not** a contour of
+segments — it has no following `<ml>`/`<mac>`.
+
+```xml
+<mr x="100" y="100" dp="8" in="0" out="0" sxy="tool.dia/2" fwd="true" l="100" w="20" a="0" r="0" c="3" name="Mill6"/>
+```
+
+| attribute | meaning |
+|---|---|
+| `name` | tool reference |
+| `x`, `y` | rectangle reference point (corner or centre — **unconfirmed**) |
+| `l`, `w` | rectangle length / width, mm (literal or expression) |
+| `a` | rotation angle, degrees (seen `0`) |
+| `r` | corner radius, mm (seen `0` = sharp corners) |
+| `dp` | milling **depth**, mm |
+| `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left, `3` = pocket (the fixture uses `3`) |
+| `in`, `out`, `sxy`, `fwd` | lead-in / lead-out / start-offset / direction, as for `<ms>` |
+
+**side** comes from the operation's `side`. Attribute meanings are inferred from the single
+fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.project`.
+
 ## 7. Worked example — `TestData/td-programs.project`
 
 ### Operation `id=3`, `side="true"` → `<program dx="1380" dy="600" dz="19">`
@@ -294,21 +326,22 @@ There is **no explicit radius, sweep angle, or start point**. Derive them:
 | # | element | resolved reading |
 |---|---|---|
 | 1–2 | `<tool>` ×2 | `Bore8` d=8, `Bore10` d=10 |
-| 3 | `<ms>` | milling/groove entry, tool `Bore10` (`tool.dia`=10). entry `x=-10`, `y = dy-35-40 = 525`, `dp=4`, `sxy = tool.dia/2 = 5`, `c=0` (center), `fwd=true`, `in=0`, `out=0` |
-| 4 | `<ml>` | line to `x = dx+10 = 1390`, `y = 525`, `dp=40` (ramps 4 → 40) |
-| 5 | `<bl>` | left-edge bore (`x=0`), tool `Bore8`: along-edge `y=65`, `z=10`, depth `dp=34` |
-| 6 | `<bl>` | left-edge bore, `Bore8`: `y=105`, `z=10`, `dp=26` |
-| 7 | `<bl>` | left-edge bore, `Bore8`: `y=505`, `z=10`, `dp=26` |
-| 8 | `<bl>` | left-edge bore, `Bore8`: `y=545`, `z=10`, `dp=34` |
-| 9 | `<tool>` | `Cut3.2` d=3.2 |
-| 10 | `<gr>` | grooving, tool `Cut3.2`, label `Паз15 ()`: start `(-10, 565)`, end `(dx+10, 565) = (1390, 565)`, depth `dp=4`, width `t=10`, `c=0` (center), `p=0` |
-| 11 | `<tool>` | `Mill6` d=6 |
-| 12 | `<var>` | `contMillDepth = dz + 2.00 = 21` |
-| 13 | `<ms>` | milling entry, tool `Mill6` (`tool.dia`=6): entry `(250, 382.5)`, `dp = contMillDepth = 21`, `c=2` (left), `in=0`, `out=1` |
-| 14 | `<mac>` | arc → end `(232.5, 400)`, centre `(250, 400)`, `dir=false` (CW) |
-| 15 | `<mac>` | arc → end `(250, 417.5)`, centre `(250, 400)` |
-| 16 | `<mac>` | arc → end `(267.5, 400)`, centre `(250, 400)` |
-| 17 | `<mac>` | arc → end `(250, 382.5)`, centre `(250, 400)` — closes an `r = 17.5` circle at `(250, 400)` |
+| 3 | `<ms>` | contour 1 entry, tool `Bore10` (`tool.dia`=10): `x=-10`, `y = dy-35-40 = 525`, `dp=4`, `sxy = tool.dia/2 = 5`, `c=0` (center), `fwd=true` |
+| 4 | `<ml>` | contour 1 line to `x = dx+10 = 1390`, `y = 525`, `dp=40` (ramps 4 → 40) |
+| 5 | `<ms>` | contour 2 entry, `Bore10`: `y = dy-35-120 = 445`, `dp=4`, `c=2` (left) |
+| 6 | `<ml>` | contour 2 line to `(1390, 445)`, `dp=40` |
+| 7 | `<ms>` | contour 3 entry, `Bore10`: `y = dy-35-200 = 365`, `dp=4`, `c=2` (left) |
+| 8 | `<ml>` | contour 3 line to `(1390, 365)`, `dp=40` |
+| 9–12 | `<bl>` ×4 | left-edge bores (`x=0`), tool `Bore8`, `z=10`: `y=65 dp=34`, `y=105 dp=26`, `y=505 dp=26`, `y=545 dp=34` |
+| 13 | `<tool>` | `Cut3.2` d=3.2 |
+| 14 | `<gr>` | grooving, `Cut3.2`, `Паз15 ()`: `(-10, 565)` → `(dx+10, 565) = (1390, 565)`, `dp=4`, width `t=10`, `c=0` (center) |
+| 15 | `<gr>` | grooving, `Cut3.2`: `y1 = 565-80 = 485` → `(1390, 485)`, `c=2` (left) |
+| 16 | `<gr>` | grooving, `Cut3.2`: `y1 = 565-160 = 405` → `(1390, 405)`, `c=1` (right) |
+| 17 | `<tool>` | `Mill6` d=6 |
+| 18 | `<var>` | `contMillDepth = dz + 2.00 = 21` |
+| 19 | `<ms>` | contour 4 entry, tool `Mill6` (`tool.dia`=6): `(250, 382.5)`, `dp = contMillDepth = 21`, `c=2` (left), `out=1` |
+| 20–23 | `<mac>` ×4 | arcs, all centre `(250, 400)`, `dir=false` (CW): end `(232.5,400)`, `(250,417.5)`, `(267.5,400)`, `(250,382.5)` — closes an `r = 17.5` circle at `(250, 400)` |
+| 24 | `<mr>` | rectangle pocket, `Mill6`: origin `(100, 100)`, `l=100`, `w=20`, `a=0`, `r=0`, `dp=8`, `sxy = tool.dia/2 = 3`, `c=3` (pocket) |
 
 ### Operation `id=4`, `side="false"` → `<program dx="1380" dy="600" dz="19">`
 
@@ -320,42 +353,31 @@ There is **no explicit radius, sweep angle, or start point**. Derive them:
 | 5 | `<bf>` | face bore, `Bore15`, centre `(34, 65)`, depth `dp=14` |
 | 6 | `<bf>` | face bore, `Bore15`, centre `(34, 545)`, depth `dp=14` |
 
-## 8. Recommended C# approach (branch `009_Read-and-display-xnc-programs`)
+## 8. Implementation (branch `009_Read-and-display-xnc-programs`)
 
-*Guidance for the follow-up implementation — not built yet.*
+The reader described above is implemented:
 
-- **XML**: `System.Xml.Linq`. Two-layer parse as in `Services/GibLabProjectService.cs:388-390`.
-  Add typed getters to `Extensions/XContainersExtensions.cs` (`GetD`, `GetDp`, `GetCx`, …)
-  instead of raw `.Attribute()` in the service / view models — house convention.
-- **Models** (read-only; `MVVM/Models`, plain classes, file-scoped namespace):
-  - `XncProgram` — `Dx/Dy/Dz`, `Side`, `IReadOnlyList<XncTool>`, bores, groovings, contours.
-  - `XncTool` — `Name`, `Diameter`.
-  - `XncBore` — `Surface` (`BoreSurface` enum `Face/Top/Bottom/Left/Right`), `ToolName`,
-    `X/Y/Z`, `Depth`, `Through`.
-  - `XncGrooving` — `ToolName`, `Start`, `End`, `Depth`, `Width`, `Position`
-    (`ToolPosition` enum), `Comment`.
-  - `XncMillingContour` — `ToolName`, `Entry`, `EntryDepth`, `Position`, `LeadIn/LeadOut`,
-    `IReadOnlyList<XncMillingSegment>`.
-  - `XncMillingSegment` — abstract; `XncLineSegment { End, Depth }`,
-    `XncArcSegment { End, Center, Clockwise, Radius }`.
-  - `ToolPosition` enum: `Center = 0, Right = 1, Left = 2, Pocket = 3` (matches `c`).
-- **Expression evaluator**: small, case-insensitive, `+ - * /` + parens + unary minus + bare
-  identifiers. Seed `dx/dy/dz`, resolve `tool.dia` per element, add `<var>` results in order.
-  Options: hand-rolled shunting-yard/recursive-descent (**recommended**, no dependency);
-  `System.Data.DataTable.Compute` with variable pre-substitution (no dependency, but the
-  `tool.dia` dot and culture need care); NCalc / Jace (adds a NuGet package the project has
-  so far avoided — only `CommunityToolkit.Mvvm` + `Microsoft.Extensions.DependencyInjection`).
-- **Layering**: expose the parsed model through `Contracts/IProjectService`; view models never
-  touch `XDocument` — house convention.
-- **Tests**: NUnit 4 + NSubstitute against `TestData/td-programs.project`; assert the
-  §7 numbers (`dy-35-40 = 525`, `dx+10 = 1390`, `tool.dia/2 = 5`, `dz+2.00 = 21`, circle
-  `r = 17.5` at `(250, 400)`).
+| piece | location |
+|---|---|
+| Parsed models (read-only classes) | `MVVM/Models/Xnc/` — `XncProgram`, `XncTool`, `XncBore` + `BoreSurface`, `XncGrooving`, `XncMillingContour` + `XncMillingSegment`/`XncLineSegment`/`XncArcSegment`, `XncMillingRectangle`, `ToolPosition`, `XncPoint` |
+| Parser | `Services/Xnc/XncProgramReader.cs` — `XncProgramReader.Read(XElement xncOperation)`; two-layer parse mirroring `GibLabProjectService.cs:388-390` |
+| Expression evaluator | `Services/Xnc/XncExpressionEvaluator.cs` + `XncSymbolTable.cs` — recursive-descent `+ - * /`, parens, unary sign, dotted identifiers; case-insensitive symbols; no new dependency |
+| Attribute getters | `Extensions/XContainersExtensions.cs` `#region XNC program sub-document` |
+| Service entry point | `IProjectService.ReadXncPrograms(int partId)` → `GibLabProjectService` / `FakeProjectService` |
+| Error type | `Services/Xnc/XncProgramFormatException.cs` |
+| Tests | `XncOptimizerUI.Test/XncProgramReaderTests.cs` (against the fixture) and `XncExpressionEvaluatorTests.cs` |
+
+`ToolPosition` maps `c` directly: `Center = 0, Right = 1, Left = 2, Pocket = 3`. Unknown
+`c` values fall back to `Center`. Unknown program elements are ignored.
 
 ## 9. Open items — verify against `TestData/td-2.project`
 
-- `dir="false"` / `"true"` ↔ CW / CCW.
-- `bt` / `bb` / `br` exact attribute set and the reference for `z`.
+- `dir="false"` / `"true"` ↔ CW / CCW (reader assumes `false` = CW).
+- `bt` / `bb` / `br` exact attribute set and the reference for `z` (reader pins the drilled
+  edge coordinate to `0` / `dx` / `dy` and reads the other axis + `z`).
+- `<mr>` — whether `x`/`y` is a corner or the centre; units of `a` (degrees assumed) and `r`.
 - `in` / `out` lead-code enumeration (only `0` and `1` seen).
-- `p` on `<gr>` (only `0` seen).
+- `p` on `<gr>` (only `0` seen; not modelled).
 - Confirm no milling segment types beyond `<ml>` and `<mac>`.
-- Whether an `<ms>` with no following segment is a valid point operation.
+- Whether an `<ms>` with no following segment is a valid point operation (reader keeps it as
+  an empty contour).

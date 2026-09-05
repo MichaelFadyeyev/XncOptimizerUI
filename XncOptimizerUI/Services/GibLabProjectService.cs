@@ -6,7 +6,9 @@ using System.Xml.Linq;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Helpers.Enums;
+using XncOptimizerUI.Services.Xnc;
 
 namespace XncOptimizerUI.Services
 {
@@ -553,6 +555,16 @@ namespace XncOptimizerUI.Services
             if (_project == null) return 0;
 
             return GetXncOperations().Count(o => o.GetPart()?.GetIdIntValue() == partId);
+        }
+
+        public IReadOnlyList<XncProgram> ReadXncPrograms(int partId)
+        {
+            if (_project == null) return [];
+
+            return GetXncOperations()
+                .Where(o => o.GetPart()?.GetIdIntValue() == partId)
+                .Select(XncProgramReader.Read)
+                .ToList();
         }
 
         // A part's XNC operations are matched by both the drilled face ("side", front/back) and the

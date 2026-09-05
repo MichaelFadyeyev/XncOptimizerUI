@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.Contracts
 {
@@ -11,6 +12,9 @@ namespace XncOptimizerUI.Contracts
         void PrepForSplitAlongX(ref string log, string[] selectedPartsIds);
         bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts);
         int GetXncProgramsCount(int partId);
+
+        /// <summary>Reads and parses every XNC machining program attached to the part with the given id.</summary>
+        IReadOnlyList<XncProgram> ReadXncPrograms(int partId);
         void SaveProject();
         bool UpdatePart(ref string log, Part part);
         List<Part> ReadParts();

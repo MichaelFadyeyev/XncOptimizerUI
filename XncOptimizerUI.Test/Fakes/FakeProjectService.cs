@@ -1,5 +1,6 @@
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.Test.Fakes
 {
@@ -15,6 +16,7 @@ namespace XncOptimizerUI.Test.Fakes
         public List<Part> Parts { get; set; } = [];
         public List<Band> Bands { get; set; } = [];
         public List<Sheet> Sheets { get; set; } = [];
+        public IReadOnlyList<XncProgram> XncPrograms { get; set; } = [];
 
         public string FullPath { get; set; } = string.Empty;
 
@@ -67,6 +69,13 @@ namespace XncOptimizerUI.Test.Fakes
             Calls.Add(nameof(GetXncProgramsCount));
 
             return 0;
+        }
+
+        public IReadOnlyList<XncProgram> ReadXncPrograms(int partId)
+        {
+            Calls.Add(nameof(ReadXncPrograms));
+
+            return XncPrograms;
         }
 
         public void SaveProject()
