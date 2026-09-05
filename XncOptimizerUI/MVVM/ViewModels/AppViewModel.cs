@@ -170,16 +170,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             get
             {
-                if (SourcePart == null) return "(none)";
-
                 var p = SourcePart;
 
                 string Band(int? id) => id == null ? "-" : GetBandingExternalSymbol(id);
 
-                return $"{p.Name}  |  {p.Length}×{p.Width}  |  "
-                    + $"bands T:{Band(p.TopBandingId)} B:{Band(p.BottomBandingId)} "
-                    + $"L:{Band(p.LeftBandingId)} R:{Band(p.RightBandingId)}  |  "
-                    + $"XNC programs: {_sourceXncCount}";
+                if (p == null)
+                    return "-\n"
+                        + "-\n"
+                        + "- | - | - | -\n"
+                        + "Programs: -";
+
+                return $"{p.Name}\n"
+                    + $"{p.Length} x {p.Width}\n"
+                    + $"{Band(p.TopBandingId)} | {Band(p.BottomBandingId)} "
+                    + $"| {Band(p.LeftBandingId)} | {Band(p.RightBandingId)}\n"
+                    + $"Programs: {_sourceXncCount}";
             }
         }
 

@@ -10,7 +10,8 @@
     Title="{Binding WindowTitle}"
     Width="800"
     Height="450"
-    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel, IsDesignTimeCreatable=False}"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+                                     IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
     <Window.Resources>
@@ -25,6 +26,10 @@
             <Setter Property="Width" Value="34" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="2,0,0,0" />
+        </Style>
+        <Style x:Key="SetOptionButtonStyle2" TargetType="Button">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Margin" Value="1,0,1,0" />
         </Style>
         <Style x:Key="FilterInputStyle" TargetType="TextBox">
             <Setter Property="Height" Value="20" />
@@ -59,7 +64,7 @@
                     Style="{StaticResource CommandButtonStyle}" />
                 <Button
                     Command="{Binding ExecutePrepForSplitAlongXCommand}"
-                    Content="Prep. For Split Along"
+                    Content="Prep. For Split Along X"
                     Style="{StaticResource CommandButtonStyle}" />
                 <Label
                     Margin="5,2,0,0"
@@ -108,6 +113,44 @@
                     Command="{Binding ReplaceXNCsCommand}"
                     Content="Replace XNCs"
                     Style="{StaticResource CommandButtonStyle}" />
+                <Label
+                    Margin="5,2,0,0"
+                    Padding="0"
+                    HorizontalAlignment="Left"
+                    Content="Source part to copy from:"
+                    FontSize="10" />
+                <Grid Margin="5,0,5,5" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2"
+                        Height="60"
+                        VerticalAlignment="Center"
+                        FontSize="10"
+                        Text="{Binding SourcePartInfo}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip="{Binding SourcePartInfo}" />
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Command="{Binding SetSourcePartCommand}"
+                        Content="SET"
+                        Style="{StaticResource SetOptionButtonStyle2}" />
+                    <Button
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Command="{Binding ResetSourcePartCommand}"
+                        Content="RESET"
+                        Style="{StaticResource SetOptionButtonStyle2}" />
+                </Grid>
                 <Button
                     Command="{Binding CopyPartsListCommand}"
                     Content="Copy parts"
@@ -250,30 +293,6 @@
                         VerticalAlignment="Center"
                         Content="{Binding Parts.Count}" />
                 </StackPanel>
-            </Grid>
-            <Grid Margin="5,2,5,2" DockPanel.Dock="Top">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Text="{Binding SourcePartInfo, StringFormat='Source: {0}'}"
-                    TextTrimming="CharacterEllipsis"
-                    ToolTip="{Binding SourcePartInfo}" />
-                <Button
-                    Grid.Column="1"
-                    Command="{Binding SetSourcePartCommand}"
-                    Content="SET"
-                    Style="{StaticResource SetOptionButtonStyle}" />
-                <Button
-                    Grid.Column="2"
-                    Width="50"
-                    Command="{Binding ResetSourcePartCommand}"
-                    Content="RESET"
-                    Style="{StaticResource SetOptionButtonStyle}" />
             </Grid>
             <DataGrid
                 AutoGenerateColumns="False"
