@@ -50,15 +50,14 @@ namespace XncOptimizerUI
             services.AddSingleton<IProjectService, GibLabProjectService>();
             services.AddSingleton<AppViewModel>(serviceProvider =>
             {
+                var project = serviceProvider.GetRequiredService<IProjectService>();
                 var config = serviceProvider.GetRequiredService<IConfigService>();
+                var dialog = serviceProvider.GetRequiredService<IDialogService>();
+                var assembly = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
+                var labels = new ObservableCollection<string>(config.LabelsToProcess);
+                var selectedLabel = config.GetLastLabelToProcessSelected();
 
-                return new AppViewModel(
-                    serviceProvider.GetRequiredService<IProjectService>(),
-                    config,
-                    serviceProvider.GetRequiredService<IDialogService>(),
-                    Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty,
-                    new ObservableCollection<string>(config.LabelsToProcess),
-                    config.GetLastLabelToProcessSelected());
+                return new AppViewModel(project, config, dialog, assembly, labels, selectedLabel);
             });
             services.AddSingleton<MainWindow>();
 
