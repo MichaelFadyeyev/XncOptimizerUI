@@ -263,13 +263,14 @@ A segment's **start point is implicit** — it is the end point of the previous 
 #### Line — `<ml>`
 
 ```xml
-<ml x="dx+10" y="dy-35-40" dp="40"/>
+<ml x="dx+10" y="dy-35-40" dp="40"/>   <!-- dp present: ramp -->
+<ml x="196" y="190"/>                  <!-- dp absent: keep the current depth -->
 ```
 
 | attribute | meaning |
 |---|---|
 | `x`, `y` | segment **end** point (literal or expression) |
-| `dp` | **depth at the end** of the segment — differing from the start depth means a ramped cut |
+| `dp` | **optional** depth at the end of the segment. Present → a (possibly ramped) cut to that depth. Absent → carry the contour's current depth forward (the `<ms>` entry depth, or the previous segment's). |
 
 #### Arc — `<mac>`
 
@@ -292,9 +293,11 @@ There is **no explicit radius, sweep angle, or start point**. Derive them:
   circle centred at `(250,400)`, traversed **clockwise** in a Y-up part frame. So
   `dir="false"` ⇒ **CW**, `dir="true"` ⇒ **CCW** — *verify against `td-2.project` before
   relying on it.*
-- No `dp` on `<mac>` in the fixture → the segment holds the depth of the previous segment.
+- `dp` on `<mac>` is optional (none seen in the fixtures) → the arc holds the contour's current depth.
 
-`td-2.project` contains only `ml` and `mac` segment element types (no others).
+`td-2.project` contains only `ml` and `mac` segment element types (no others). The reader
+tracks a running depth per contour: seeded from the `<ms>` entry `dp`, replaced whenever an
+`<ml>` / `<mac>` carries its own `dp`, and stamped onto every segment as `XncMillingSegment.Depth`.
 
 ### 6.6 Milling rectangles — `<mr>`
 

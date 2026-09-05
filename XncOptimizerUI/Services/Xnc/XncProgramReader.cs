@@ -73,6 +73,9 @@ namespace XncOptimizerUI.Services.Xnc
                     expression ?? throw new XncProgramFormatException($"Missing value for {where}."),
                     symbols);
 
+            double EvalOr(string? expression, double fallback) =>
+                expression is { } e ? XncExpressionEvaluator.Evaluate(e, symbols) : fallback;
+
             double Sym(string name) => symbols.TryGet(name, out var value) ? value : 0d;
 
             void SetToolDia(string? toolName, string where)
@@ -119,15 +122,17 @@ namespace XncOptimizerUI.Services.Xnc
                     {
                         CloseContour();
                         SetToolDia(element.GetNameValue(), "<ms>");
+                        var entryDepth = Eval(element.GetDpValue(), "<ms> @dp");
                         contour = new ContourBuilder
                         {
                             ToolName = element.GetNameValue() ?? string.Empty,
                             Entry = new XncPoint(Eval(element.GetXValue(), "<ms> @x"), Eval(element.GetYValue(), "<ms> @y")),
-                            EntryDepth = Eval(element.GetDpValue(), "<ms> @dp"),
+                            EntryDepth = entryDepth,
                             Position = ParsePosition(element.GetCValue()),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
-                            StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<ms> @sxy") : null
+                            StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<ms> @sxy") : null,
+                            CurrentDepth = entryDepth
                         };
                         break;
                     }
@@ -135,10 +140,12 @@ namespace XncOptimizerUI.Services.Xnc
                     case "ml":
                     {
                         var open = contour ?? throw new XncProgramFormatException("<ml> outside a milling contour.");
+                        // dp is optional on <ml>: absent means keep cutting at the contour's current depth.
+                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
                         open.Segments.Add(new XncLineSegment
                         {
                             End = new XncPoint(Eval(element.GetXValue(), "<ml> @x"), Eval(element.GetYValue(), "<ml> @y")),
-                            Depth = Eval(element.GetDpValue(), "<ml> @dp")
+                            Depth = open.CurrentDepth
                         });
                         break;
                     }
@@ -146,6 +153,7 @@ namespace XncOptimizerUI.Services.Xnc
                     case "mac":
                     {
                         var open = contour ?? throw new XncProgramFormatException("<mac> outside a milling contour.");
+                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
                         var end = new XncPoint(Eval(element.GetXValue(), "<mac> @x"), Eval(element.GetYValue(), "<mac> @y"));
                         var center = new XncPoint(Eval(element.GetCxValue(), "<mac> @cx"), Eval(element.GetCyValue(), "<mac> @cy"));
                         open.Segments.Add(new XncArcSegment
@@ -153,7 +161,8 @@ namespace XncOptimizerUI.Services.Xnc
                             End = end,
                             Center = center,
                             Clockwise = !ParseBool(element.GetDirValue(), false),
-                            Radius = Distance(center, end)
+                            Radius = Distance(center, end),
+                            Depth = open.CurrentDepth
                         });
                         break;
                     }
@@ -285,6 +294,10 @@ namespace XncOptimizerUI.Services.Xnc
             public int LeadIn { get; init; }
             public int LeadOut { get; init; }
             public double? StartOffsetXY { get; init; }
+
+            /// <summary>Running cut depth, seeded from the entry and updated by each segment's <c>dp</c>.</summary>
+            public double CurrentDepth { get; set; }
+
             public List<XncMillingSegment> Segments { get; } = [];
 
             public XncMillingContour Build() => new()

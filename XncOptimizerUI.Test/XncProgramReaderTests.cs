@@ -13,12 +13,12 @@ namespace XncOptimizerUI.Test
     [TestFixture]
     public class XncProgramReaderTests
     {
-        private static string FixturePath =>
-            Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "td-programs.project");
+        private static List<XncProgram> ReadFixture() => ReadPrograms("td-programs.project");
 
-        private static List<XncProgram> ReadFixture()
+        private static List<XncProgram> ReadPrograms(string fixtureFileName)
         {
-            var doc = XDocument.Load(FixturePath);
+            var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", fixtureFileName);
+            var doc = XDocument.Load(path);
 
             return doc.Root!
                 .Elements("operation")
@@ -186,6 +186,26 @@ namespace XncOptimizerUI.Test
                 Assert.That(rect.Depth, Is.EqualTo(8));
                 Assert.That(rect.Position, Is.EqualTo(ToolPosition.Pocket));  // c = 3
                 Assert.That(rect.StartOffsetXY, Is.EqualTo(3));               // tool.dia/2, Mill6 d = 6
+            });
+        }
+
+        [Test]
+        public void Reads_millingSegmentsThatOmitDp_carryingTheContourDepthForward()
+        {
+            // Real export where every <ml>/<mac> has no dp — the cut stays at the entry depth.
+            var programs = ReadPrograms("td-missing-ml-error.project");
+
+            Assert.That(programs, Has.Count.EqualTo(2));
+
+            var contour = programs[0].MillingContours.Single();
+            Assert.Multiple(() =>
+            {
+                Assert.That(contour.EntryDepth, Is.EqualTo(38));          // contMillDepth = dz + 2, dz = 36
+                Assert.That(contour.Segments, Has.Count.EqualTo(3));      // ml, mac, ml
+                Assert.That(contour.Segments.Select(s => s.Depth), Is.EqualTo(new[] { 38d, 38d, 38d }));
+                Assert.That(contour.Segments[0], Is.InstanceOf<XncLineSegment>());
+                Assert.That(contour.Segments[1], Is.InstanceOf<XncArcSegment>());
+                Assert.That(contour.Segments[2], Is.InstanceOf<XncLineSegment>());
             });
         }
 
