@@ -22,4 +22,8 @@
 	<ItemGroup>
 	  <None Include=".claude\code-analysis.md" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include=".copilot\" />
+	</ItemGroup>
 </Project>
