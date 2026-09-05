@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.Test.Fakes;
 
@@ -269,6 +270,92 @@ namespace XncOptimizerUI.Test
             vm.SelectedPart = vm.Parts[1];
 
             Assert.That(_projectService.SaveProjectCount, Is.Zero);
+        }
+
+        [Test]
+        public void SelectingPart_RendersItsXncProgramsAsBriefLines()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms =
+            [
+                new XncProgram
+                {
+                    Side = true,
+                    Dx = 1380, Dy = 600, Dz = 19,
+                    Tools = [new XncTool { Name = "Bore8", Diameter = 8 }],
+                    Bores =
+                    [
+                        new XncBore
+                        {
+                            Surface = BoreSurface.Left, ToolName = "Bore8",
+                            X = 0, Y = 65, Z = 10, Depth = 34
+                        }
+                    ],
+                    Groovings =
+                    [
+                        new XncGrooving
+                        {
+                            ToolName = "Cut3.2",
+                            Start = new XncPoint(-10, 565), End = new XncPoint(1390, 565),
+                            Depth = 4, Width = 10, Position = ToolPosition.Center
+                        }
+                    ],
+                    MillingContours =
+                    [
+                        new XncMillingContour
+                        {
+                            ToolName = "Mill6", Entry = new XncPoint(250, 382.5),
+                            EntryDepth = 21, Position = ToolPosition.Left,
+                            Segments = [new XncArcSegment(), new XncArcSegment()]
+                        }
+                    ]
+                }
+            ];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.SelectedPart = vm.Parts[0];
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartPrograms, Does.StartWith("Programs: 1"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/xnc/front/dx1380 dy600 dz19"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/tool/front/Bore8 Ø8"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/bore/front/Left Bore8 (0,65,10) dp34"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/groove/front/Cut3.2 (-10,565)-(1390,565) dp4 w10 Center"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/mill/front/Mill6 (250,382.5) dp21 Left 2 arc"));
+            });
+        }
+
+        [Test]
+        public void SelectingPart_WithNoPrograms_ShowsNone()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.SelectedPart = vm.Parts[0];
+
+            Assert.That(vm.SelectedPartPrograms, Is.EqualTo("Programs: none"));
+        }
+
+        [Test]
+        public void ChangingSelectedPart_RefreshesTheProgramsText()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = false, Dx = 800, Dy = 300, Dz = 16 }];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.SelectedPart = vm.Parts[0];
+            Assert.That(vm.SelectedPartPrograms, Does.Contain("/xnc/back/dx800 dy300 dz16"));
+
+            vm.SelectedPart = null;
+            Assert.That(vm.SelectedPartPrograms, Is.EqualTo("Programs: -"));
         }
 
         [Test]

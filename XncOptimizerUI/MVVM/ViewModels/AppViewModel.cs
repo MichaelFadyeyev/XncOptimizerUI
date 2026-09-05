@@ -6,11 +6,14 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using XncOptimizerUI.Contracts;
+using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {
     public partial class AppViewModel : ObservableObject
     {
+        private const string NoProgramsInfo = "Programs: -";
+
         private readonly string _assembly;
         private string _filterName = string.Empty;
         private decimal? _filterLength;
@@ -153,6 +156,18 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 Log = log;
             }
         }
+
+        partial void OnSelectedPartChanged(PartVM? value)
+        {
+            SelectedPartPrograms = BuildSelectedPartPrograms(value);
+        }
+
+        /// <summary>
+        /// Brief, one-line-per-feature summary of the XNC programs attached to
+        /// <see cref="SelectedPart"/>. Refreshed whenever the selection changes.
+        /// </summary>
+        [ObservableProperty]
+        private string _selectedPartPrograms = NoProgramsInfo;
 
         [ObservableProperty]
         private BandVM? _selectedBand;
@@ -557,6 +572,100 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             return bandingId == null ? string.Empty : Bands.First(b => b.Id == bandingId).ExternalSymbol;
         }
+
+        /// <summary>
+        /// Reads the selected part's XNC programs and renders them as brief lines of
+        /// the shape <c>#/type/side/&lt;params&gt;</c> (one per tool, bore, groove,
+        /// milling contour and rectangle), preceded by a <c>Programs: N</c> header.
+        /// </summary>
+        private string BuildSelectedPartPrograms(PartVM? part)
+        {
+            if (part is null || string.IsNullOrEmpty(FullPath))
+            {
+                return NoProgramsInfo;
+            }
+
+            IReadOnlyList<XncProgram> programs;
+
+            try
+            {
+                programs = _projectService.ReadXncPrograms(part.Id);
+            }
+            catch (Exception e)
+            {
+                return $"Programs: <read error: {e.Message}>";
+            }
+
+            if (programs.Count == 0)
+            {
+                return "Programs: none";
+            }
+
+            var sb = new StringBuilder();
+            sb.Append("Programs: ").Append(programs.Count).Append('\n');
+
+            var n = 0;
+
+            foreach (var program in programs)
+            {
+                var side = program.Side ? "front" : "back";
+
+                void Line(string type, string parameters) => sb
+                    .Append(++n).Append('/').Append(type).Append('/').Append(side).Append('/')
+                    .Append(parameters).Append('\n');
+
+                Line("xnc", $"dx{Num(program.Dx)} dy{Num(program.Dy)} dz{Num(program.Dz)}");
+
+                foreach (var tool in program.Tools)
+                {
+                    Line("tool", $"{tool.Name} Ø{Num(tool.Diameter)}");
+                }
+
+                foreach (var bore in program.Bores)
+                {
+                    var through = bore.Through ? " through" : string.Empty;
+                    Line("bore", $"{bore.Surface} {bore.ToolName} "
+                        + $"({Num(bore.X)},{Num(bore.Y)},{Num(bore.Z)}) dp{Num(bore.Depth)}{through}");
+                }
+
+                foreach (var groove in program.Groovings)
+                {
+                    Line("groove", $"{groove.ToolName} "
+                        + $"({Num(groove.Start.X)},{Num(groove.Start.Y)})-({Num(groove.End.X)},{Num(groove.End.Y)}) "
+                        + $"dp{Num(groove.Depth)} w{Num(groove.Width)} {groove.Position}");
+                }
+
+                foreach (var contour in program.MillingContours)
+                {
+                    Line("mill", $"{contour.ToolName} "
+                        + $"({Num(contour.Entry.X)},{Num(contour.Entry.Y)}) dp{Num(contour.EntryDepth)} "
+                        + $"{contour.Position} {DescribeSegments(contour.Segments)}");
+                }
+
+                foreach (var rect in program.MillingRectangles)
+                {
+                    Line("rect", $"{rect.ToolName} "
+                        + $"({Num(rect.Origin.X)},{Num(rect.Origin.Y)}) {Num(rect.Length)}x{Num(rect.Width)} "
+                        + $"dp{Num(rect.Depth)} {rect.Position}");
+                }
+            }
+
+            return sb.ToString().TrimEnd('\n');
+        }
+
+        private static string DescribeSegments(IReadOnlyList<XncMillingSegment> segments)
+        {
+            var lines = segments.Count(s => s is XncLineSegment);
+            var arcs = segments.Count(s => s is XncArcSegment);
+
+            var parts = new List<string>(2);
+            if (lines > 0) parts.Add($"{lines} line");
+            if (arcs > 0) parts.Add($"{arcs} arc");
+
+            return parts.Count == 0 ? "0 seg" : string.Join("+", parts);
+        }
+
+        private static string Num(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
         private static decimal? TryParseToDecimal(string value)
         {

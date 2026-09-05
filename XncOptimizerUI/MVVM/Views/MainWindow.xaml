@@ -38,9 +38,9 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="MainGrid">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="150" />
+            <ColumnDefinition Width="200" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -48,10 +48,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <DockPanel
             Grid.Row="0"
-            Grid.RowSpan="3"
+            Grid.RowSpan="4"
             Grid.Column="0">
             <StackPanel DockPanel.Dock="Top">
                 <Button
@@ -363,7 +364,19 @@
             </DataGrid>
         </DockPanel>
         <TextBox
+            x:Name="ProgramsTextBlox"
             Grid.Row="2"
+            Grid.Column="1"
+            Grid.ColumnSpan="2"
+            Height="60"
+            HorizontalScrollBarVisibility="Auto"
+            IsReadOnly="True"
+            Text="{Binding SelectedPartPrograms, Mode=OneWay}"
+            TextWrapping="NoWrap"
+            VerticalScrollBarVisibility="Auto" />
+        <TextBox
+            x:Name="LogTextBox"
+            Grid.Row="3"
             Grid.Column="1"
             Grid.ColumnSpan="2"
             Height="60"
