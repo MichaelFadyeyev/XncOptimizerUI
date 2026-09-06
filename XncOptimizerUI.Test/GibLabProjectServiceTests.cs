@@ -215,7 +215,7 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
-        public void ConvertGroovesAndMills_GroovesToMills_ConvertsGrooveAndAddsBoreTool()
+        public void ConvertGroovesAndMills_GroovesToMills_ConvertsGrooveAddsBoreToolAndDropsOrphan()
         {
             var service = CreateService();
             service.OpenProject(CopyFixture("td-grooving.project"));
@@ -230,7 +230,8 @@ namespace XncOptimizerUI.Test
                 Assert.That(service.FullPath, Does.EndWith("_gm.project"));
                 Assert.That(File.Exists(service.FullPath), Is.True);
                 Assert.That(log, Does.Contain("converted 1"));
-                Assert.That(log, Does.Contain("1 new tool"));
+                Assert.That(log, Does.Contain("1 tool(s) added"));
+                Assert.That(log, Does.Contain("1 tool(s) removed"));
             });
 
             var program = service.ReadXncPrograms(2).Single();
@@ -240,6 +241,8 @@ namespace XncOptimizerUI.Test
                 Assert.That(program.Groovings, Is.Empty);
                 Assert.That(program.MillingContours, Has.Count.EqualTo(1));
                 Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(10d));
+                // Cut3.2 was the groove's only user; after conversion nothing references it.
+                Assert.That(program.Tools.Select(t => t.Name), Does.Not.Contain("Cut3.2"));
             });
 
             var contour = program.MillingContours.Single();
@@ -247,13 +250,42 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                // groove ran along X at y=50; x1=-10 -> -width, x2=dx+10 -> dx+width (width = t = 10)
-                Assert.That(contour.Entry.X, Is.EqualTo(-10d));
+                // groove ran along X at y=50; overshoot = tool.dia/2 = width/2 = 5
+                Assert.That(contour.Entry.X, Is.EqualTo(-5d));    // x1=-10 -> -5
                 Assert.That(contour.Entry.Y, Is.EqualTo(50d));
-                Assert.That(segment.End.X, Is.EqualTo(10010d));
+                Assert.That(segment.End.X, Is.EqualTo(10005d));   // x2=dx+10 -> dx+5
                 Assert.That(segment.End.Y, Is.EqualTo(50d));
                 Assert.That(contour.EntryDepth, Is.EqualTo(4d));
                 Assert.That(contour.Position, Is.EqualTo(ToolPosition.Right)); // groove c="1"
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_KeepsToolStillUsedByAnUnconvertedGroove()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-grooving-mixed.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(log, Does.Contain("converted 1"));
+                Assert.That(log, Does.Contain("0 tool(s) removed"));
+            });
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.MillingContours, Has.Count.EqualTo(1));
+                Assert.That(program.Groovings, Has.Count.EqualTo(1), "the diagonal groove is left untouched");
+                // Cut3.2 is still referenced by that diagonal groove, so it must survive.
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Cut3.2"));
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(10d));
             });
         }
 

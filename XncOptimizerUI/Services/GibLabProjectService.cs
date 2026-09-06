@@ -563,7 +563,8 @@ namespace XncOptimizerUI.Services
 
             var totalConverted = 0;
             var totalIgnored = 0;
-            var totalTools = 0;
+            var totalToolsAdded = 0;
+            var totalToolsRemoved = 0;
             var touchedParts = 0;
 
             try
@@ -579,7 +580,8 @@ namespace XncOptimizerUI.Services
 
                     var partConverted = 0;
                     var partIgnored = 0;
-                    var partTools = 0;
+                    var partToolsAdded = 0;
+                    var partToolsRemoved = 0;
 
                     foreach (var op in partOps)
                     {
@@ -594,7 +596,7 @@ namespace XncOptimizerUI.Services
                         var program = programXml.Element("program")
                             ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
 
-                        var (converted, ignored, toolsAdded) = direction == GrooveMillDirection.GroovesToMills
+                        var (converted, ignored, toolsAdded, toolsRemoved) = direction == GrooveMillDirection.GroovesToMills
                             ? ConvertGroovesToMills(program)
                             : ConvertMillsToGrooves(program);
 
@@ -605,7 +607,8 @@ namespace XncOptimizerUI.Services
 
                         partConverted += converted;
                         partIgnored += ignored;
-                        partTools += toolsAdded;
+                        partToolsAdded += toolsAdded;
+                        partToolsRemoved += toolsRemoved;
                     }
 
                     if (partConverted > 0 || partIgnored > 0)
@@ -613,13 +616,14 @@ namespace XncOptimizerUI.Services
                         touchedParts++;
 
                         log += direction == GrooveMillDirection.GroovesToMills
-                            ? $"Grooves->Mills: \"{part.Name}\" (id={part.Id}): {partConverted} groove(s) -> mill(s), {partTools} new tool(s), {partIgnored} ignored\n"
-                            : $"Mills->Grooves: \"{part.Name}\" (id={part.Id}): {partConverted} mill(s) -> groove(s), {partIgnored} ignored\n";
+                            ? $"Grooves->Mills: \"{part.Name}\" (id={part.Id}): {partConverted} groove(s) -> mill(s), {partToolsAdded} tool(s) added, {partToolsRemoved} tool(s) removed, {partIgnored} ignored\n"
+                            : $"Mills->Grooves: \"{part.Name}\" (id={part.Id}): {partConverted} mill(s) -> groove(s), {partToolsRemoved} tool(s) removed, {partIgnored} ignored\n";
                     }
 
                     totalConverted += partConverted;
                     totalIgnored += partIgnored;
-                    totalTools += partTools;
+                    totalToolsAdded += partToolsAdded;
+                    totalToolsRemoved += partToolsRemoved;
                 }
             }
             catch (Exception e)
@@ -644,7 +648,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nGroove/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalTools} new tool(s) across {touchedParts} part(s). Stored to: {_fullPath}";
+            log += $"***\nGroove/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}";
 
             return true;
         }
@@ -658,7 +662,7 @@ namespace XncOptimizerUI.Services
         private const double AxisEpsilon = 1e-6;
         private const double DiameterEpsilon = 1e-6;
 
-        private static (int converted, int ignored, int toolsAdded) ConvertGroovesToMills(XElement program)
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertGroovesToMills(XElement program)
         {
             var symbols = SeedProgramSymbols(program);
             var toolsByName = ReadToolDiameters(program);
@@ -668,6 +672,7 @@ namespace XncOptimizerUI.Services
             var converted = 0;
             var ignored = 0;
             var addedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var originalToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var gr in program.Elements("gr").ToList())
             {
@@ -688,6 +693,11 @@ namespace XncOptimizerUI.Services
                 var width = EvalXnc(gr.GetTValue(), symbols);
                 var dp = gr.GetDpValue() ?? "0";
 
+                if (gr.GetNameValue() is { } originalTool)
+                {
+                    originalToolNames.Add(originalTool); // considered for cleanup once conversion is done
+                }
+
                 var toolName = FindToolByDiameter(toolsByName, width);
 
                 if (toolName == null)
@@ -700,17 +710,20 @@ namespace XncOptimizerUI.Services
                     addedToolNames.Add(toolName); // counted (distinct) as toolsAdded at the end
                 }
 
-                // Overshoot the part outline by one tool diameter, but only along the axis the
-                // groove actually runs (the constant axis keeps its authored value).
+                // Overshoot the part outline by half a tool diameter (the tool centre must clear
+                // the edge), but only along the axis the groove actually runs (the constant axis
+                // keeps its authored value).
+                var overshoot = width / 2d;
+
                 if (horizontal)
                 {
-                    x1 = OvershootAlongAxis(x1, dx, width);
-                    x2 = OvershootAlongAxis(x2, dx, width);
+                    x1 = OvershootAlongAxis(x1, dx, overshoot);
+                    x2 = OvershootAlongAxis(x2, dx, overshoot);
                 }
                 else
                 {
-                    y1 = OvershootAlongAxis(y1, dy, width);
-                    y2 = OvershootAlongAxis(y2, dy, width);
+                    y1 = OvershootAlongAxis(y1, dy, overshoot);
+                    y2 = OvershootAlongAxis(y2, dy, overshoot);
                 }
 
                 var ms = new XElement("ms",
@@ -742,10 +755,12 @@ namespace XncOptimizerUI.Services
                 converted++;
             }
 
-            return (converted, ignored, addedToolNames.Count);
+            var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
+
+            return (converted, ignored, addedToolNames.Count, toolsRemoved);
         }
 
-        private static (int converted, int ignored, int toolsAdded) ConvertMillsToGrooves(XElement program)
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToGrooves(XElement program)
         {
             var symbols = SeedProgramSymbols(program);
             var toolsByName = ReadToolDiameters(program);
@@ -755,6 +770,7 @@ namespace XncOptimizerUI.Services
 
             var converted = 0;
             var ignored = 0;
+            var originalToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var elements = program.Elements().ToList();
 
@@ -868,28 +884,78 @@ namespace XncOptimizerUI.Services
                     gr.SetAttributeValue("comment", comment);
                 }
 
+                originalToolNames.Add(toolName);
+
                 ms.AddBeforeSelf(gr);
                 ml.Remove();
                 ms.Remove();
                 converted++;
             }
 
-            return (converted, ignored, 0);
+            var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
+
+            return (converted, ignored, 0, toolsRemoved);
         }
 
-        private static double OvershootAlongAxis(double value, double size, double diameter)
+        private static double OvershootAlongAxis(double value, double size, double offset)
         {
             if (value <= 0d)
             {
-                return -diameter;
+                return -offset;
             }
 
             if (value >= size)
             {
-                return size + diameter;
+                return size + offset;
             }
 
             return value;
+        }
+
+        /// <summary>
+        /// Removes <c>&lt;tool&gt;</c> declarations whose name is in <paramref name="candidateNames"/>
+        /// (the tools the converted grooves/mills referenced) and is no longer referenced by any
+        /// remaining tool-using element in the program. Returns the number removed.
+        /// </summary>
+        private static int RemoveUnreferencedTools(XElement program, HashSet<string> candidateNames)
+        {
+            if (candidateNames.Count == 0)
+            {
+                return 0;
+            }
+
+            var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var element in program.Elements())
+            {
+                var tag = element.Name.LocalName;
+
+                // <tool> is the declaration; <var> @name is a variable, not a tool; <ml>/<mac> carry no name.
+                if (tag is "tool" or "var" or "ml" or "mac")
+                {
+                    continue;
+                }
+
+                if (element.GetNameValue() is { } name)
+                {
+                    referenced.Add(name);
+                }
+            }
+
+            var removed = 0;
+
+            foreach (var tool in program.Elements("tool").ToList())
+            {
+                if (tool.GetNameValue() is { } name
+                    && candidateNames.Contains(name)
+                    && !referenced.Contains(name))
+                {
+                    tool.Remove();
+                    removed++;
+                }
+            }
+
+            return removed;
         }
 
         private static XncSymbolTable SeedProgramSymbols(XElement program)

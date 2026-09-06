@@ -58,13 +58,16 @@ Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` whic
 bound via `Helpers/EnumToBooleanConverter`). *Grooves → Mills*: each axis-parallel `<gr>`
 becomes a single-segment milling contour (`<ms>` + `<ml>`) cut with a round tool of diameter =
 groove width `t` (an existing `<tool>` of that diameter is reused, else a `Bore<t>` tool is
-added); endpoints that reach the part outline overshoot it by one tool diameter along the
-groove axis. *Mills → Grooves*: the inverse, but only for a contour that is one straight
-segment, axis-parallel, shallower than `dz`, and not a pocket (`c≠3`); outside endpoints are
-clamped onto the outline. Diagonal / non-compliant elements (and all `<mr>` rectangles) are
-left untouched and tallied as *ignored*; per-part and batch converted/ignored counts go to the
-log. Nothing converted ⇒ returns `false`, saves nothing. Output saved as `_gm.project` with a
-timestamped description. `GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)`.
+added); endpoints that reach the part outline overshoot it by **half a tool diameter** (so the
+tool centre clears the edge) along the groove axis. *Mills → Grooves*: the inverse, but only
+for a contour that is one straight segment, axis-parallel, shallower than `dz`, and not a
+pocket (`c≠3`); outside endpoints are clamped onto the outline. After each program is rewritten,
+any `<tool>` that the converted grooves/mills referenced and that nothing else in the program
+still uses is removed. Diagonal / non-compliant elements (and all `<mr>` rectangles) are left
+untouched and tallied as *ignored*; per-part and batch converted / ignored / tools-added /
+tools-removed counts go to the log. Nothing converted ⇒ returns `false`, saves nothing. Output
+saved as `_gm.project` with a timestamped description.
+`GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)`.
 
 **Group identical elements** — (originally "Optimize") clusters XNC operations by: program content + edge-band materials. Groups are renumbered, consolidated into one product good, saved as `_opt.project`. Guards against re-running on already-optimized files or files with no XNC operations (logs warning instead of silently no-op'ing).
 
