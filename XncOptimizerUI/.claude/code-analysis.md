@@ -15,8 +15,8 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 
 ## Core abstractions & services
 
-- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `FullPath`), implemented by `GibLabProjectService`.
-- **`Services/GibLabProjectService.cs`** — contains the old `XmlOperator`/`XncOperator` class library's logic, moved and extended with: XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), and XNC operation counting (`GetXncProgramsCount`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[xnc-program-read]]).
+- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `FullPath`), implemented by `GibLabProjectService`.
+- **`Services/GibLabProjectService.cs`** — contains the old `XmlOperator`/`XncOperator` class library's logic, moved and extended with: XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), and groove ⇄ mill conversion (`ConvertGroovesAndMills`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[xnc-program-read]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
 - **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `text#id` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
 
@@ -52,6 +52,19 @@ Programs: 1
 Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[xnc-program-read]].
 
 **Replace XNC programs** — new: source part's drill programs (one per face: front/back) are validated, then copied to selected target parts. Before copying, all targets are checked for: (1) identical dimensions & banding, (2) same number of XNC faces, (3) matching face/turn orientations. If validation passes, the `program` attribute and `countBore` metadata are overwritten, and the file is saved as `_replaced-XNC.project` with a timestamp description. Implemented in `GibLabProjectService.ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)` with detailed validation and error logging.
+
+**Convert grooves ⇄ mills** — new: for the parts **checked** in the Parts grid (the "Sel"
+`PartVM.IsSelected` column), rewrites every XNC program in the chosen direction (radio toggle
+bound via `Helpers/EnumToBooleanConverter`). *Grooves → Mills*: each axis-parallel `<gr>`
+becomes a single-segment milling contour (`<ms>` + `<ml>`) cut with a round tool of diameter =
+groove width `t` (an existing `<tool>` of that diameter is reused, else a `Bore<t>` tool is
+added); endpoints that reach the part outline overshoot it by one tool diameter along the
+groove axis. *Mills → Grooves*: the inverse, but only for a contour that is one straight
+segment, axis-parallel, shallower than `dz`, and not a pocket (`c≠3`); outside endpoints are
+clamped onto the outline. Diagonal / non-compliant elements (and all `<mr>` rectangles) are
+left untouched and tallied as *ignored*; per-part and batch converted/ignored counts go to the
+log. Nothing converted ⇒ returns `false`, saves nothing. Output saved as `_gm.project` with a
+timestamped description. `GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)`.
 
 **Group identical elements** — (originally "Optimize") clusters XNC operations by: program content + edge-band materials. Groups are renumbered, consolidated into one product good, saved as `_opt.project`. Guards against re-running on already-optimized files or files with no XNC operations (logs warning instead of silently no-op'ing).
 

@@ -397,6 +397,46 @@ namespace XncOptimizerUI.MVVM.ViewModels
             ReadItems();
         }
 
+        [ObservableProperty]
+        private GrooveMillDirection _grooveMillDirection = GrooveMillDirection.GroovesToMills;
+
+        [RelayCommand]
+        private void ConvertGroovesAndMills()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var parts = _allParts
+                .Where(p => p.IsSelected)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += "No parts checked for groove/mill conversion!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
         [RelayCommand]
         private void AddNewLabel()
         {

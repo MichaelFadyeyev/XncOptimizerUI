@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -550,6 +551,433 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
+        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for groove/mill conversion.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+
+            var totalConverted = 0;
+            var totalIgnored = 0;
+            var totalTools = 0;
+            var touchedParts = 0;
+
+            try
+            {
+                foreach (var part in parts)
+                {
+                    var partOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == part.Id).ToList();
+
+                    if (partOps.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var partConverted = 0;
+                    var partIgnored = 0;
+                    var partTools = 0;
+
+                    foreach (var op in partOps)
+                    {
+                        var programAttribute = op.GetProgram();
+
+                        if (programAttribute == null)
+                        {
+                            continue;
+                        }
+
+                        var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+                        var program = programXml.Element("program")
+                            ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
+
+                        var (converted, ignored, toolsAdded) = direction == GrooveMillDirection.GroovesToMills
+                            ? ConvertGroovesToMills(program)
+                            : ConvertMillsToGrooves(program);
+
+                        if (converted > 0)
+                        {
+                            programAttribute.Value = program.ToString();
+                        }
+
+                        partConverted += converted;
+                        partIgnored += ignored;
+                        partTools += toolsAdded;
+                    }
+
+                    if (partConverted > 0 || partIgnored > 0)
+                    {
+                        touchedParts++;
+
+                        log += direction == GrooveMillDirection.GroovesToMills
+                            ? $"Grooves->Mills: \"{part.Name}\" (id={part.Id}): {partConverted} groove(s) -> mill(s), {partTools} new tool(s), {partIgnored} ignored\n"
+                            : $"Mills->Grooves: \"{part.Name}\" (id={part.Id}): {partConverted} mill(s) -> groove(s), {partIgnored} ignored\n";
+                    }
+
+                    totalConverted += partConverted;
+                    totalIgnored += partIgnored;
+                    totalTools += partTools;
+                }
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{e.Message}";
+                return false;
+            }
+
+            if (totalConverted == 0)
+            {
+                var what = direction == GrooveMillDirection.GroovesToMills ? "grooves" : "mills";
+                log += $"***\nNo {what} converted (ignored {totalIgnored}).";
+                return false;
+            }
+
+            AppendDescription(direction == GrooveMillDirection.GroovesToMills
+                ? "converted grooves to mills"
+                : "converted mills to grooves");
+
+            var result = GetGrooveMillFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nGroove/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalTools} new tool(s) across {touchedParts} part(s). Stored to: {_fullPath}";
+
+            return true;
+        }
+
+        // --- Groove <-> mill program rewriting -------------------------------------------------
+        // Both directions decode the escaped <program> sub-document (as PrepForSplitAlongX does),
+        // mutate the element tree in place, and let the caller re-serialize with program.ToString().
+        // Only axis-parallel single-segment paths are converted; everything else is counted as
+        // "ignored" and left untouched.
+
+        private const double AxisEpsilon = 1e-6;
+        private const double DiameterEpsilon = 1e-6;
+
+        private static (int converted, int ignored, int toolsAdded) ConvertGroovesToMills(XElement program)
+        {
+            var symbols = SeedProgramSymbols(program);
+            var toolsByName = ReadToolDiameters(program);
+            symbols.TryGet("dx", out var dx);
+            symbols.TryGet("dy", out var dy);
+
+            var converted = 0;
+            var ignored = 0;
+            var addedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var gr in program.Elements("gr").ToList())
+            {
+                var x1 = EvalXnc(gr.GetX1Value(), symbols);
+                var y1 = EvalXnc(gr.GetY1Value(), symbols);
+                var x2 = EvalXnc(gr.GetX2Value(), symbols);
+                var y2 = EvalXnc(gr.GetY2Value(), symbols);
+
+                var horizontal = Math.Abs(y1 - y2) <= AxisEpsilon;
+                var vertical = Math.Abs(x1 - x2) <= AxisEpsilon;
+
+                if (horizontal == vertical) // diagonal (neither) or degenerate (both)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var width = EvalXnc(gr.GetTValue(), symbols);
+                var dp = gr.GetDpValue() ?? "0";
+
+                var toolName = FindToolByDiameter(toolsByName, width);
+
+                if (toolName == null)
+                {
+                    toolName = MakeToolName(width, toolsByName);
+                    gr.AddBeforeSelf(new XElement("tool",
+                        new XAttribute("name", toolName),
+                        new XAttribute("d", XmlConvert.ToString(width))));
+                    toolsByName[toolName] = width;
+                    addedToolNames.Add(toolName); // counted (distinct) as toolsAdded at the end
+                }
+
+                // Overshoot the part outline by one tool diameter, but only along the axis the
+                // groove actually runs (the constant axis keeps its authored value).
+                if (horizontal)
+                {
+                    x1 = OvershootAlongAxis(x1, dx, width);
+                    x2 = OvershootAlongAxis(x2, dx, width);
+                }
+                else
+                {
+                    y1 = OvershootAlongAxis(y1, dy, width);
+                    y2 = OvershootAlongAxis(y2, dy, width);
+                }
+
+                var ms = new XElement("ms",
+                    new XAttribute("x", XmlConvert.ToString(x1)),
+                    new XAttribute("y", XmlConvert.ToString(y1)),
+                    new XAttribute("dp", dp),
+                    new XAttribute("in", "0"),
+                    new XAttribute("out", "0"),
+                    new XAttribute("sxy", "tool.dia/2"),
+                    new XAttribute("fwd", "true"),
+                    new XAttribute("c", gr.GetCValue() ?? "0"),
+                    new XAttribute("name", toolName));
+
+                var comment = gr.GetCommentValue();
+
+                if (comment != null)
+                {
+                    ms.SetAttributeValue("comment", comment);
+                }
+
+                var ml = new XElement("ml",
+                    new XAttribute("x", XmlConvert.ToString(x2)),
+                    new XAttribute("y", XmlConvert.ToString(y2)),
+                    new XAttribute("dp", dp));
+
+                gr.AddBeforeSelf(ms);
+                gr.AddBeforeSelf(ml);
+                gr.Remove();
+                converted++;
+            }
+
+            return (converted, ignored, addedToolNames.Count);
+        }
+
+        private static (int converted, int ignored, int toolsAdded) ConvertMillsToGrooves(XElement program)
+        {
+            var symbols = SeedProgramSymbols(program);
+            var toolsByName = ReadToolDiameters(program);
+            symbols.TryGet("dx", out var dx);
+            symbols.TryGet("dy", out var dy);
+            symbols.TryGet("dz", out var dz);
+
+            var converted = 0;
+            var ignored = 0;
+
+            var elements = program.Elements().ToList();
+
+            for (var i = 0; i < elements.Count; i++)
+            {
+                var tag = elements[i].Name.LocalName;
+
+                if (tag == "mr")
+                {
+                    ignored++;
+                    continue;
+                }
+
+                if (tag != "ms")
+                {
+                    continue;
+                }
+
+                var ms = elements[i];
+
+                var segments = new List<XElement>();
+
+                for (var j = i + 1; j < elements.Count; j++)
+                {
+                    var segTag = elements[j].Name.LocalName;
+
+                    if (segTag != "ml" && segTag != "mac")
+                    {
+                        break;
+                    }
+
+                    segments.Add(elements[j]);
+                }
+
+                if (segments.Count != 1 || segments[0].Name.LocalName != "ml")
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var ml = segments[0];
+
+                var entryDepth = EvalXnc(ms.GetDpValue(), symbols);
+                var segmentDepth = ml.GetDpValue() is { } rawDp ? EvalXnc(rawDp, symbols) : entryDepth;
+
+                if (Math.Max(entryDepth, segmentDepth) >= dz)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                if (ParsePositionCode(ms.GetCValue()) == ToolPosition.Pocket)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var x1 = EvalXnc(ms.GetXValue(), symbols);
+                var y1 = EvalXnc(ms.GetYValue(), symbols);
+                var x2 = EvalXnc(ml.GetXValue(), symbols);
+                var y2 = EvalXnc(ml.GetYValue(), symbols);
+
+                var horizontal = Math.Abs(y1 - y2) <= AxisEpsilon;
+                var vertical = Math.Abs(x1 - x2) <= AxisEpsilon;
+
+                if (horizontal == vertical)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var toolName = ms.GetNameValue();
+
+                if (toolName == null || !toolsByName.TryGetValue(toolName, out var toolDiameter))
+                {
+                    ignored++;
+                    continue;
+                }
+
+                // Any endpoint that lies outside the part is pulled onto the boundary line;
+                // on-edge / interior endpoints keep their value. Only the axis the mill runs
+                // along can be out of range.
+                if (horizontal)
+                {
+                    x1 = Math.Clamp(x1, 0d, dx);
+                    x2 = Math.Clamp(x2, 0d, dx);
+                }
+                else
+                {
+                    y1 = Math.Clamp(y1, 0d, dy);
+                    y2 = Math.Clamp(y2, 0d, dy);
+                }
+
+                var dpOut = ml.GetDpValue() ?? ms.GetDpValue() ?? "0";
+
+                var gr = new XElement("gr",
+                    new XAttribute("x1", XmlConvert.ToString(x1)),
+                    new XAttribute("y1", XmlConvert.ToString(y1)),
+                    new XAttribute("dp", dpOut),
+                    new XAttribute("x2", XmlConvert.ToString(x2)),
+                    new XAttribute("y2", XmlConvert.ToString(y2)),
+                    new XAttribute("t", XmlConvert.ToString(toolDiameter)),
+                    new XAttribute("c", ms.GetCValue() ?? "0"),
+                    new XAttribute("p", "0"),
+                    new XAttribute("name", toolName));
+
+                var comment = ms.GetCommentValue();
+
+                if (comment != null)
+                {
+                    gr.SetAttributeValue("comment", comment);
+                }
+
+                ms.AddBeforeSelf(gr);
+                ml.Remove();
+                ms.Remove();
+                converted++;
+            }
+
+            return (converted, ignored, 0);
+        }
+
+        private static double OvershootAlongAxis(double value, double size, double diameter)
+        {
+            if (value <= 0d)
+            {
+                return -diameter;
+            }
+
+            if (value >= size)
+            {
+                return size + diameter;
+            }
+
+            return value;
+        }
+
+        private static XncSymbolTable SeedProgramSymbols(XElement program)
+        {
+            var symbols = new XncSymbolTable();
+            symbols.Set("dx", RequireProgramDouble(program.GetDxValue(), "dx"));
+            symbols.Set("dy", RequireProgramDouble(program.GetDyValue(), "dy"));
+            symbols.Set("dz", RequireProgramDouble(program.GetDzValue(), "dz"));
+
+            return symbols;
+        }
+
+        private static double RequireProgramDouble(string? raw, string name)
+        {
+            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            {
+                return value;
+            }
+
+            throw new Exception($"<program> @{name} is missing or not a number (was '{raw}').");
+        }
+
+        private static double EvalXnc(string? expression, XncSymbolTable symbols)
+        {
+            return XncExpressionEvaluator.Evaluate(
+                expression ?? throw new Exception("Missing XNC coordinate/value."),
+                symbols);
+        }
+
+        private static Dictionary<string, double> ReadToolDiameters(XElement program)
+        {
+            var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tool in program.Elements("tool"))
+            {
+                var name = tool.GetNameValue();
+
+                if (name != null
+                    && double.TryParse(tool.GetDValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out var diameter))
+                {
+                    map[name] = diameter; // last declaration wins, matching XncProgramReader
+                }
+            }
+
+            return map;
+        }
+
+        private static string? FindToolByDiameter(Dictionary<string, double> toolsByName, double diameter)
+        {
+            foreach (var tool in toolsByName)
+            {
+                if (Math.Abs(tool.Value - diameter) <= DiameterEpsilon)
+                {
+                    return tool.Key;
+                }
+            }
+
+            return null;
+        }
+
+        private static string MakeToolName(double diameter, Dictionary<string, double> toolsByName)
+        {
+            var baseName = "Bore" + XmlConvert.ToString(diameter);
+
+            if (!toolsByName.ContainsKey(baseName))
+            {
+                return baseName;
+            }
+
+            for (var n = 1; ; n++)
+            {
+                var candidate = $"{baseName}_{n}";
+
+                if (!toolsByName.ContainsKey(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        private static ToolPosition ParsePositionCode(string? raw)
+        {
+            return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
+                && Enum.IsDefined(typeof(ToolPosition), code)
+                    ? (ToolPosition)code
+                    : ToolPosition.Center;
+        }
+
         public int GetXncProgramsCount(int partId)
         {
             if (_project == null) return 0;
@@ -702,6 +1130,27 @@ namespace XncOptimizerUI.Services
             var version = int.Parse(collection[0].Groups[1].Value);
 
             return regex2.Replace(_source, $"_ren({version + 1}).project");
+        }
+
+        private string GetGrooveMillFileName()
+        {
+            var regex1 = new Regex(@"_gm\.project$");
+            var regex2 = new Regex(@"_gm\((\d*)\)\.project$");
+
+            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            {
+                return _source.Replace(".project", "_gm.project");
+            }
+
+            if (regex1.IsMatch(_source))
+            {
+                return regex1.Replace(_source, "_gm(1).project");
+            }
+
+            var collection = regex2.Matches(_source);
+            var version = int.Parse(collection[0].Groups[1].Value);
+
+            return regex2.Replace(_source, $"_gm({version + 1}).project");
         }
 
         private static Part CreatePart(XElement element)

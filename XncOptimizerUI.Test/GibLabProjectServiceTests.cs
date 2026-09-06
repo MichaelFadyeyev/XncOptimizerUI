@@ -1,5 +1,7 @@
 using NSubstitute;
 using XncOptimizerUI.Contracts;
+using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.Test
@@ -46,6 +48,16 @@ namespace XncOptimizerUI.Test
         }
 
         private GibLabProjectService CreateService() => new(_config, _clock);
+
+        /// <summary>Copies a named fixture into the per-test temp dir and returns its path.</summary>
+        private string CopyFixture(string name)
+        {
+            var source = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", name);
+            var dest = Path.Combine(_directory, name);
+            File.Copy(source, dest);
+
+            return dest;
+        }
 
         /// <summary>
         /// Opens the fixture and reads in the order the service requires: ReadParts
@@ -200,6 +212,145 @@ namespace XncOptimizerUI.Test
             });
 
             _ = _config.Received().SawWidth;
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_ConvertsGrooveAndAddsBoreTool()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-grooving.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(log, Does.Contain("converted 1"));
+                Assert.That(log, Does.Contain("1 new tool"));
+            });
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Groovings, Is.Empty);
+                Assert.That(program.MillingContours, Has.Count.EqualTo(1));
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(10d));
+            });
+
+            var contour = program.MillingContours.Single();
+            var segment = contour.Segments.Single();
+
+            Assert.Multiple(() =>
+            {
+                // groove ran along X at y=50; x1=-10 -> -width, x2=dx+10 -> dx+width (width = t = 10)
+                Assert.That(contour.Entry.X, Is.EqualTo(-10d));
+                Assert.That(contour.Entry.Y, Is.EqualTo(50d));
+                Assert.That(segment.End.X, Is.EqualTo(10010d));
+                Assert.That(segment.End.Y, Is.EqualTo(50d));
+                Assert.That(contour.EntryDepth, Is.EqualTo(4d));
+                Assert.That(contour.Position, Is.EqualTo(ToolPosition.Right)); // groove c="1"
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_ConvertsShallowSingleSegmentMill()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-milling-shallow.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(log, Does.Contain("converted 1"));
+            });
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.That(program.MillingContours, Is.Empty);
+
+            var groove = program.Groovings.Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(groove.ToolName, Is.EqualTo("Mill6"));
+                Assert.That(groove.Width, Is.EqualTo(6d));   // t = tool Mill6 diameter
+                Assert.That(groove.Depth, Is.EqualTo(5d));
+                Assert.That(groove.Position, Is.EqualTo(ToolPosition.Left)); // ms c="2"
+                // entry x=-20 and end x=1020 lie outside [0,1000] -> clamped onto the edge
+                Assert.That(groove.Start.X, Is.EqualTo(0d));
+                Assert.That(groove.Start.Y, Is.EqualTo(80d));
+                Assert.That(groove.End.X, Is.EqualTo(1000d));
+                Assert.That(groove.End.Y, Is.EqualTo(80d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_IgnoresThroughMillAndRectangle()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-milling.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No mills converted"));
+                Assert.That(log, Does.Contain("ignored 2")); // through-mill contour + <mr>
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore), "nothing converted => nothing saved");
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_IgnoresDiagonalGroove()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-grooving-diagonal.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No grooves converted"));
+                Assert.That(log, Does.Contain("ignored 1"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+                "a diagonal groove must be left untouched");
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_WithNoParts_ReturnsFalseAndLogs()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-grooving.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(ref log, [], GrooveMillDirection.GroovesToMills);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No parts selected for groove/mill conversion."));
+            });
         }
 
         /// <summary>Minimal fixed clock; .NET 9 ships no in-box fake TimeProvider.</summary>

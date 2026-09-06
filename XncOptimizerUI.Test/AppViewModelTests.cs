@@ -359,6 +359,80 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void ConvertGroovesAndMills_PassesCheckedPartsAndDirectionToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.GrooveMillDirection = GrooveMillDirection.MillsToGrooves;
+            _projectService.Calls.Clear();
+
+            vm.ConvertGroovesAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.ConvertGroovesAndMills)));
+                Assert.That(_projectService.LastGrooveMillParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
+                Assert.That(_projectService.LastGrooveMillDirection, Is.EqualTo(GrooveMillDirection.MillsToGrooves));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful conversion reloads the project");
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
+        {
+            SeedTwoParts();
+            _projectService.ConvertGroovesAndMillsResult = false;
+            _projectService.LogToAppend = "***\nNo grooves converted (ignored 2).";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.ConvertGroovesAndMillsCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning("No grooves converted (ignored 2).", Arg.Any<string>());
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertGroovesAndMills) }),
+                "a failed conversion should not reload the project");
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_WithNoPartsChecked_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.ConvertGroovesAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No parts checked"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_WithNoFileOpen_LogsAndDoesNothing()
+        {
+            var vm = CreateViewModel();
+
+            vm.ConvertGroovesAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
         public void CloseFile_ClearsProjectState()
         {
             SeedTwoParts();

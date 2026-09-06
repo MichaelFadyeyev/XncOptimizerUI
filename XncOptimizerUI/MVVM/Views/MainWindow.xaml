@@ -3,10 +3,12 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:local="clr-namespace:XncOptimizerUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:validators="clr-namespace:XncOptimizerUI.MVVM.Validators"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
     Title="{Binding WindowTitle}"
     Width="800"
     Height="450"
@@ -15,6 +17,7 @@
     mc:Ignorable="d">
 
     <Window.Resources>
+        <helpers:EnumToBooleanConverter x:Key="EnumToBool" />
         <Style x:Key="TextWrappingStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
@@ -152,6 +155,22 @@
                         Content="RESET"
                         Style="{StaticResource SetOptionButtonStyle2}" />
                 </Grid>
+                <Button
+                    Command="{Binding ConvertGroovesAndMillsCommand}"
+                    Content="Convert grooves / mills"
+                    Style="{StaticResource CommandButtonStyle}" />
+                <StackPanel Margin="5,0,5,5" Orientation="Vertical">
+                    <RadioButton
+                        Content="Grooves → Mills"
+                        FontSize="10"
+                        GroupName="GrooveMillDir"
+                        IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}}" />
+                    <RadioButton
+                        Content="Mills → Grooves"
+                        FontSize="10"
+                        GroupName="GrooveMillDir"
+                        IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}}" />
+                </StackPanel>
                 <Button
                     Command="{Binding CopyPartsListCommand}"
                     Content="Copy parts"
