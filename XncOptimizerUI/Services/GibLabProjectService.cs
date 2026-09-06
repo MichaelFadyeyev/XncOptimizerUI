@@ -662,6 +662,9 @@ namespace XncOptimizerUI.Services
         private const double AxisEpsilon = 1e-6;
         private const double DiameterEpsilon = 1e-6;
 
+        /// <summary>Diameter of the grooving cutter a mill is turned back into a groove with.</summary>
+        private const double GroovingToolDiameter = 2.8;
+
         private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertGroovesToMills(XElement program)
         {
             var symbols = SeedProgramSymbols(program);
@@ -676,6 +679,16 @@ namespace XncOptimizerUI.Services
 
             foreach (var gr in program.Elements("gr").ToList())
             {
+                // Only a primary-pass groove (p="0", or absent) may become a mill; a secondary
+                // pass (p != "0") is left as-is.
+                var p = gr.GetPValue();
+
+                if (p != null && p.Trim() != "0")
+                {
+                    ignored++;
+                    continue;
+                }
+
                 var x1 = EvalXnc(gr.GetX1Value(), symbols);
                 var y1 = EvalXnc(gr.GetY1Value(), symbols);
                 var x2 = EvalXnc(gr.GetX2Value(), symbols);
@@ -702,7 +715,7 @@ namespace XncOptimizerUI.Services
 
                 if (toolName == null)
                 {
-                    toolName = MakeToolName(width, toolsByName);
+                    toolName = MakeToolName(width, toolsByName, "Bore");
                     gr.AddBeforeSelf(new XElement("tool",
                         new XAttribute("name", toolName),
                         new XAttribute("d", XmlConvert.ToString(width))));
@@ -770,6 +783,7 @@ namespace XncOptimizerUI.Services
 
             var converted = 0;
             var ignored = 0;
+            var addedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var originalToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var elements = program.Elements().ToList();
@@ -842,12 +856,26 @@ namespace XncOptimizerUI.Services
                     continue;
                 }
 
-                var toolName = ms.GetNameValue();
+                var millToolName = ms.GetNameValue();
 
-                if (toolName == null || !toolsByName.TryGetValue(toolName, out var toolDiameter))
+                if (millToolName == null || !toolsByName.TryGetValue(millToolName, out var millToolDiameter))
                 {
                     ignored++;
                     continue;
+                }
+
+                // The groove is cut by a fixed-diameter grooving cutter (multiple passes when the
+                // slot is wider); the mill's own tool is only used for the slot width `t`.
+                var grooveToolName = FindToolByDiameter(toolsByName, GroovingToolDiameter);
+
+                if (grooveToolName == null)
+                {
+                    grooveToolName = MakeToolName(GroovingToolDiameter, toolsByName, "Cut");
+                    ms.AddBeforeSelf(new XElement("tool",
+                        new XAttribute("name", grooveToolName),
+                        new XAttribute("d", XmlConvert.ToString(GroovingToolDiameter))));
+                    toolsByName[grooveToolName] = GroovingToolDiameter;
+                    addedToolNames.Add(grooveToolName);
                 }
 
                 // Any endpoint that lies outside the part is pulled onto the boundary line;
@@ -872,10 +900,10 @@ namespace XncOptimizerUI.Services
                     new XAttribute("dp", dpOut),
                     new XAttribute("x2", XmlConvert.ToString(x2)),
                     new XAttribute("y2", XmlConvert.ToString(y2)),
-                    new XAttribute("t", XmlConvert.ToString(toolDiameter)),
+                    new XAttribute("t", XmlConvert.ToString(millToolDiameter)),
                     new XAttribute("c", ms.GetCValue() ?? "0"),
                     new XAttribute("p", "0"),
-                    new XAttribute("name", toolName));
+                    new XAttribute("name", grooveToolName));
 
                 var comment = ms.GetCommentValue();
 
@@ -884,7 +912,7 @@ namespace XncOptimizerUI.Services
                     gr.SetAttributeValue("comment", comment);
                 }
 
-                originalToolNames.Add(toolName);
+                originalToolNames.Add(millToolName);
 
                 ms.AddBeforeSelf(gr);
                 ml.Remove();
@@ -894,7 +922,7 @@ namespace XncOptimizerUI.Services
 
             var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
 
-            return (converted, ignored, 0, toolsRemoved);
+            return (converted, ignored, addedToolNames.Count, toolsRemoved);
         }
 
         private static double OvershootAlongAxis(double value, double size, double offset)
@@ -1016,9 +1044,9 @@ namespace XncOptimizerUI.Services
             return null;
         }
 
-        private static string MakeToolName(double diameter, Dictionary<string, double> toolsByName)
+        private static string MakeToolName(double diameter, Dictionary<string, double> toolsByName, string prefix)
         {
-            var baseName = "Bore" + XmlConvert.ToString(diameter);
+            var baseName = prefix + XmlConvert.ToString(diameter);
 
             if (!toolsByName.ContainsKey(baseName))
             {

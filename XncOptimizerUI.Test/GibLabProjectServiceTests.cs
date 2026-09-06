@@ -304,6 +304,8 @@ namespace XncOptimizerUI.Test
                 Assert.That(result, Is.True);
                 Assert.That(service.FullPath, Does.EndWith("_gm.project"));
                 Assert.That(log, Does.Contain("converted 1"));
+                Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
+                Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Mill6
             });
 
             var program = service.ReadXncPrograms(2).Single();
@@ -314,8 +316,11 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(groove.ToolName, Is.EqualTo("Mill6"));
-                Assert.That(groove.Width, Is.EqualTo(6d));   // t = tool Mill6 diameter
+                // the groove is cut by the fixed 2.8 mm grooving tool, not the mill's Mill6
+                Assert.That(groove.ToolName, Is.EqualTo("Cut2.8"));
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(2.8d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Not.Contain("Mill6"));
+                Assert.That(groove.Width, Is.EqualTo(6d));   // t = original mill (Mill6) diameter
                 Assert.That(groove.Depth, Is.EqualTo(5d));
                 Assert.That(groove.Position, Is.EqualTo(ToolPosition.Left)); // ms c="2"
                 // entry x=-20 and end x=1020 lie outside [0,1000] -> clamped onto the edge
@@ -344,6 +349,29 @@ namespace XncOptimizerUI.Test
                 Assert.That(log, Does.Contain("ignored 2")); // through-mill contour + <mr>
                 Assert.That(service.FullPath, Is.EqualTo(pathBefore), "nothing converted => nothing saved");
             });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_IgnoresSecondaryPassGroove()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-grooving-secondary-pass.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No grooves converted"));
+                Assert.That(log, Does.Contain("ignored 1"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+                "a p!=0 (secondary-pass) groove must be left untouched");
         }
 
         [Test]

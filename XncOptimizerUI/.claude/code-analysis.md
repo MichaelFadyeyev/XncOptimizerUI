@@ -55,11 +55,12 @@ Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` whic
 
 **Convert grooves ⇄ mills** — new: for the parts **checked** in the Parts grid (the "Sel"
 `PartVM.IsSelected` column), rewrites every XNC program in the chosen direction (radio toggle
-bound via `Helpers/EnumToBooleanConverter`). *Grooves → Mills*: each axis-parallel `<gr>`
-becomes a single-segment milling contour (`<ms>` + `<ml>`) cut with a round tool of diameter =
-groove width `t` (an existing `<tool>` of that diameter is reused, else a `Bore<t>` tool is
-added); endpoints that reach the part outline overshoot it by **half a tool diameter** (so the
-tool centre clears the edge) along the groove axis. *Mills → Grooves*: the inverse, but only
+bound via `Helpers/EnumToBooleanConverter`). *Grooves → Mills*: each axis-parallel primary-pass
+`<gr>` (`p="0"` or absent) becomes a single-segment milling contour (`<ms>` + `<ml>`) cut with
+a round tool of diameter = groove width `t` (an existing `<tool>` of that diameter is reused,
+else a `Bore<t>` tool is added); endpoints that reach the part outline overshoot it by **half a
+tool diameter** (so the tool centre clears the edge) along the groove axis. Secondary-pass
+grooves (`p != "0"`) are left untouched. *Mills → Grooves*: the inverse, but only
 for a contour that is one straight segment, axis-parallel, shallower than `dz`, and not a
 pocket (`c≠3`); outside endpoints are clamped onto the outline. After each program is rewritten,
 any `<tool>` that the converted grooves/mills referenced and that nothing else in the program
