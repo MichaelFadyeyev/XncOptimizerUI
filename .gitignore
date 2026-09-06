@@ -362,5 +362,15 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Samples for testing
-/XncOptimizerUI/TestData
+# Samples for testing: the large real project dumps (td.project, td-2.project) and
+# ad-hoc scratch files stay out; the small synthetic fixtures the test suite needs
+# are tracked.
+/XncOptimizerUI/TestData/*
+!/XncOptimizerUI/TestData/td-grooving.project
+!/XncOptimizerUI/TestData/td-grooving-diagonal.project
+!/XncOptimizerUI/TestData/td-grooving-mixed.project
+!/XncOptimizerUI/TestData/td-grooving-secondary-pass.project
+!/XncOptimizerUI/TestData/td-milling.project
+!/XncOptimizerUI/TestData/td-milling-shallow.project
+!/XncOptimizerUI/TestData/td-missing-ml-error.project
+!/XncOptimizerUI/TestData/td-programs.project
