@@ -362,6 +362,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# Worktrees
+.claude/worktrees/
+
 # Samples for testing: the large real project dumps (td.project, td-2.project) and
 # ad-hoc scratch files stay out; the small synthetic fixtures the test suite needs
 # are tracked.
