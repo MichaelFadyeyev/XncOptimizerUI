@@ -311,7 +311,7 @@ segments — it has no following `<ml>`/`<mac>`.
 | attribute | meaning |
 |---|---|
 | `name` | tool reference |
-| `x`, `y` | rectangle reference point (corner or centre — **unconfirmed**) |
+| `x`, `y` | rectangle reference point (centre) |
 | `l`, `w` | rectangle length / width, mm (literal or expression) |
 | `a` | rotation angle, degrees (seen `0`) |
 | `r` | corner radius, mm (seen `0` = sharp corners) |
