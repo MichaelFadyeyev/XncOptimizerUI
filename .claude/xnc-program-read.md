@@ -222,7 +222,7 @@ centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `
 | `dp` | groove **depth**, mm |
 | `t` | groove **width**, mm (may exceed the tool `d` → machine makes multiple passes) |
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left (all three occur in the fixture) |
-| `p` | secondary pass / position flag (seen `0`) |
+| `p` | part plane, `0` = front, `1` = right, `2` = left, `3` = top, `4` = bottom (seen `0`) |
 | `comment` | free-text label, e.g. `Паз15 ()` |
 
 **side** comes from the operation's `side` (no attribute on `<gr>`).
