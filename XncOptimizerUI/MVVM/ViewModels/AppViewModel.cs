@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -128,6 +129,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<PartVM> _parts = [];
+
+        /// <summary>
+        /// Number of parts currently checked ("Sel") across the whole project, including
+        /// any hidden by the active filter — this is the set the batch commands act on.
+        /// </summary>
+        public int CheckedCount => _allParts.Count(p => p.IsSelected);
 
         [ObservableProperty]
         private ObservableCollection<BandVM> _bands = [];
@@ -513,6 +520,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SelectedBand = null;
             SourcePart = null;
 
+            RebindCheckedCount(_allParts, []);
+            _allParts = [];
+
             Parts = [];
             Bands = [];
             Sheets = [];
@@ -538,6 +548,22 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             _applyPartsFilter = true;
+        }
+
+        [RelayCommand]
+        private void CheckAll() => SetChecked(true);
+
+        [RelayCommand]
+        private void UncheckAll() => SetChecked(false);
+
+        // Acts on the currently displayed (filtered) parts only, mirroring the "Filtered no:"
+        // label. Each IsSelected write raises PartVM.PropertyChanged, which refreshes CheckedCount.
+        private void SetChecked(bool value)
+        {
+            foreach (var part in Parts)
+            {
+                part.IsSelected = value;
+            }
         }
 
         #endregion
@@ -570,6 +596,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             SelectedPart = null;
             _applyPartsFilter = false;
+
+            var previousParts = _allParts;
             _allParts = [.. _projectService.ReadParts().Select(p => new PartVM(p))];
 
             for (var i = 0; i < _allParts.Count; i++)
@@ -577,8 +605,38 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 _allParts[i].Number = i + 1;
             }
 
+            RebindCheckedCount(previousParts, _allParts);
+
             Parts = new ObservableCollection<PartVM>(_allParts);
             FilterName = string.Empty;
+        }
+
+        /// <summary>
+        /// Keeps <see cref="CheckedCount"/> live: the label must react to every "Sel" checkbox
+        /// toggle in the grid, not just to Check all / Uncheck all. Detaches the handler from the
+        /// old part VMs, attaches it to the new ones, and refreshes the count.
+        /// </summary>
+        private void RebindCheckedCount(IEnumerable<PartVM> oldParts, IEnumerable<PartVM> newParts)
+        {
+            foreach (var part in oldParts)
+            {
+                part.PropertyChanged -= OnPartVmPropertyChanged;
+            }
+
+            foreach (var part in newParts)
+            {
+                part.PropertyChanged += OnPartVmPropertyChanged;
+            }
+
+            OnPropertyChanged(nameof(CheckedCount));
+        }
+
+        private void OnPartVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PartVM.IsSelected))
+            {
+                OnPropertyChanged(nameof(CheckedCount));
+            }
         }
 
         /// <summary>

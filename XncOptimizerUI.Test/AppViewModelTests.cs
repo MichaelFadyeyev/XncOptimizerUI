@@ -505,6 +505,99 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void CheckAll_ChecksEveryVisiblePart_AndCheckedCountReflectsIt()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.CheckAllCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Parts.Select(p => p.IsSelected), Is.All.True);
+                Assert.That(vm.CheckedCount, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public void UncheckAll_UnchecksEveryVisiblePart()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.CheckAllCommand.Execute(null);
+
+            vm.UncheckAllCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Parts.Select(p => p.IsSelected), Is.All.False);
+                Assert.That(vm.CheckedCount, Is.EqualTo(0));
+            });
+        }
+
+        [Test]
+        public void CheckedCount_UpdatesOnIndividualToggle_AndRaisesPropertyChanged()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            var raised = 0;
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(AppViewModel.CheckedCount)) raised++;
+            };
+
+            vm.Parts[0].IsSelected = true;
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.CheckedCount, Is.EqualTo(1));
+                Assert.That(raised, Is.GreaterThanOrEqualTo(1));
+            });
+
+            vm.Parts[0].IsSelected = false;
+            Assert.That(vm.CheckedCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CheckAll_WithActiveFilter_OnlyChecksFilteredParts()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.FilterName = "Полиця"; // setter runs FilterParts -> only part 100 stays visible
+            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+
+            vm.CheckAllCommand.Execute(null);
+            Assert.That(vm.CheckedCount, Is.EqualTo(1), "the filtered-out part must not be checked");
+
+            vm.ClearFiltersCommand.Execute(null);
+            var reappeared = vm.Parts.Single(p => p.Name == "Бокова");
+            Assert.That(reappeared.IsSelected, Is.False);
+        }
+
+        [Test]
+        public void CloseFile_ResetsCheckedCount()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.CheckAllCommand.Execute(null);
+
+            vm.CloseFileCommand.Execute(null);
+
+            Assert.That(vm.CheckedCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public void CloseFile_ClearsProjectState()
         {
             SeedTwoParts();
