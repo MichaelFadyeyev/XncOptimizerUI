@@ -28,6 +28,7 @@ namespace XncOptimizerUI.Test
         {
             _config = Substitute.For<IConfigService>();
             _config.SawWidth.Returns(4.0m);
+            _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
 
             _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_directory);
@@ -552,6 +553,126 @@ namespace XncOptimizerUI.Test
 
             Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
                 "a diagonal groove must be left untouched");
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_OffSizeWidth_ConvertsToMillRectangleWithSmallestCutter()
+        {
+            var service = CreateService();
+            // t=10 groove, but the shop only has Ø6 and Ø20 cutters -> milled out as a pocket.
+            _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 20.0m });
+            service.OpenProject(CopyFixture("td-grooving.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(log, Does.Contain("converted 1"));
+                Assert.That(log, Does.Contain("1 tool(s) added"));   // Mill6
+                Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Cut3.2
+            });
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Groovings, Is.Empty);
+                Assert.That(program.MillingContours, Is.Empty);
+                Assert.That(program.MillingRectangles, Has.Count.EqualTo(1));
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(6d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Not.Contain("Cut3.2"));
+            });
+
+            var rect = program.MillingRectangles.Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(rect.ToolName, Is.EqualTo("Mill6"));
+                Assert.That(rect.Position, Is.EqualTo(ToolPosition.Pocket));   // c="3"
+                // groove ran along X at y=50; ends x1=-10 / x2=dx+10 are outside [0,10000]
+                // -> pushed a further toolDiam/2 = 3 past each edge: [-3, 10003], length 10006.
+                Assert.That(rect.Length, Is.EqualTo(10006d));
+                Assert.That(rect.Width, Is.EqualTo(10d));                     // short side = groove width t
+                Assert.That(rect.Origin.X, Is.EqualTo(5000d));               // rectangle centre
+                Assert.That(rect.Origin.Y, Is.EqualTo(50d));
+                Assert.That(rect.Depth, Is.EqualTo(4d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_OffSizeWidth_InteriorGroove_RectangleIsNotExtended()
+        {
+            var service = CreateService();
+            _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 20.0m });
+            service.OpenProject(CopyFixture("td-grooving-interior.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+
+            Assert.That(result, Is.True);
+
+            var rect = service.ReadXncPrograms(2).Single().MillingRectangles.Single();
+
+            Assert.Multiple(() =>
+            {
+                // groove x1=100 / x2=900 are both inside [0,1000] -> no overshoot.
+                Assert.That(rect.Length, Is.EqualTo(800d));
+                Assert.That(rect.Width, Is.EqualTo(10d));
+                Assert.That(rect.Origin.X, Is.EqualTo(500d));
+                Assert.That(rect.Origin.Y, Is.EqualTo(250d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_SmallestCutterWiderThanGroove_IgnoresGroove()
+        {
+            var service = CreateService();
+            // Only a Ø20 cutter available; the t=10 groove cannot be milled cleanly.
+            _config.MillingToolDiams.Returns(new List<decimal> { 20.0m });
+            service.OpenProject(CopyFixture("td-grooving.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No grooves converted"));
+                Assert.That(log, Does.Contain("ignored 1"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+                "a groove with no fitting cutter must be left untouched");
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_NoMillingToolsConfigured_CancelsOperation()
+        {
+            var service = CreateService();
+            _config.MillingToolDiams.Returns(new List<decimal>());
+            service.OpenProject(CopyFixture("td-grooving.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No milling tools configured"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1));
         }
 
         [Test]

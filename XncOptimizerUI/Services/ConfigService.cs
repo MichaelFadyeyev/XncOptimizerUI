@@ -82,6 +82,11 @@ namespace XncOptimizerUI.Services
             get { return _options.SawWidth; }
         }
 
+        public IReadOnlyList<decimal> MillingToolDiams
+        {
+            get { return _options.MillingToolDiams; }
+        }
+
         public IReadOnlyList<string> LabelsToProcess
         {
             get { return _options.LabelsToProcess; }

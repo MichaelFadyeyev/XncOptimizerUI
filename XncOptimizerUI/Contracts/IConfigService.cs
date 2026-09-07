@@ -4,6 +4,8 @@ namespace XncOptimizerUI.Contracts
     {
         decimal SawWidth { get; }
 
+        IReadOnlyList<decimal> MillingToolDiams { get; }
+
         IReadOnlyList<string> LabelsToProcess { get; }
 
         string GetLastLabelToProcessSelected();

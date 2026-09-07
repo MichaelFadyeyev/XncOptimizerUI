@@ -559,6 +559,17 @@ namespace XncOptimizerUI.Services
                 return false;
             }
 
+            var millingToolDiameters = (_config.MillingToolDiams ?? [])
+                .Select(d => (double)d)
+                .OrderBy(d => d)
+                .ToArray();
+
+            if (direction == GrooveMillDirection.GroovesToMills && millingToolDiameters.Length == 0)
+            {
+                log += "***\nNo milling tools configured (AppOptions.MillingToolDiams is empty). Grooves->Mills conversion cancelled.";
+                return false;
+            }
+
             var xncOperations = GetXncOperations();
 
             var totalConverted = 0;
@@ -597,7 +608,7 @@ namespace XncOptimizerUI.Services
                             ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
 
                         var (converted, ignored, toolsAdded, toolsRemoved) = direction == GrooveMillDirection.GroovesToMills
-                            ? ConvertGroovesToMills(program)
+                            ? ConvertGroovesToMills(program, millingToolDiameters)
                             : ConvertMillsToGrooves(program, processPockets);
 
                         if (converted > 0)
@@ -1038,7 +1049,23 @@ namespace XncOptimizerUI.Services
         /// <summary>Diameter of the grooving cutter a mill is turned back into a groove with.</summary>
         private const double GroovingToolDiameter = 2.8;
 
-        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertGroovesToMills(XElement program)
+        /// <summary>
+        /// Rewrites every axis-parallel primary-pass <c>&lt;gr&gt;</c> groove as a milling
+        /// operation, taking the shop's available cutters (<paramref name="millingToolDiameters"/>,
+        /// from <c>AppOptions.MillingToolDiams</c>) into account:
+        /// <list type="bullet">
+        /// <item>groove width equals an available diameter (within <see cref="DiameterEpsilon"/>)
+        /// =&gt; a linear mill (<c>&lt;ms&gt;</c> + <c>&lt;ml&gt;</c>), as before;</item>
+        /// <item>otherwise, if the smallest available cutter fits the width =&gt; a rectangular
+        /// pocket (<c>&lt;mr&gt;</c> with <c>c="3"</c>) that runs along the groove, its short side
+        /// the groove width, cut with that smallest cutter;</item>
+        /// <item>otherwise (smallest cutter wider than the groove) =&gt; the groove is left
+        /// untouched and counted as ignored.</item>
+        /// </list>
+        /// The caller guarantees <paramref name="millingToolDiameters"/> is non-empty.
+        /// </summary>
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertGroovesToMills(
+            XElement program, IReadOnlyList<double> millingToolDiameters)
         {
             var symbols = SeedProgramSymbols(program);
             var toolsByName = ReadToolDiameters(program);
@@ -1082,6 +1109,45 @@ namespace XncOptimizerUI.Services
                 if (gr.GetNameValue() is { } originalTool)
                 {
                     originalToolNames.Add(originalTool); // considered for cleanup once conversion is done
+                }
+
+                var matchesAvailableDiameter = false;
+
+                foreach (var d in millingToolDiameters)
+                {
+                    if (Math.Abs(d - width) <= DiameterEpsilon)
+                    {
+                        matchesAvailableDiameter = true;
+                        break;
+                    }
+                }
+
+                if (!matchesAvailableDiameter)
+                {
+                    // No cutter of the groove's exact width: mill the groove out as a rectangular
+                    // pocket with the smallest available cutter. If even that one is wider than the
+                    // groove it cannot be milled cleanly, so the groove is left as-is.
+                    var toolDiam = double.PositiveInfinity;
+
+                    foreach (var d in millingToolDiameters)
+                    {
+                        if (d < toolDiam)
+                        {
+                            toolDiam = d;
+                        }
+                    }
+
+                    if (double.IsInfinity(toolDiam) || toolDiam > width)
+                    {
+                        ignored++;
+                        continue;
+                    }
+
+                    EmitGrooveRectangle(gr, x1, y1, x2, y2, width, dp, horizontal, dx, dy, toolDiam,
+                        toolsByName, addedToolNames);
+                    gr.Remove();
+                    converted++;
+                    continue;
                 }
 
                 var toolName = FindToolByDiameter(toolsByName, width);
@@ -1542,6 +1608,111 @@ namespace XncOptimizerUI.Services
             }
 
             anchor.AddBeforeSelf(gr);
+        }
+
+        /// <summary>
+        /// Inserts an <c>&lt;mr&gt;</c> pocket before <paramref name="gr"/> for an axis-parallel
+        /// groove that has no matching milling-cutter diameter. The rectangle runs along the
+        /// groove (<c>a=0</c>, so its <c>l</c>/<c>w</c> map straight onto world X/Y): the running
+        /// side carries the groove length, the other side the groove <paramref name="width"/>. A
+        /// running-axis end that lies outside or on the part border is pushed a further
+        /// <paramref name="toolDiam"/><c> / 2</c> past it (via <see cref="OvershootAlongAxis"/>);
+        /// the constant axis keeps the groove's centre-line. Fabricates the cutter
+        /// (<c>Mill&lt;d&gt;</c>) when the program declares none. The caller removes the source
+        /// <c>&lt;gr&gt;</c> and bumps the counters.
+        /// </summary>
+        private static void EmitGrooveRectangle(
+            XElement gr,
+            double x1,
+            double y1,
+            double x2,
+            double y2,
+            double width,
+            string dpRaw,
+            bool horizontal,
+            double dx,
+            double dy,
+            double toolDiam,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames)
+        {
+            var overshoot = toolDiam / 2d;
+
+            double runStart, runEnd, runSize, constCoord;
+
+            if (horizontal)
+            {
+                runStart = x1;
+                runEnd = x2;
+                runSize = dx;
+                constCoord = (y1 + y2) / 2d;
+            }
+            else
+            {
+                runStart = y1;
+                runEnd = y2;
+                runSize = dy;
+                constCoord = (x1 + x2) / 2d;
+            }
+
+            runStart = OvershootAlongAxis(runStart, runSize, overshoot);
+            runEnd = OvershootAlongAxis(runEnd, runSize, overshoot);
+
+            var length = Math.Abs(runEnd - runStart);
+            var runCentre = (runStart + runEnd) / 2d;
+
+            double cx, cy, l, w;
+
+            if (horizontal)
+            {
+                cx = runCentre;
+                cy = constCoord;
+                l = length;
+                w = width;
+            }
+            else
+            {
+                cx = constCoord;
+                cy = runCentre;
+                l = width;
+                w = length;
+            }
+
+            var toolName = FindToolByDiameter(toolsByName, toolDiam);
+
+            if (toolName == null)
+            {
+                toolName = MakeToolName(toolDiam, toolsByName, "Mill");
+                gr.AddBeforeSelf(new XElement("tool",
+                    new XAttribute("name", toolName),
+                    new XAttribute("d", XmlConvert.ToString(toolDiam))));
+                toolsByName[toolName] = toolDiam;
+                addedToolNames.Add(toolName);
+            }
+
+            var mr = new XElement("mr",
+                new XAttribute("x", XmlConvert.ToString(cx)),
+                new XAttribute("y", XmlConvert.ToString(cy)),
+                new XAttribute("dp", dpRaw),
+                new XAttribute("in", "0"),
+                new XAttribute("out", "0"),
+                new XAttribute("sxy", "tool.dia/2"),
+                new XAttribute("fwd", "true"),
+                new XAttribute("l", XmlConvert.ToString(l)),
+                new XAttribute("w", XmlConvert.ToString(w)),
+                new XAttribute("a", "0"),
+                new XAttribute("r", "0"),
+                new XAttribute("c", "3"),
+                new XAttribute("name", toolName));
+
+            var comment = gr.GetCommentValue();
+
+            if (comment != null)
+            {
+                mr.SetAttributeValue("comment", comment);
+            }
+
+            gr.AddBeforeSelf(mr);
         }
 
         private static double OvershootAlongAxis(double value, double size, double offset)
