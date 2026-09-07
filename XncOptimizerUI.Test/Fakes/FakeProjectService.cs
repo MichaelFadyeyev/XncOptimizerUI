@@ -36,6 +36,7 @@ namespace XncOptimizerUI.Test.Fakes
         public IList<Part>? LastReplaceTargets { get; private set; }
         public IList<Part>? LastGrooveMillParts { get; private set; }
         public GrooveMillDirection? LastGrooveMillDirection { get; private set; }
+        public bool? LastGrooveMillProcessPockets { get; private set; }
         public IList<Part>? LastMillTraversalParts { get; private set; }
 
         public void OpenProject(string path)
@@ -69,11 +70,12 @@ namespace XncOptimizerUI.Test.Fakes
             return ReplaceXncProgramsResult;
         }
 
-        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)
+        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)
         {
             Calls.Add(nameof(ConvertGroovesAndMills));
             LastGrooveMillParts = parts;
             LastGrooveMillDirection = direction;
+            LastGrooveMillProcessPockets = processPockets;
             log += LogToAppend;
 
             return ConvertGroovesAndMillsResult;

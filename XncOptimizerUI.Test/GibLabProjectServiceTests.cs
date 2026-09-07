@@ -222,7 +222,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -268,7 +268,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -297,7 +297,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -340,7 +340,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -352,6 +352,163 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_WithProcessPockets_ConvertsAxisParallelRectangularPockets()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-milling-pocket.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(log, Does.Contain("converted 2"));
+                Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
+                Assert.That(log, Does.Contain("ignored 3"));         // rotated + frame + through-depth
+            });
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Groovings, Has.Count.EqualTo(2));
+                Assert.That(program.MillingRectangles, Has.Count.EqualTo(3), "rotated / non-pocket / through-depth rectangles are left alone");
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(2.8d));
+            });
+
+            // #1: l=200 >= w=30 -> groove along X, width = w, centred on y
+            var alongX = program.Groovings[0];
+            // #2: w=160 > l=25 -> groove along Y, width = l, centred on x
+            var alongY = program.Groovings[1];
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(alongX.ToolName, Is.EqualTo("Cut2.8"));
+                Assert.That(alongX.Start.X, Is.EqualTo(200d));
+                Assert.That(alongX.Start.Y, Is.EqualTo(150d));
+                Assert.That(alongX.End.X, Is.EqualTo(400d));
+                Assert.That(alongX.End.Y, Is.EqualTo(150d));
+                Assert.That(alongX.Width, Is.EqualTo(30d));
+                Assert.That(alongX.Depth, Is.EqualTo(6d));
+                Assert.That(alongX.Position, Is.EqualTo(ToolPosition.Center));
+
+                Assert.That(alongY.Start.X, Is.EqualTo(700d));
+                Assert.That(alongY.Start.Y, Is.EqualTo(70d));
+                Assert.That(alongY.End.X, Is.EqualTo(700d));
+                Assert.That(alongY.End.Y, Is.EqualTo(230d));
+                Assert.That(alongY.Width, Is.EqualTo(25d));
+                Assert.That(alongY.Depth, Is.EqualTo(5d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_WithoutProcessPockets_LeavesRectanglesAlone()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-milling-pocket.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No mills converted"));
+                Assert.That(log, Does.Contain("ignored 5"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(2).Single().MillingRectangles, Has.Count.EqualTo(5));
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_WithProcessPockets_ConvertsRectangularContourPockets()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-pocket-to-groove.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(log, Does.Contain("converted 2"));
+                Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
+                Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Mill6
+                Assert.That(log, Does.Contain("ignored 0"));
+            });
+
+            var program = service.ReadXncPrograms(1).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.MillingContours, Is.Empty);
+                Assert.That(program.Groovings, Has.Count.EqualTo(2));
+                Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(2.8d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Not.Contain("Mill6"));
+            });
+
+            // contour 1: rect X in [120,130], Y in [-5,1385] -> groove along Y, centred x=125,
+            // ends clamped onto the part borders [0, dy=1380]
+            var alongY = program.Groovings[0];
+            // contour 2: rect X in [-5,645], Y in [550,560] -> groove along X, centred y=555,
+            // ends clamped onto the part borders [0, dx=640]
+            var alongX = program.Groovings[1];
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(alongY.ToolName, Is.EqualTo("Cut2.8"));
+                Assert.That(alongY.Start.X, Is.EqualTo(125d));
+                Assert.That(alongY.Start.Y, Is.EqualTo(0d));
+                Assert.That(alongY.End.X, Is.EqualTo(125d));
+                Assert.That(alongY.End.Y, Is.EqualTo(1380d));
+                Assert.That(alongY.Width, Is.EqualTo(10d));
+                Assert.That(alongY.Depth, Is.EqualTo(4d));
+                Assert.That(alongY.Position, Is.EqualTo(ToolPosition.Center));
+                Assert.That(alongY.Comment, Is.EqualTo("Виїмка G=4 (В4)"));
+
+                Assert.That(alongX.Start.X, Is.EqualTo(0d));
+                Assert.That(alongX.Start.Y, Is.EqualTo(555d));
+                Assert.That(alongX.End.X, Is.EqualTo(640d));
+                Assert.That(alongX.End.Y, Is.EqualTo(555d));
+                Assert.That(alongX.Width, Is.EqualTo(10d));
+                Assert.That(alongX.Depth, Is.EqualTo(4d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_WithoutProcessPockets_LeavesContourPocketsAlone()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-pocket-to-groove.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No mills converted"));
+                Assert.That(log, Does.Contain("ignored 2"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+            });
+
+            Assert.That(service.ReadXncPrograms(1).Single().MillingContours, Has.Count.EqualTo(2));
+        }
+
+        [Test]
         public void ConvertGroovesAndMills_GroovesToMills_IgnoresSecondaryPassGroove()
         {
             var service = CreateService();
@@ -360,7 +517,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -383,7 +540,7 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
             var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills);
+                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
 
             Assert.Multiple(() =>
             {
@@ -404,7 +561,7 @@ namespace XncOptimizerUI.Test
             service.OpenProject(CopyFixture("td-grooving.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(ref log, [], GrooveMillDirection.GroovesToMills);
+            var result = service.ConvertGroovesAndMills(ref log, [], GrooveMillDirection.GroovesToMills, processPockets: false);
 
             Assert.Multiple(() =>
             {

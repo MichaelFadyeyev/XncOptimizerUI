@@ -551,7 +551,7 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
-        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)
+        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)
         {
             if (parts == null || parts.Count == 0)
             {
@@ -598,7 +598,7 @@ namespace XncOptimizerUI.Services
 
                         var (converted, ignored, toolsAdded, toolsRemoved) = direction == GrooveMillDirection.GroovesToMills
                             ? ConvertGroovesToMills(program)
-                            : ConvertMillsToGrooves(program);
+                            : ConvertMillsToGrooves(program, processPockets);
 
                         if (converted > 0)
                         {
@@ -1146,7 +1146,7 @@ namespace XncOptimizerUI.Services
             return (converted, ignored, addedToolNames.Count, toolsRemoved);
         }
 
-        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToGrooves(XElement program)
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToGrooves(XElement program, bool processPockets)
         {
             var symbols = SeedProgramSymbols(program);
             var toolsByName = ReadToolDiameters(program);
@@ -1167,7 +1167,17 @@ namespace XncOptimizerUI.Services
 
                 if (tag == "mr")
                 {
-                    ignored++;
+                    if (TryConvertRectanglePocketToGroove(
+                            elements[i], processPockets, symbols, dx, dy, dz,
+                            toolsByName, addedToolNames, originalToolNames))
+                    {
+                        converted++;
+                    }
+                    else
+                    {
+                        ignored++;
+                    }
+
                     continue;
                 }
 
@@ -1190,6 +1200,19 @@ namespace XncOptimizerUI.Services
                     }
 
                     segments.Add(elements[j]);
+                }
+
+                // A closed axis-parallel rectangular pocket contour (<ms c="3"> + several
+                // straight <ml>) becomes a groove down its long axis, same rule as an <mr> pocket.
+                if (processPockets
+                    && ParsePositionCode(ms.GetCValue()) == ToolPosition.Pocket
+                    && segments.Count >= 3
+                    && segments.All(s => s.Name.LocalName == "ml")
+                    && TryConvertContourPocketToGroove(ms, segments, symbols, dx, dy, dz,
+                           toolsByName, addedToolNames, originalToolNames))
+                {
+                    converted++;
+                    continue;
                 }
 
                 if (segments.Count != 1 || segments[0].Name.LocalName != "ml")
@@ -1296,6 +1319,229 @@ namespace XncOptimizerUI.Services
             var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
 
             return (converted, ignored, addedToolNames.Count, toolsRemoved);
+        }
+
+        /// <summary>
+        /// Turns an axis-parallel rectangular pocket primitive (<c>&lt;mr&gt;</c> with
+        /// <c>c="3"</c>) into a <c>&lt;gr&gt;</c> groove. Returns <c>false</c> (and leaves the
+        /// <c>&lt;mr&gt;</c> untouched) when pocket processing is off or the rectangle is rotated,
+        /// through-depth, not a pocket, or degenerate.
+        /// </summary>
+        private static bool TryConvertRectanglePocketToGroove(
+            XElement mr,
+            bool processPockets,
+            XncSymbolTable symbols,
+            double dx,
+            double dy,
+            double dz,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames,
+            HashSet<string> originalToolNames)
+        {
+            if (!processPockets)
+            {
+                return false;
+            }
+
+            if (ParsePositionCode(mr.GetCValue()) != ToolPosition.Pocket)
+            {
+                return false;
+            }
+
+            // A rotated rectangle has no clean groove representation. A missing angle is 0.
+            var angle = mr.GetAValue() is { } rawAngle ? EvalXnc(rawAngle, symbols) : 0d;
+
+            if (Math.Abs(angle) > AxisEpsilon)
+            {
+                return false;
+            }
+
+            if (EvalXnc(mr.GetDpValue(), symbols) >= dz)
+            {
+                return false;
+            }
+
+            var length = EvalXnc(mr.GetLengthValue(), symbols); // along X while a == 0
+            var breadth = EvalXnc(mr.GetWidthValue(), symbols);  // along Y while a == 0
+
+            if (length <= 0d || breadth <= 0d)
+            {
+                return false;
+            }
+
+            var cx = EvalXnc(mr.GetXValue(), symbols);
+            var cy = EvalXnc(mr.GetYValue(), symbols);
+
+            // <mr> x/y is the rectangle centre.
+            EmitPocketGroove(mr,
+                cx - length / 2d, cx + length / 2d, cy - breadth / 2d, cy + breadth / 2d,
+                mr.GetDpValue() ?? "0", mr.GetCommentValue(), mr.GetNameValue(),
+                dx, dy, toolsByName, addedToolNames, originalToolNames);
+
+            mr.Remove();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Turns a milling contour that traces an axis-parallel rectangle (an <c>&lt;ms c="3"&gt;</c>
+        /// entry plus straight <c>&lt;ml&gt;</c> segments) into a <c>&lt;gr&gt;</c> groove. Returns
+        /// <c>false</c> (leaving the contour untouched) when the vertices are not a rectangle, the
+        /// pocket is through-depth, or it is degenerate.
+        /// </summary>
+        private static bool TryConvertContourPocketToGroove(
+            XElement ms,
+            List<XElement> segments,
+            XncSymbolTable symbols,
+            double dx,
+            double dy,
+            double dz,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames,
+            HashSet<string> originalToolNames)
+        {
+            var xs = new List<double> { EvalXnc(ms.GetXValue(), symbols) };
+            var ys = new List<double> { EvalXnc(ms.GetYValue(), symbols) };
+
+            foreach (var seg in segments)
+            {
+                xs.Add(EvalXnc(seg.GetXValue(), symbols));
+                ys.Add(EvalXnc(seg.GetYValue(), symbols));
+            }
+
+            var minX = xs.Min();
+            var maxX = xs.Max();
+            var minY = ys.Min();
+            var maxY = ys.Max();
+
+            if (maxX - minX <= AxisEpsilon || maxY - minY <= AxisEpsilon)
+            {
+                return false; // degenerate: a line, not a rectangle
+            }
+
+            for (var k = 0; k < xs.Count; k++)
+            {
+                var onCorner = (Math.Abs(xs[k] - minX) <= AxisEpsilon || Math.Abs(xs[k] - maxX) <= AxisEpsilon)
+                    && (Math.Abs(ys[k] - minY) <= AxisEpsilon || Math.Abs(ys[k] - maxY) <= AxisEpsilon);
+
+                if (!onCorner)
+                {
+                    return false; // a vertex off the bounding-box corners => not a rectangle
+                }
+
+                if (k > 0
+                    && Math.Abs(xs[k] - xs[k - 1]) > AxisEpsilon
+                    && Math.Abs(ys[k] - ys[k - 1]) > AxisEpsilon)
+                {
+                    return false; // a diagonal step => not axis-parallel sides
+                }
+            }
+
+            var depth = EvalXnc(ms.GetDpValue(), symbols);
+
+            foreach (var seg in segments)
+            {
+                if (seg.GetDpValue() is { } rawDp)
+                {
+                    depth = Math.Max(depth, EvalXnc(rawDp, symbols));
+                }
+            }
+
+            if (depth >= dz)
+            {
+                return false;
+            }
+
+            EmitPocketGroove(ms, minX, maxX, minY, maxY,
+                ms.GetDpValue() ?? "0", ms.GetCommentValue(), ms.GetNameValue(),
+                dx, dy, toolsByName, addedToolNames, originalToolNames);
+
+            foreach (var seg in segments)
+            {
+                seg.Remove();
+            }
+
+            ms.Remove();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Inserts a <c>&lt;gr&gt;</c> before <paramref name="anchor"/> for an axis-parallel
+        /// rectangular pocket bounded by <c>[minX,maxX] x [minY,maxY]</c>: it runs along the
+        /// longer side, its width is the shorter side, and endpoints beyond the part edge are
+        /// pulled onto it. Creates the fixed grooving tool if the program has none. The caller
+        /// removes the source element(s) and bumps the counters.
+        /// </summary>
+        private static void EmitPocketGroove(
+            XElement anchor,
+            double minX,
+            double maxX,
+            double minY,
+            double maxY,
+            string dpRaw,
+            string? comment,
+            string? pocketToolName,
+            double dx,
+            double dy,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames,
+            HashSet<string> originalToolNames)
+        {
+            var spanX = maxX - minX;
+            var spanY = maxY - minY;
+
+            double x1, y1, x2, y2, slot;
+
+            if (spanX >= spanY)
+            {
+                x1 = Math.Clamp(minX, 0d, dx);
+                x2 = Math.Clamp(maxX, 0d, dx);
+                y1 = y2 = (minY + maxY) / 2d;
+                slot = spanY;
+            }
+            else
+            {
+                x1 = x2 = (minX + maxX) / 2d;
+                y1 = Math.Clamp(minY, 0d, dy);
+                y2 = Math.Clamp(maxY, 0d, dy);
+                slot = spanX;
+            }
+
+            var grooveToolName = FindToolByDiameter(toolsByName, GroovingToolDiameter);
+
+            if (grooveToolName == null)
+            {
+                grooveToolName = MakeToolName(GroovingToolDiameter, toolsByName, "Cut");
+                anchor.AddBeforeSelf(new XElement("tool",
+                    new XAttribute("name", grooveToolName),
+                    new XAttribute("d", XmlConvert.ToString(GroovingToolDiameter))));
+                toolsByName[grooveToolName] = GroovingToolDiameter;
+                addedToolNames.Add(grooveToolName);
+            }
+
+            var gr = new XElement("gr",
+                new XAttribute("x1", XmlConvert.ToString(x1)),
+                new XAttribute("y1", XmlConvert.ToString(y1)),
+                new XAttribute("dp", dpRaw),
+                new XAttribute("x2", XmlConvert.ToString(x2)),
+                new XAttribute("y2", XmlConvert.ToString(y2)),
+                new XAttribute("t", XmlConvert.ToString(slot)),
+                new XAttribute("c", "0"),
+                new XAttribute("p", "0"),
+                new XAttribute("name", grooveToolName));
+
+            if (comment != null)
+            {
+                gr.SetAttributeValue("comment", comment);
+            }
+
+            if (pocketToolName != null)
+            {
+                originalToolNames.Add(pocketToolName);
+            }
+
+            anchor.AddBeforeSelf(gr);
         }
 
         private static double OvershootAlongAxis(double value, double size, double offset)

@@ -165,11 +165,20 @@
                         FontSize="10"
                         GroupName="GrooveMillDir"
                         IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}}" />
-                    <RadioButton
-                        Content="Mills → Grooves"
-                        FontSize="10"
-                        GroupName="GrooveMillDir"
-                        IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}}" />
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton
+                            Content="Mills → Grooves"
+                            FontSize="10"
+                            GroupName="GrooveMillDir"
+                            IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}}" />
+                        <CheckBox
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            Content="incl. pockets"
+                            FontSize="10"
+                            IsChecked="{Binding ProcessPockets}"
+                            ToolTip="Also convert axis-parallel rectangular pockets (&lt;mr&gt;) to grooves" />
+                    </StackPanel>
                 </StackPanel>
                 <Button
                     Command="{Binding OptimizeMillTraversalCommand}"

@@ -18,8 +18,11 @@ namespace XncOptimizerUI.Contracts
         /// otherwise non-compliant elements are left untouched; the counts of converted and
         /// ignored elements are appended to <paramref name="log"/>. Returns <c>false</c> (and
         /// saves nothing) when nothing was converted.
+        /// When <paramref name="processPockets"/> is <c>true</c> and the direction is
+        /// <see cref="GrooveMillDirection.MillsToGrooves"/>, axis-parallel rectangular pocket
+        /// mills (<c>&lt;mr&gt;</c> with <c>c="3"</c>) are also turned into grooves.
         /// </summary>
-        bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction);
+        bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets);
 
         /// <summary>
         /// For every supplied part, re-sequences the straight axis-parallel milling contours in

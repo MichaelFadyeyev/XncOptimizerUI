@@ -407,6 +407,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [ObservableProperty]
         private GrooveMillDirection _grooveMillDirection = GrooveMillDirection.GroovesToMills;
 
+        /// <summary>
+        /// When set, a Mills → Grooves conversion also turns axis-parallel rectangular pocket
+        /// mills into grooves. Opt-in: off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _processPockets;
+
         [RelayCommand]
         private void ConvertGroovesAndMills()
         {
@@ -430,7 +437,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var log = Log;
             var logStart = log.Length;
 
-            var success = _projectService.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection);
+            var success = _projectService.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection, ProcessPockets);
 
             Log = log;
 

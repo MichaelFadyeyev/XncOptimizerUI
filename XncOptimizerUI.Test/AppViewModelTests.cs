@@ -367,6 +367,7 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             vm.Parts[0].IsSelected = true;
             vm.GrooveMillDirection = GrooveMillDirection.MillsToGrooves;
+            vm.ProcessPockets = true;
             _projectService.Calls.Clear();
 
             vm.ConvertGroovesAndMillsCommand.Execute(null);
@@ -376,6 +377,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.ConvertGroovesAndMills)));
                 Assert.That(_projectService.LastGrooveMillParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
                 Assert.That(_projectService.LastGrooveMillDirection, Is.EqualTo(GrooveMillDirection.MillsToGrooves));
+                Assert.That(_projectService.LastGrooveMillProcessPockets, Is.True);
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
                     "a successful conversion reloads the project");
             });

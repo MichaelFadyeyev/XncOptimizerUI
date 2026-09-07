@@ -371,6 +371,9 @@ FodyWeavers.xsd
 !/XncOptimizerUI/TestData/td-grooving-mixed.project
 !/XncOptimizerUI/TestData/td-grooving-secondary-pass.project
 !/XncOptimizerUI/TestData/td-milling.project
+!/XncOptimizerUI/TestData/td-milling-pocket.project
 !/XncOptimizerUI/TestData/td-milling-shallow.project
+!/XncOptimizerUI/TestData/td-pocket-to-groove.project
+!/XncOptimizerUI/TestData/td-mills-optimization.project
 !/XncOptimizerUI/TestData/td-missing-ml-error.project
 !/XncOptimizerUI/TestData/td-programs.project
