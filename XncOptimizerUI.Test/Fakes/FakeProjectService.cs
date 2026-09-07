@@ -26,6 +26,7 @@ namespace XncOptimizerUI.Test.Fakes
         public bool GroupIdenticalElementsResult { get; set; } = true;
         public bool ReplaceXncProgramsResult { get; set; } = true;
         public bool ConvertGroovesAndMillsResult { get; set; } = true;
+        public bool OptimizeMillTraversalResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
 
         public List<string> Calls { get; } = [];
@@ -35,6 +36,7 @@ namespace XncOptimizerUI.Test.Fakes
         public IList<Part>? LastReplaceTargets { get; private set; }
         public IList<Part>? LastGrooveMillParts { get; private set; }
         public GrooveMillDirection? LastGrooveMillDirection { get; private set; }
+        public IList<Part>? LastMillTraversalParts { get; private set; }
 
         public void OpenProject(string path)
         {
@@ -75,6 +77,15 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return ConvertGroovesAndMillsResult;
+        }
+
+        public bool OptimizeMillTraversal(ref string log, IList<Part> parts)
+        {
+            Calls.Add(nameof(OptimizeMillTraversal));
+            LastMillTraversalParts = parts;
+            log += LogToAppend;
+
+            return OptimizeMillTraversalResult;
         }
 
         public int GetXncProgramsCount(int partId)

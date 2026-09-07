@@ -438,6 +438,43 @@ namespace XncOptimizerUI.MVVM.ViewModels
         }
 
         [RelayCommand]
+        private void OptimizeMillTraversal()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var parts = _allParts
+                .Where(p => p.IsSelected)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += "No parts checked for mill order optimization!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.OptimizeMillTraversal(ref log, parts);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        [RelayCommand]
         private void AddNewLabel()
         {
             if (!string.IsNullOrEmpty(NewLabelToProcess))

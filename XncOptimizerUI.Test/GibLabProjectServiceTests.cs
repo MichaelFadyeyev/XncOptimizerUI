@@ -413,6 +413,88 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [Test]
+        public void OptimizeMillTraversal_ReordersParallelPassesIntoSerpentineOrder()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-mills-optimization.project"));
+
+            var log = string.Empty;
+            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 1, Name = "as-is" }]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_mo.project"));
+                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(log, Does.Contain("reordered 3 pass(es)"));
+                Assert.That(log, Does.Contain("Stored to:"));
+            });
+
+            var optimised = service.ReadXncPrograms(1).Single();
+            var oracle = service.ReadXncPrograms(2).Single(); // the hand-authored "optimized" part
+
+            Assert.That(optimised.MillingContours, Has.Count.EqualTo(6));
+
+            // The pass order (by Y) is preserved; only the entry/exit ends of passes 2, 4 and 6
+            // are swapped so every pass starts where the previous one finished.
+            var expectedEntryX = new[] { -5d, 1385d, -5d, 1385d, -5d, 1385d };
+            var expectedY = new[] { 5d, 45d, 85d, 125d, 165d, 205d };
+
+            for (var i = 0; i < 6; i++)
+            {
+                var contour = optimised.MillingContours[i];
+                var end = contour.Segments.Single().End;
+                var index = i;
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(contour.Entry.Y, Is.EqualTo(expectedY[index]));
+                    Assert.That(contour.Entry.X, Is.EqualTo(expectedEntryX[index]));
+                    Assert.That(end.X, Is.EqualTo(expectedEntryX[index] == -5d ? 1385d : -5d));
+                    Assert.That(end.Y, Is.EqualTo(expectedY[index]));
+
+                    // identical to the hand-authored oracle part in the same fixture
+                    Assert.That(contour.Entry.X, Is.EqualTo(oracle.MillingContours[index].Entry.X));
+                    Assert.That(end.X, Is.EqualTo(oracle.MillingContours[index].Segments.Single().End.X));
+                });
+            }
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_AlreadyOptimised_ReturnsFalseAndSavesNothing()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-mills-optimization.project"));
+            var pathBefore = service.FullPath;
+
+            var log = string.Empty;
+            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 2, Name = "optimized" }]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No mill passes reordered"));
+                Assert.That(service.FullPath, Is.EqualTo(pathBefore), "nothing reordered => nothing saved");
+            });
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_WithNoParts_ReturnsFalseAndLogs()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-mills-optimization.project"));
+
+            var log = string.Empty;
+            var result = service.OptimizeMillTraversal(ref log, []);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No parts selected for mill traversal optimization."));
+            });
+        }
+
         /// <summary>Minimal fixed clock; .NET 9 ships no in-box fake TimeProvider.</summary>
         private sealed class FakeTimeProvider(DateTimeOffset now) : TimeProvider
         {

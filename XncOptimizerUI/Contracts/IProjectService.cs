@@ -21,6 +21,17 @@ namespace XncOptimizerUI.Contracts
         /// </summary>
         bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction);
 
+        /// <summary>
+        /// For every supplied part, re-sequences the straight axis-parallel milling contours in
+        /// each XNC machining program so that the entry point of every pass sits next to the exit
+        /// point of the previous one (a serpentine path that removes the long rapid returns).
+        /// Passes are grouped per XNC operation (one part face) and per tool; a greedy
+        /// nearest-neighbour walk picks the order and the direction of each pass. Arcs,
+        /// multi-segment contours, pockets and rectangles are left untouched and counted as
+        /// ignored. Returns <c>false</c> (and saves nothing) when nothing was reordered.
+        /// </summary>
+        bool OptimizeMillTraversal(ref string log, IList<Part> parts);
+
         int GetXncProgramsCount(int partId);
 
         /// <summary>Reads and parses every XNC machining program attached to the part with the given id.</summary>

@@ -653,6 +653,379 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
+        /// <summary>
+        /// Re-sequences the straight axis-parallel milling passes in every XNC program of the
+        /// supplied parts so the entry of each pass is next to the exit of the previous one.
+        /// Passes are handled per XNC operation (one part face, one <c>side</c>) and grouped by
+        /// tool; a greedy nearest-neighbour walk picks the order and the direction of each pass.
+        /// Non-eligible elements (arcs, multi-segment contours, pockets, <c>&lt;mr&gt;</c>) keep
+        /// their slot and are counted as ignored. Saves nothing and returns <c>false</c> when
+        /// nothing was reordered.
+        /// </summary>
+        public bool OptimizeMillTraversal(ref string log, IList<Part> parts)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for mill traversal optimization.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+
+            var totalReordered = 0;
+            var totalIgnored = 0;
+            var touchedParts = 0;
+
+            try
+            {
+                foreach (var part in parts)
+                {
+                    var partOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == part.Id).ToList();
+
+                    if (partOps.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var partReordered = 0;
+                    var partIgnored = 0;
+                    var partGroups = 0;
+
+                    foreach (var op in partOps)
+                    {
+                        var programAttribute = op.GetProgram();
+
+                        if (programAttribute == null)
+                        {
+                            continue;
+                        }
+
+                        var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+                        var program = programXml.Element("program")
+                            ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
+
+                        var (reordered, ignored, changedGroups) = OptimizeMillTraversalInProgram(program);
+
+                        if (reordered > 0)
+                        {
+                            // Match ConvertGroovesAndMills' re-serialization, but keep the XML
+                            // declaration when the source had one so the output diff stays minimal.
+                            programAttribute.Value = programXml.Declaration is { } declaration
+                                ? declaration + program.ToString()
+                                : program.ToString();
+                        }
+
+                        partReordered += reordered;
+                        partIgnored += ignored;
+                        partGroups += changedGroups;
+                    }
+
+                    if (partReordered > 0 || partIgnored > 0)
+                    {
+                        touchedParts++;
+                        log += $"Mill order: \"{part.Name}\" (id={part.Id}): reordered {partReordered} pass(es) in {partGroups} group(s), {partIgnored} ignored\n";
+                    }
+
+                    totalReordered += partReordered;
+                    totalIgnored += partIgnored;
+                }
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{e.Message}";
+                return false;
+            }
+
+            if (totalReordered == 0)
+            {
+                log += $"***\nNo mill passes reordered (ignored {totalIgnored}).";
+                return false;
+            }
+
+            AppendDescription("optimized mill traversal order");
+
+            var result = GetMillOrderFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nMill traversal optimization complete: reordered {totalReordered} pass(es) across {touchedParts} part(s). Stored to: {_fullPath}";
+
+            return true;
+        }
+
+        // --- Parallel-mill traversal ordering ------------------------------------------------
+        // A milling "pass" here is an <ms> entry followed by exactly one straight <ml> segment
+        // that runs parallel to X or Y and is not a pocket (c="3"). Passes that share a tool
+        // (the <ms> @name) are re-sequenced together by a greedy nearest-neighbour walk; the
+        // first pass in document order keeps its authored direction and seeds the walk, then
+        // each remaining pass is appended in whichever direction puts its entry closest to the
+        // current tool position. Everything else is left exactly where it is.
+
+        private readonly record struct MillPass(
+            string ToolName,
+            string MsX, string MsY, string? MsDp,
+            string MlX, string MlY, string? MlDp,
+            string? In, string? Out, string? Sxy, string? Fwd, string? C, string Name, string? Comment,
+            double EntryX, double EntryY, double ExitX, double ExitY);
+
+        private static (int reordered, int ignored, int changedGroups) OptimizeMillTraversalInProgram(XElement program)
+        {
+            var symbols = SeedProgramSymbols(program);
+
+            var slots = new List<(XElement Ms, XElement Ml)>();
+            var passes = new List<MillPass>();
+            var ignored = 0;
+
+            var elements = program.Elements().ToList();
+
+            for (var i = 0; i < elements.Count; i++)
+            {
+                var tag = elements[i].Name.LocalName;
+
+                if (tag == "mr")
+                {
+                    ignored++;
+                    continue;
+                }
+
+                if (tag != "ms")
+                {
+                    continue;
+                }
+
+                var ms = elements[i];
+
+                var segments = new List<XElement>();
+
+                for (var j = i + 1; j < elements.Count; j++)
+                {
+                    var segTag = elements[j].Name.LocalName;
+
+                    if (segTag != "ml" && segTag != "mac")
+                    {
+                        break;
+                    }
+
+                    segments.Add(elements[j]);
+                }
+
+                if (segments.Count != 1 || segments[0].Name.LocalName != "ml")
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var ml = segments[0];
+
+                if (ParsePositionCode(ms.GetCValue()) == ToolPosition.Pocket)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var toolName = ms.GetNameValue();
+
+                if (toolName == null)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                var msX = ms.GetXValue();
+                var msY = ms.GetYValue();
+                var mlX = ml.GetXValue();
+                var mlY = ml.GetYValue();
+
+                double ax, ay, bx, by;
+
+                try
+                {
+                    ax = EvalXnc(msX, symbols);
+                    ay = EvalXnc(msY, symbols);
+                    bx = EvalXnc(mlX, symbols);
+                    by = EvalXnc(mlY, symbols);
+                }
+                catch (Exception)
+                {
+                    // A pass whose endpoints don't resolve to plain numbers isn't something we
+                    // can reason about geometrically: leave it untouched.
+                    ignored++;
+                    continue;
+                }
+
+                var horizontal = Math.Abs(ay - by) <= AxisEpsilon;
+                var vertical = Math.Abs(ax - bx) <= AxisEpsilon;
+
+                if (horizontal == vertical) // diagonal (neither) or degenerate (both)
+                {
+                    ignored++;
+                    continue;
+                }
+
+                slots.Add((ms, ml));
+                passes.Add(new MillPass(
+                    toolName,
+                    msX!, msY!, ms.GetDpValue(),
+                    mlX!, mlY!, ml.GetDpValue(),
+                    ms.GetInValue(), ms.GetOutValue(), ms.GetSxyValue(),
+                    ms.Attribute("fwd")?.Value, ms.GetCValue(), toolName, ms.GetCommentValue(),
+                    ax, ay, bx, by));
+            }
+
+            if (slots.Count < 2)
+            {
+                return (0, ignored, 0);
+            }
+
+            var groups = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+
+            for (var k = 0; k < passes.Count; k++)
+            {
+                if (!groups.TryGetValue(passes[k].ToolName, out var members))
+                {
+                    members = [];
+                    groups[passes[k].ToolName] = members;
+                }
+
+                members.Add(k);
+            }
+
+            var reordered = 0;
+            var changedGroups = 0;
+
+            foreach (var members in groups.Values)
+            {
+                if (members.Count < 2)
+                {
+                    continue;
+                }
+
+                var plan = NearestNeighbourOrder(passes, members);
+
+                var groupReordered = 0;
+
+                for (var m = 0; m < members.Count; m++)
+                {
+                    var (sourceIndex, reversed) = plan[m];
+
+                    if (sourceIndex != members[m] || reversed)
+                    {
+                        groupReordered++;
+                    }
+                }
+
+                if (groupReordered == 0)
+                {
+                    continue;
+                }
+
+                reordered += groupReordered;
+                changedGroups++;
+
+                // `passes` holds attribute strings, not element references, so overwriting a slot
+                // from any source pass is safe even when the two overlap.
+                for (var m = 0; m < members.Count; m++)
+                {
+                    var (sourceIndex, reversed) = plan[m];
+                    var (ms, ml) = slots[members[m]];
+
+                    ApplyPass(ms, ml, passes[sourceIndex], reversed);
+                }
+            }
+
+            return (reordered, ignored, changedGroups);
+        }
+
+        private static List<(int SourceIndex, bool Reversed)> NearestNeighbourOrder(List<MillPass> passes, List<int> members)
+        {
+            var order = new List<(int, bool)>(members.Count);
+            var remaining = new List<int>(members);
+
+            // The first pass in document order is left as authored and seeds the walk.
+            var seed = remaining[0];
+            remaining.RemoveAt(0);
+            order.Add((seed, false));
+
+            var currentX = passes[seed].ExitX;
+            var currentY = passes[seed].ExitY;
+
+            while (remaining.Count > 0)
+            {
+                var bestPos = 0;
+                var bestReversed = false;
+                var bestDistance = double.MaxValue;
+
+                for (var r = 0; r < remaining.Count; r++)
+                {
+                    var pass = passes[remaining[r]];
+
+                    var forward = SquaredDistance(currentX, currentY, pass.EntryX, pass.EntryY);
+
+                    if (forward < bestDistance)
+                    {
+                        bestDistance = forward;
+                        bestPos = r;
+                        bestReversed = false;
+                    }
+
+                    var backward = SquaredDistance(currentX, currentY, pass.ExitX, pass.ExitY);
+
+                    if (backward < bestDistance)
+                    {
+                        bestDistance = backward;
+                        bestPos = r;
+                        bestReversed = true;
+                    }
+                }
+
+                var chosen = remaining[bestPos];
+                remaining.RemoveAt(bestPos);
+                order.Add((chosen, bestReversed));
+
+                var chosenPass = passes[chosen];
+                currentX = bestReversed ? chosenPass.EntryX : chosenPass.ExitX;
+                currentY = bestReversed ? chosenPass.EntryY : chosenPass.ExitY;
+            }
+
+            return order;
+        }
+
+        private static void ApplyPass(XElement ms, XElement ml, in MillPass source, bool reversed)
+        {
+            // Reversing a pass swaps which authored endpoint the tool enters from; the constant
+            // (non-running) axis is identical at both ends, so a plain string swap is exact.
+            var entryX = reversed ? source.MlX : source.MsX;
+            var entryY = reversed ? source.MlY : source.MsY;
+            var entryDp = reversed ? source.MlDp ?? source.MsDp : source.MsDp;
+            var exitX = reversed ? source.MsX : source.MlX;
+            var exitY = reversed ? source.MsY : source.MlY;
+            var exitDp = reversed ? source.MsDp : source.MlDp;
+
+            ms.SetAttributeValue("x", entryX);
+            ms.SetAttributeValue("y", entryY);
+            ms.SetAttributeValue("dp", entryDp);
+            ms.SetAttributeValue("in", source.In);
+            ms.SetAttributeValue("out", source.Out);
+            ms.SetAttributeValue("sxy", source.Sxy);
+            ms.SetAttributeValue("fwd", source.Fwd);
+            ms.SetAttributeValue("c", source.C);
+            ms.SetAttributeValue("name", source.Name);
+            ms.SetAttributeValue("comment", source.Comment);
+
+            ml.SetAttributeValue("x", exitX);
+            ml.SetAttributeValue("y", exitY);
+            ml.SetAttributeValue("dp", exitDp);
+        }
+
+        private static double SquaredDistance(double x1, double y1, double x2, double y2)
+        {
+            var dx = x1 - x2;
+            var dy = y1 - y2;
+
+            return dx * dx + dy * dy;
+        }
+
         // --- Groove <-> mill program rewriting -------------------------------------------------
         // Both directions decode the escaped <program> sub-document (as PrepForSplitAlongX does),
         // mutate the element tree in place, and let the caller re-serialize with program.ToString().
@@ -1245,6 +1618,27 @@ namespace XncOptimizerUI.Services
             var version = int.Parse(collection[0].Groups[1].Value);
 
             return regex2.Replace(_source, $"_gm({version + 1}).project");
+        }
+
+        private string GetMillOrderFileName()
+        {
+            var regex1 = new Regex(@"_mo\.project$");
+            var regex2 = new Regex(@"_mo\((\d*)\)\.project$");
+
+            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            {
+                return _source.Replace(".project", "_mo.project");
+            }
+
+            if (regex1.IsMatch(_source))
+            {
+                return regex1.Replace(_source, "_mo(1).project");
+            }
+
+            var collection = regex2.Matches(_source);
+            var version = int.Parse(collection[0].Groups[1].Value);
+
+            return regex2.Replace(_source, $"_mo({version + 1}).project");
         }
 
         private static Part CreatePart(XElement element)

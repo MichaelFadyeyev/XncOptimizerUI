@@ -433,6 +433,78 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void OptimizeMillTraversal_PassesCheckedPartsToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.OptimizeMillTraversalCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OptimizeMillTraversal)));
+                Assert.That(_projectService.LastMillTraversalParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful optimization reloads the project");
+            });
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
+        {
+            SeedTwoParts();
+            _projectService.OptimizeMillTraversalResult = false;
+            _projectService.LogToAppend = "***\nNo mill passes reordered (ignored 0).";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.OptimizeMillTraversalCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning("No mill passes reordered (ignored 0).", Arg.Any<string>());
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OptimizeMillTraversal) }),
+                "a failed optimization should not reload the project");
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_WithNoPartsChecked_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.OptimizeMillTraversalCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No parts checked for mill order optimization!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_WithNoFileOpen_LogsAndDoesNothing()
+        {
+            var vm = CreateViewModel();
+
+            vm.OptimizeMillTraversalCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
         public void CloseFile_ClearsProjectState()
         {
             SeedTwoParts();
