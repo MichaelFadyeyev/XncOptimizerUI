@@ -11,19 +11,22 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove=".claude\**" />
+	  <Compile Remove=".copilot\**" />
+	  <EmbeddedResource Remove=".claude\**" />
+	  <EmbeddedResource Remove=".copilot\**" />
+	  <None Remove=".claude\**" />
+	  <None Remove=".copilot\**" />
+	  <Page Remove=".claude\**" />
+	  <Page Remove=".copilot\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Content Include="xnc_logo.ico" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Include=".claude\code-analysis.md" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include=".copilot\" />
 	</ItemGroup>
 </Project>
