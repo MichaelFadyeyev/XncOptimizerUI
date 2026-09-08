@@ -586,6 +586,347 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void LengthMin_ExcludesShorterParts()
+        {
+            SeedTwoParts(); // Полиця 600x400, Бокова 800x300
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "700";
+
+            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
+        }
+
+        [Test]
+        public void LengthRange_KeepsPartsInsideBounds()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "550";
+            vm.LengthMax = "650";
+
+            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
+        }
+
+        [Test]
+        public void WidthMax_ExcludesWiderParts()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.WidthMax = "350";
+
+            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
+        }
+
+        [Test]
+        public void RangeAndName_CombineAsAnd()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.FilterName = "Бокова";
+            vm.LengthMin = "100";
+            vm.LengthMax = "900";
+            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+
+            vm.LengthMax = "500"; // Бокова is 800 long -> now excluded
+            Assert.That(vm.Parts, Is.Empty);
+        }
+
+        [Test]
+        public void ClearFilters_ResetsRangeFields()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "550";
+            vm.LengthMax = "650";
+            vm.WidthMin = "100";
+            vm.WidthMax = "450";
+            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+
+            vm.ClearFiltersCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Parts, Has.Count.EqualTo(2));
+                Assert.That(vm.LengthMin, Is.Empty);
+                Assert.That(vm.LengthMax, Is.Empty);
+                Assert.That(vm.WidthMin, Is.Empty);
+                Assert.That(vm.WidthMax, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void InvalidDecimalString_IsIgnored()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "abc";
+
+            Assert.That(vm.Parts, Has.Count.EqualTo(2), "unparseable bound must not filter anything");
+        }
+
+        [Test]
+        public void DotSeparator_ParsedAsDecimal()
+        {
+            SeedTwoParts(); // Полиця 600 long, Бокова 800 long
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMax = "700.5";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMax, Is.EqualTo("700.5"), "typed text is kept verbatim");
+                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }),
+                    "700.5 must parse as a decimal, so only the 600-long part passes");
+            });
+        }
+
+        [Test]
+        public void CommaSeparator_ParsedAsDecimal()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMax = "700,5";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMax, Is.EqualTo("700,5"), "comma is not reformatted away");
+                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }),
+                    "comma must be treated as the decimal separator, same as a dot");
+            });
+        }
+
+        [Test]
+        public void HalfTypedDecimal_IsNotReformatted()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "18."; // mid-typing "18.5"
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("18."), "trailing separator must survive so the next digit lands");
+                Assert.That(vm.Parts, Has.Count.EqualTo(2), "\"18.\" parses as 18, both parts are longer");
+            });
+        }
+
+        [Test]
+        public void CommaAndDot_FilterIdentically()
+        {
+            SeedTwoParts(); // widths 400 and 300
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.WidthMax = "350.0";
+            var withDot = vm.Parts.Select(p => p.Name).ToArray();
+
+            vm.ClearFiltersCommand.Execute(null);
+
+            vm.WidthMax = "350,0";
+            var withComma = vm.Parts.Select(p => p.Name).ToArray();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(withDot, Is.EqualTo(new[] { "Бокова" }));
+                Assert.That(withComma, Is.EqualTo(withDot));
+            });
+        }
+
+        [Test]
+        public void LengthMin_AboveLengthMax_RaisesMaxToMatch()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMax = "500";
+            vm.LengthMin = "700";
+            vm.NormalizeRangeBounds(); // debounce timer would do this after typing pauses
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("700"));
+                Assert.That(vm.LengthMax, Is.EqualTo("700"));
+            });
+        }
+
+        [Test]
+        public void LengthMax_BelowLengthMin_LowersMinToMatch()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "500";
+            vm.LengthMax = "300";
+            vm.NormalizeRangeBounds();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("300"));
+                Assert.That(vm.LengthMax, Is.EqualTo("300"));
+            });
+        }
+
+        [Test]
+        public void WidthMin_AboveWidthMax_RaisesMaxToMatch()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.WidthMax = "200";
+            vm.WidthMin = "450";
+            vm.NormalizeRangeBounds();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.WidthMin, Is.EqualTo("450"));
+                Assert.That(vm.WidthMax, Is.EqualTo("450"));
+            });
+        }
+
+        [Test]
+        public void Equalize_SkippedWhenSiblingBlank()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "700"; // LengthMax left blank -> no snap
+            vm.NormalizeRangeBounds();
+
+            Assert.That(vm.LengthMax, Is.Empty);
+        }
+
+        [Test]
+        public void Equalize_ThenFilterUsesSnappedBounds()
+        {
+            SeedTwoParts(); // Полиця 600 long, Бокова 800 long
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMax = "500";
+            vm.LengthMin = "700"; // both snap to 700 -> nothing is exactly 700 long
+            vm.NormalizeRangeBounds();
+
+            Assert.That(vm.Parts, Is.Empty);
+        }
+
+        [Test]
+        public void Equalize_MaxTypedBelowMin_DigitByDigit_SnapsToFullValue()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "100";
+            vm.LengthMax = "5";  // first digit while typing "50"
+            vm.LengthMax = "50"; // full value
+            vm.NormalizeRangeBounds();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("50"), "min must snap to the full max, not the first digit");
+                Assert.That(vm.LengthMax, Is.EqualTo("50"));
+            });
+        }
+
+        [Test]
+        public void Equalize_MinTypedAboveMax_DigitByDigit_SnapsToFullValue()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMax = "40";
+            vm.LengthMin = "9";
+            vm.LengthMin = "90";
+            vm.NormalizeRangeBounds();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("90"));
+                Assert.That(vm.LengthMax, Is.EqualTo("90"));
+            });
+        }
+
+        [Test]
+        public void NormalizeRangeBounds_LeavesValidRangeUntouched()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "100";
+            vm.LengthMax = "500";
+            vm.NormalizeRangeBounds();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.EqualTo("100"));
+                Assert.That(vm.LengthMax, Is.EqualTo("500"));
+            });
+        }
+
+        [Test]
+        public void ClearFilters_CancelsPendingEqualize()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.LengthMin = "700";
+            vm.LengthMax = "500"; // inverted, snap still pending (timer not fired)
+
+            vm.ClearFiltersCommand.Execute(null);
+            vm.NormalizeRangeBounds(); // pending edge was cleared -> no-op
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.LengthMin, Is.Empty);
+                Assert.That(vm.LengthMax, Is.Empty);
+                Assert.That(vm.WidthMin, Is.Empty);
+                Assert.That(vm.WidthMax, Is.Empty);
+                Assert.That(vm.Parts, Has.Count.EqualTo(2));
+            });
+        }
+
+        [Test]
         public void CloseFile_ResetsCheckedCount()
         {
             SeedTwoParts();

@@ -255,19 +255,52 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="40" />
                     <ColumnDefinition Width="40" />
-                    <ColumnDefinition Width="110" />
-                    <ColumnDefinition Width="0.2*" />
-                    <ColumnDefinition Width="0.2*" />
+                    <ColumnDefinition Width="0.22*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="0.22*" />
+                    <ColumnDefinition Width="0.22*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="0.22*" />
                     <ColumnDefinition Width="1*" />
                     <ColumnDefinition Width="40" />
                     <ColumnDefinition Width="40" />
-                    <ColumnDefinition Width="110" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
+
+                <StackPanel
+                    x:Name="CheckedCountPanel"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="11"
+                    HorizontalAlignment="Left"
+                    Orientation="Horizontal">
+                    <Label
+                        VerticalAlignment="Center"
+                        Content="Checked no:" />
+                    <Label
+                        VerticalAlignment="Center"
+                        Content="{Binding CheckedCount}" />
+                </StackPanel>
+                <StackPanel
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="11"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+                    <Label
+                        VerticalAlignment="Center"
+                        Content="Filtered no:" />
+                    <Label
+                        VerticalAlignment="Center"
+                        Content="{Binding Parts.Count}" />
+                </StackPanel>
+
                 <Button
                     x:Name="CheckAllButton"
+                    Grid.Row="1"
                     Grid.Column="0"
                     Height="20"
                     Margin="2,0,0,0"
@@ -276,32 +309,21 @@
                     Content="Check all"/>
                 <Button
                     x:Name="UncheckAllButton"
+                    Grid.Row="1"
                     Grid.Column="1"
                     Height="20"
                     Margin="2,0,0,0"
                     Padding="0,2"
                     Command="{Binding UncheckAllCommand}"
                     Content="Uncheck all" />
-                <StackPanel
-                    x:Name="CheckedCountPanel"
-                    Grid.Column="2"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-                    <Label
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Content="Checked no:" />
-                    <Label
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Content="{Binding CheckedCount}" />
-                </StackPanel>
+
                 <TextBox
-                    Grid.Column="3"
+                    Grid.Row="1"
+                    Grid.Column="2"
                     Style="{StaticResource FilterInputStyle}"
-                    Text="{Binding FilterLength}">
-                    <!--<TextBox.Text>
-                        <Binding Path="FilterLength"
+                    ToolTip="Length min">
+                    <TextBox.Text>
+                        <Binding Path="LengthMin"
                                  UpdateSourceTrigger="PropertyChanged"
                                  ValidatesOnDataErrors="True"
                                  NotifyOnValidationError="True"
@@ -310,14 +332,21 @@
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
                         </Binding>
-                    </TextBox.Text>-->
+                    </TextBox.Text>
                 </TextBox>
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="3"
+                    Margin="2,0,0,0"
+                    VerticalAlignment="Center"
+                    Text="&#8211;" />
                 <TextBox
+                    Grid.Row="1"
                     Grid.Column="4"
                     Style="{StaticResource FilterInputStyle}"
-                    Text="{Binding FilterWidth}">
-                    <!--<TextBox.Text>
-                        <Binding Path="FilterWidth"
+                    ToolTip="Length max">
+                    <TextBox.Text>
+                        <Binding Path="LengthMax"
                                  UpdateSourceTrigger="PropertyChanged"
                                  ValidatesOnDataErrors="True"
                                  NotifyOnValidationError="True"
@@ -326,39 +355,70 @@
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
                         </Binding>
-                    </TextBox.Text>-->
+                    </TextBox.Text>
                 </TextBox>
                 <TextBox
+                    Grid.Row="1"
                     Grid.Column="5"
                     Style="{StaticResource FilterInputStyle}"
+                    ToolTip="Width min">
+                    <TextBox.Text>
+                        <Binding Path="WidthMin"
+                                 UpdateSourceTrigger="PropertyChanged"
+                                 ValidatesOnDataErrors="True"
+                                 NotifyOnValidationError="True"
+                                 Mode="TwoWay">
+                            <Binding.ValidationRules>
+                                <validators:DecimalValidationRule />
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox.Text>
+                </TextBox>
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="6"
+                    Margin="2,0,0,0"
+                    VerticalAlignment="Center"
+                    Text="&#8211;" />
+                <TextBox
+                    Grid.Row="1"
+                    Grid.Column="7"
+                    Style="{StaticResource FilterInputStyle}"
+                    ToolTip="Width max">
+                    <TextBox.Text>
+                        <Binding Path="WidthMax"
+                                 UpdateSourceTrigger="PropertyChanged"
+                                 ValidatesOnDataErrors="True"
+                                 NotifyOnValidationError="True"
+                                 Mode="TwoWay">
+                            <Binding.ValidationRules>
+                                <validators:DecimalValidationRule />
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox.Text>
+                </TextBox>
+                <TextBox
+                    Grid.Row="1"
+                    Grid.Column="8"
+                    Style="{StaticResource FilterInputStyle}"
+                    ToolTip="Name contains"
                     Text="{Binding FilterName}" />
                 <Button
-                    Grid.Column="6"
+                    Grid.Row="1"
+                    Grid.Column="9"
                     Height="20"
                     Margin="2,0,0,0"
                     Padding="0,2"
                     Command="{Binding ApplyFilterCommand}"
                     Content="Filter" />
                 <Button
-                    Grid.Column="7"
+                    Grid.Row="1"
+                    Grid.Column="10"
                     Height="20"
                     Margin="2,0,0,0"
                     Padding="0,2"
                     Command="{Binding ClearFiltersCommand}"
                     Content="Clear" />
-                <StackPanel
-                    Grid.Column="8"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-                    <Label
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Content="Filtered no:" />
-                    <Label
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Content="{Binding Parts.Count}" />
-                </StackPanel>
             </Grid>
             <DataGrid
                 AutoGenerateColumns="False"
