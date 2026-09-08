@@ -5,8 +5,11 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Windows.Threading;
 using XncOptimizerUI.Contracts;
+using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.MVVM.ViewModels
@@ -15,11 +18,29 @@ namespace XncOptimizerUI.MVVM.ViewModels
     {
         private const string NoProgramsInfo = "Programs: -";
 
+        private const int BoundsNormalizeDelayMs = 400;
+
         private readonly string _assembly;
         private string _filterName = string.Empty;
-        private decimal? _filterLength;
-        private decimal? _filterWidth;
+
+        // Each range bound keeps the raw text the user typed AND its parsed value. The text
+        // is what the TextBox shows, so a half-typed "18." or a "," separator is not
+        // reformatted away mid-edit; the decimal is what the filter and the equalize use.
+        private string _lengthMinText = string.Empty;
+        private string _lengthMaxText = string.Empty;
+        private string _widthMinText = string.Empty;
+        private string _widthMaxText = string.Empty;
+        private decimal? _lengthMin;
+        private decimal? _lengthMax;
+        private decimal? _widthMin;
+        private decimal? _widthMax;
         private bool _applyPartsFilter = true;
+
+        private enum RangeEdge { None, Min, Max }
+
+        private readonly DispatcherTimer _boundsNormalizeTimer;
+        private RangeEdge _lengthPendingEdge = RangeEdge.None;
+        private RangeEdge _widthPendingEdge = RangeEdge.None;
 
         private List<PartVM> _allParts = [];
         private int _sourceXncCount;
@@ -43,6 +64,16 @@ namespace XncOptimizerUI.MVVM.ViewModels
             _windowTitle = _assembly + " - No file selected";
             _labelsToProcess = labelsToProcess;
             _selectedLabel = selectedLabel;
+
+            _boundsNormalizeTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(BoundsNormalizeDelayMs)
+            };
+            _boundsNormalizeTimer.Tick += (_, _) =>
+            {
+                _boundsNormalizeTimer.Stop();
+                NormalizeRangeBounds();
+            };
         }
 
         #region Props
@@ -75,42 +106,129 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 _applyPartsFilter = true;
             }
         }
-        public string FilterLength
+        public string LengthMin
         {
-            get { return _filterLength == null ? string.Empty : _filterLength.ToString()!; }
-            set
+            get => _lengthMinText;
+            set => SetRangeBound(ref _lengthMinText, ref _lengthMin, value, ref _lengthPendingEdge, RangeEdge.Min);
+        }
+        public string LengthMax
+        {
+            get => _lengthMaxText;
+            set => SetRangeBound(ref _lengthMaxText, ref _lengthMax, value, ref _lengthPendingEdge, RangeEdge.Max);
+        }
+        public string WidthMin
+        {
+            get => _widthMinText;
+            set => SetRangeBound(ref _widthMinText, ref _widthMin, value, ref _widthPendingEdge, RangeEdge.Min);
+        }
+        public string WidthMax
+        {
+            get => _widthMaxText;
+            set => SetRangeBound(ref _widthMaxText, ref _widthMax, value, ref _widthPendingEdge, RangeEdge.Max);
+        }
+
+        private void SetRangeBound(ref string text, ref decimal? parsed, string? value,
+            ref RangeEdge pendingEdge, RangeEdge edge, [CallerMemberName] string? propertyName = null)
+        {
+            // Store the raw text verbatim. "." is the only decimal separator; "," is a
+            // validation error (DecimalValidationRule rejects it, so it never reaches here
+            // through the binding). Trimming and canonicalization happen only on commit
+            // (NormalizeRangeBounds), so they cannot eat a digit still being typed.
+            text = value ?? string.Empty;
+            parsed = TryParseToDecimal(text);
+            OnPropertyChanged(propertyName);
+
+            pendingEdge = edge;
+            RestartBoundsNormalizeTimer();
+
+            if (_applyPartsFilter)
             {
-                _filterLength = TryParseToDecimal(value);
-                OnPropertyChanged();
+                FilterParts();
+                return;
+            }
 
-                if (_applyPartsFilter)
-                {
-                    FilterParts();
-                    return;
-                }
+            _applyPartsFilter = true;
+        }
 
-                _applyPartsFilter = true;
+        private void RestartBoundsNormalizeTimer()
+        {
+            _boundsNormalizeTimer.Stop();
+            _boundsNormalizeTimer.Start();
+        }
+
+        private void CancelBoundsNormalize()
+        {
+            _boundsNormalizeTimer.Stop();
+            _lengthPendingEdge = RangeEdge.None;
+            _widthPendingEdge = RangeEdge.None;
+        }
+
+        /// <summary>
+        /// Snaps an inverted [min, max] pair together, moving the edge the user did NOT
+        /// just edit. Runs off the debounce timer so it acts on the fully typed value
+        /// rather than each intermediate digit. Public so the Filter button and tests
+        /// can force it without waiting for the timer.
+        /// </summary>
+        public void NormalizeRangeBounds()
+        {
+            CanonicalizeBoundText(ref _lengthMinText, nameof(LengthMin));
+            CanonicalizeBoundText(ref _lengthMaxText, nameof(LengthMax));
+            CanonicalizeBoundText(ref _widthMinText, nameof(WidthMin));
+            CanonicalizeBoundText(ref _widthMaxText, nameof(WidthMax));
+
+            var changed = NormalizePair(
+                ref _lengthMin, ref _lengthMinText, nameof(LengthMin),
+                ref _lengthMax, ref _lengthMaxText, nameof(LengthMax), _lengthPendingEdge);
+            changed |= NormalizePair(
+                ref _widthMin, ref _widthMinText, nameof(WidthMin),
+                ref _widthMax, ref _widthMaxText, nameof(WidthMax), _widthPendingEdge);
+
+            _lengthPendingEdge = RangeEdge.None;
+            _widthPendingEdge = RangeEdge.None;
+
+            if (changed)
+            {
+                FilterParts();
             }
         }
-        public string FilterWidth
+
+        // Canonicalization (trim, trailing-separator strip) never changes the parsed value,
+        // so the decimal? fields stay correct and this does not need to re-run the filter.
+        private void CanonicalizeBoundText(ref string text, string propertyName)
         {
-            get
-            {
-                return _filterWidth == null ? string.Empty : _filterWidth.ToString()!;
-            }
-            set
-            {
-                _filterWidth = TryParseToDecimal(value);
-                OnPropertyChanged();
+            var canonical = DecimalInput.Canonicalize(text);
 
-                if (_applyPartsFilter)
-                {
-                    FilterParts();
-                    return;
-                }
-
-                _applyPartsFilter = true;
+            if (canonical != text)
+            {
+                text = canonical;
+                OnPropertyChanged(propertyName);
             }
+        }
+
+        private bool NormalizePair(
+            ref decimal? min, ref string minText, string minProp,
+            ref decimal? max, ref string maxText, string maxProp,
+            RangeEdge edited)
+        {
+            if (edited == RangeEdge.None || !min.HasValue || !max.HasValue || min <= max)
+            {
+                return false;
+            }
+
+            if (edited == RangeEdge.Min)
+            {
+                max = min;
+                maxText = DecimalInput.Format(max.Value);
+                OnPropertyChanged(maxProp);
+            }
+            else
+            {
+                min = max;
+                minText = DecimalInput.Format(min.Value);
+                OnPropertyChanged(minProp);
+            }
+
+            return true;
         }
 
         [ObservableProperty]
@@ -518,10 +636,18 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             Log = string.Empty;
             FullPath = string.Empty;
+            _applyPartsFilter = false;
             FilterName = string.Empty;
-            FilterLength = string.Empty;
-            FilterWidth = string.Empty;
+            _applyPartsFilter = false;
+            LengthMin = string.Empty;
+            _applyPartsFilter = false;
+            LengthMax = string.Empty;
+            _applyPartsFilter = false;
+            WidthMin = string.Empty;
+            _applyPartsFilter = false;
+            WidthMax = string.Empty;
             NewLabelToProcess = string.Empty;
+            CancelBoundsNormalize();
 
             SelectedPart = null;
             SelectedBand = null;
@@ -540,14 +666,23 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             _applyPartsFilter = false;
             FilterName = string.Empty;
-            FilterLength = string.Empty;
-            FilterWidth = string.Empty;
+            _applyPartsFilter = false;
+            LengthMin = string.Empty;
+            _applyPartsFilter = false;
+            LengthMax = string.Empty;
+            _applyPartsFilter = false;
+            WidthMin = string.Empty;
+            _applyPartsFilter = false;
+            WidthMax = string.Empty;
+            CancelBoundsNormalize();
             Parts = new ObservableCollection<PartVM>(_allParts);
         }
 
         [RelayCommand]
         private void ApplyFilter()
         {
+            NormalizeRangeBounds();
+
             if (_applyPartsFilter)
             {
                 FilterParts();
@@ -614,6 +749,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             RebindCheckedCount(previousParts, _allParts);
 
+            // Each Filter*/*Min/*Max setter re-arms _applyPartsFilter, so disarm before every
+            // assignment to keep the reset from triggering a mid-load FilterParts pass.
+            _applyPartsFilter = false;
+            LengthMin = string.Empty;
+            _applyPartsFilter = false;
+            LengthMax = string.Empty;
+            _applyPartsFilter = false;
+            WidthMin = string.Empty;
+            _applyPartsFilter = false;
+            WidthMax = string.Empty;
+            _applyPartsFilter = false;
+            CancelBoundsNormalize();
+
             Parts = new ObservableCollection<PartVM>(_allParts);
             FilterName = string.Empty;
         }
@@ -667,8 +815,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             Parts = new ObservableCollection<PartVM>(
                 _allParts.Where(p => (string.IsNullOrEmpty(_filterName) || p.Name.Contains(_filterName))
-                    && (_filterLength == null || p.Length == _filterLength)
-                    && (_filterWidth == null || p.Width == _filterWidth))
+                    && (_lengthMin == null || p.Length >= _lengthMin)
+                    && (_lengthMax == null || p.Length <= _lengthMax)
+                    && (_widthMin == null || p.Width >= _widthMin)
+                    && (_widthMax == null || p.Width <= _widthMax))
                 );
         }
 
@@ -809,17 +959,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private static string Num(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-        private static decimal? TryParseToDecimal(string value)
-        {
-            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var width))
-            {
-                return width;
-            }
-            else
-            {
-                return null;
-            }
-        }
+        private static decimal? TryParseToDecimal(string value) =>
+            DecimalInput.TryParse(value, out var result) ? result : null;
 
         #endregion
     }

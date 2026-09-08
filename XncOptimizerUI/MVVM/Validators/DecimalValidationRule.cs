@@ -1,7 +1,6 @@
-﻿
 using System.Globalization;
-
 using System.Windows.Controls;
+using XncOptimizerUI.Helpers;
 
 namespace XncOptimizerUI.MVVM.Validators
 {
@@ -9,14 +8,14 @@ namespace XncOptimizerUI.MVVM.Validators
     {
         public override ValidationResult Validate(object value, CultureInfo cultureInfo)
         {
-            if (string.IsNullOrEmpty(value as string))
+            var text = value as string;
+
+            if (string.IsNullOrWhiteSpace(text))
                 return ValidationResult.ValidResult;
 
-            if (decimal.TryParse(value as string, out _))
-                return ValidationResult.ValidResult;
-
-            return new ValidationResult(false, "Invalid decimal number");
+            return DecimalInput.TryParse(text, out _)
+                ? ValidationResult.ValidResult
+                : new ValidationResult(false, "Invalid decimal number");
         }
     }
-
 }
