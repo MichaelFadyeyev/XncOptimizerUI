@@ -10,8 +10,8 @@
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
     xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
     Title="{Binding WindowTitle}"
-    Width="800"
-    Height="450"
+    Width="1024"
+    Height="768"
     d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
@@ -321,7 +321,8 @@
                     Grid.Row="1"
                     Grid.Column="2"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Length min">
+                    ToolTip="Length min"
+                    TextChanged="RangeInput_TextChanged">
                     <TextBox.Text>
                         <Binding Path="LengthMin"
                                  UpdateSourceTrigger="PropertyChanged"
@@ -344,7 +345,8 @@
                     Grid.Row="1"
                     Grid.Column="4"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Length max">
+                    ToolTip="Length max"
+                    TextChanged="RangeInput_TextChanged">
                     <TextBox.Text>
                         <Binding Path="LengthMax"
                                  UpdateSourceTrigger="PropertyChanged"
@@ -361,7 +363,8 @@
                     Grid.Row="1"
                     Grid.Column="5"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Width min">
+                    ToolTip="Width min"
+                    TextChanged="RangeInput_TextChanged">
                     <TextBox.Text>
                         <Binding Path="WidthMin"
                                  UpdateSourceTrigger="PropertyChanged"
@@ -384,7 +387,8 @@
                     Grid.Row="1"
                     Grid.Column="7"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Width max">
+                    ToolTip="Width max"
+                    TextChanged="RangeInput_TextChanged">
                     <TextBox.Text>
                         <Binding Path="WidthMax"
                                  UpdateSourceTrigger="PropertyChanged"

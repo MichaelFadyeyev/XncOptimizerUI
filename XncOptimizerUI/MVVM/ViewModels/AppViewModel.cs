@@ -130,6 +130,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private void SetRangeBound(ref string text, ref decimal? parsed, string? value,
             ref RangeEdge pendingEdge, RangeEdge edge, [CallerMemberName] string? propertyName = null)
         {
+            // Store the raw text verbatim. "." is the only decimal separator; "," is a
+            // validation error (DecimalValidationRule rejects it, so it never reaches here
+            // through the binding). Trimming and canonicalization happen only on commit
+            // (NormalizeRangeBounds), so they cannot eat a digit still being typed.
             text = value ?? string.Empty;
             parsed = TryParseToDecimal(text);
             OnPropertyChanged(propertyName);
@@ -167,6 +171,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         public void NormalizeRangeBounds()
         {
+            CanonicalizeBoundText(ref _lengthMinText, nameof(LengthMin));
+            CanonicalizeBoundText(ref _lengthMaxText, nameof(LengthMax));
+            CanonicalizeBoundText(ref _widthMinText, nameof(WidthMin));
+            CanonicalizeBoundText(ref _widthMaxText, nameof(WidthMax));
+
             var changed = NormalizePair(
                 ref _lengthMin, ref _lengthMinText, nameof(LengthMin),
                 ref _lengthMax, ref _lengthMaxText, nameof(LengthMax), _lengthPendingEdge);
@@ -180,6 +189,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
             if (changed)
             {
                 FilterParts();
+            }
+        }
+
+        // Canonicalization (trim, trailing-separator strip) never changes the parsed value,
+        // so the decimal? fields stay correct and this does not need to re-run the filter.
+        private void CanonicalizeBoundText(ref string text, string propertyName)
+        {
+            var canonical = DecimalInput.Canonicalize(text);
+
+            if (canonical != text)
+            {
+                text = canonical;
+                OnPropertyChanged(propertyName);
             }
         }
 
