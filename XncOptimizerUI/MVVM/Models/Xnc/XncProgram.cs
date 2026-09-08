@@ -3,7 +3,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// <summary>
     /// A parsed XNC machining program: the decoded contents of the <c>program</c>
     /// attribute of one <c>&lt;operation typeId="XNC"&gt;</c>. See
-    /// <c>.claude/xnc-program-read.md</c> for the format this follows.
+    /// <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c> for the format this follows.
     /// </summary>
     public class XncProgram
     {

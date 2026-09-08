@@ -8,7 +8,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
 
         /// <summary>
         /// True when the arc is swept clockwise in the Y-up part frame. Derived from
-        /// <c>dir="false"</c> (see <c>.claude/xnc-program-read.md</c> &#167;6.5 &#8212; still to be
+        /// <c>dir="false"</c> (see <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c> &#167;6.5 &#8212; still to be
         /// confirmed against <c>td-2.project</c>).
         /// </summary>
         public bool Clockwise { get; init; }

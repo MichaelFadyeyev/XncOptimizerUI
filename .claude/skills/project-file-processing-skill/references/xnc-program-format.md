@@ -1,18 +1,8 @@
----
-name: xnc-program-read
-description: >
-  How to read XNC machining-program data (tools, bores, groovings, milling entry
-  points, milling line/arc segments, rectangular milling pockets, variables and
-  expressions) out of the inline `program` attribute on `operation[typeId="XNC"]`
-  elements in a GibLab `.project` file. Reflects `TestData/td-programs.project` as of
-  2026-09-05; element/attribute vocabulary cross-checked against the larger
-  `TestData/td-2.project` (523 program sub-documents). Implemented by
-  `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs`, surfaced as
-  `IProjectService.ReadXncPrograms(int partId)`. Not ground truth for every dialect
-  variation.
----
-
 # Reading XNC machining programs
+
+This is the folded content of the former `.claude/xnc-program-read.md`. It documents the escaped
+`program` sub-document only; the outer `.project` schema is in `project-file-schema.md`, the
+.NET side in `dotnet-api.md`.
 
 ## 1. Purpose & scope
 
@@ -356,7 +346,7 @@ fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.pro
 | 5 | `<bf>` | face bore, `Bore15`, centre `(34, 65)`, depth `dp=14` |
 | 6 | `<bf>` | face bore, `Bore15`, centre `(34, 545)`, depth `dp=14` |
 
-## 8. Implementation (branch `009_Read-and-display-xnc-programs`)
+## 8. Implementation
 
 The reader described above is implemented:
 

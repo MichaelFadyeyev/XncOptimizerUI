@@ -3,7 +3,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// <summary>
     /// A rectangular milling primitive (<c>&lt;mr&gt;</c>) &#8212; a self-contained pocket or
     /// frame, not a contour of segments. Attribute meanings are inferred from the fixture
-    /// (see <c>.claude/xnc-program-read.md</c> &#167;6.6).
+    /// (see <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c> &#167;6.6).
     /// </summary>
     public class XncMillingRectangle
     {

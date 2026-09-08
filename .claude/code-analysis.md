@@ -16,14 +16,14 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 ## Core abstractions & services
 
 - **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `FullPath`), implemented by `GibLabProjectService`.
-- **`Services/GibLabProjectService.cs`** — contains the old `XmlOperator`/`XncOperator` class library's logic, moved and extended with: XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), and groove ⇄ mill conversion (`ConvertGroovesAndMills`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[xnc-program-read]]).
+- **`Services/GibLabProjectService.cs`** — contains the old `XmlOperator`/`XncOperator` class library's logic, moved and extended with: XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), and groove ⇄ mill conversion (`ConvertGroovesAndMills`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
 - **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `text#id` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
 
 ## Domain models & presentation
 
 - **Models** (`MVVM/Models/Part.cs`, `Band.cs`, `Sheet.cs`) — plain data classes (`Id`, `Name`, `Length`, `Width`, `Count`, sheet/banding relationships).
-- **`MVVM/Models/Xnc/`** — read-only classes representing parsed XNC programs: `XncProgram` (top-level), `XncTool`, `XncBore`+`BoreSurface`, `XncGrooving`, `XncMillingContour`+`XncMillingSegment` (`XncLineSegment`, `XncArcSegment`), `XncMillingRectangle`, `ToolPosition`, `XncPoint`. Format documented in [[xnc-program-read]].
+- **`MVVM/Models/Xnc/`** — read-only classes representing parsed XNC programs: `XncProgram` (top-level), `XncTool`, `XncBore`+`BoreSurface`, `XncGrooving`, `XncMillingContour`+`XncMillingSegment` (`XncLineSegment`, `XncArcSegment`), `XncMillingRectangle`, `ToolPosition`, `XncPoint`. Format documented in [[project-file-processing-skill]].
 - **ViewModels** (`PartVM`, `BandVM`, `SheetVM`) — wrap domain models for data-binding; `AppViewModel` orchestrates the UI.
 - **`AppViewModel.cs`** — file lifecycle (Open/Save/Close), filterable `Parts`/`Bands`/`Sheets` grids, part selection + edit-on-selection-change that auto-saves, XNC program display (`SelectedPartPrograms`), CSV/clipboard export, label management.
 
@@ -49,7 +49,7 @@ Programs: 1
   /groove/front/Cut3.2 (-10,565)-(1390,565) dp4 w10 Center
   /mill/front/Mill6 (250,382.5) dp21 Left 2 arc
 ```
-Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[xnc-program-read]].
+Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[project-file-processing-skill]].
 
 **Replace XNC programs** — new: source part's drill programs (one per face: front/back) are validated, then copied to selected target parts. Before copying, all targets are checked for: (1) identical dimensions & banding, (2) same number of XNC faces, (3) matching face/turn orientations. If validation passes, the `program` attribute and `countBore` metadata are overwritten, and the file is saved as `_replaced-XNC.project` with a timestamp description. Implemented in `GibLabProjectService.ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)` with detailed validation and error logging.
 
@@ -97,7 +97,7 @@ saved as `_gm.project` with a timestamped description.
 
 # For developers / contributors
 
-See [[xnc-program-read]] for a comprehensive reference on the GibLab `.project` XML format, especially:
+See [[project-file-processing-skill]] (`.claude/skills/project-file-processing-skill/`, especially `references/project-file-schema.md` and `references/xnc-program-format.md`) for a comprehensive reference on the GibLab `.project` XML format, especially:
 - How XNC machining programs are encoded as escaped XML inside the `program` attribute of `<operation typeId="XNC">` elements
 - The coordinate frame, symbol table, expression evaluation, and all element types (tools, bores, groovings, milling contours, rectangles)
 - A worked example from the test fixture

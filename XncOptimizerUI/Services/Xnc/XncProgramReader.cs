@@ -10,7 +10,7 @@ namespace XncOptimizerUI.Services.Xnc
     /// <summary>
     /// Reads the escaped <c>program</c> sub-document on an
     /// <c>&lt;operation typeId="XNC"&gt;</c> into an <see cref="XncProgram"/>.
-    /// The format is documented in <c>.claude/xnc-program-read.md</c>.
+    /// The format is documented in <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c>.
     /// </summary>
     public static class XncProgramReader
     {
@@ -238,7 +238,7 @@ namespace XncOptimizerUI.Services.Xnc
                     }
 
                     default:
-                        // Unknown element type: ignore (see .claude/xnc-program-read.md §9).
+                        // Unknown element type: ignore (see .claude/skills/project-file-processing-skill/references/xnc-program-format.md §9).
                         break;
                 }
             }

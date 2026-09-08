@@ -8,7 +8,7 @@ namespace XncOptimizerUI.Test
     /// <summary>
     /// Exercises <see cref="XncProgramReader"/> against the checked-in fixture
     /// <c>TestData/td-programs.project</c>. Expected numbers follow the worked example
-    /// in <c>.claude/xnc-program-read.md</c> §7.
+    /// in <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c> §7.
     /// </summary>
     [TestFixture]
     public class XncProgramReaderTests
