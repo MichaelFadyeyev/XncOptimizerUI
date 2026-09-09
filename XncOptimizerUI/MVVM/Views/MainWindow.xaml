@@ -198,55 +198,100 @@
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
         </DockPanel>
-        <DataGrid
+        <TabControl
+            Grid.Row="0"
             Grid.Column="1"
-            Height="Auto"
-            HorizontalContentAlignment="Right"
-            AutoGenerateColumns="False"
-            ItemsSource="{Binding Bands}"
-            ScrollViewer.VerticalScrollBarVisibility="Auto"
-            SelectedItem="{Binding SelectedBand}">
-            <DataGrid.Columns>
-                <DataGridTextColumn
-                    Width="5*"
-                    Binding="{Binding ExternalSymbol}"
-                    Header="Ext. Sign">
-                    <!--<DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Center" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.HeaderStyle>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="HorizontalAlignment" Value="Center" />
-                        </Style>
-                    </DataGridTextColumn.HeaderStyle>-->
-                </DataGridTextColumn>
-                <DataGridTextColumn
-                    Width="5*"
-                    Binding="{Binding InternalSymbol}"
-                    Header="Int. Sign">
-                    <!--<DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Center" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.HeaderStyle>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="HorizontalAlignment" Value="Center" />
-                        </Style>
-                    </DataGridTextColumn.HeaderStyle>-->
-                </DataGridTextColumn>
-                <DataGridTextColumn
-                    Width="20*"
-                    Binding="{Binding Code}"
-                    Header="Code" />
-                <DataGridTextColumn
-                    Width="70*"
-                    Binding="{Binding Name}"
-                    Header="Vame" />
-            </DataGrid.Columns>
-        </DataGrid>
+            Grid.ColumnSpan="2"
+            MaxHeight="240">
+            <TabItem Header="Products">
+                <DataGrid
+                    AutoGenerateColumns="False"
+                    ItemsSource="{Binding Products}"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn
+                            Width="70*"
+                            Binding="{Binding Name}"
+                            Header="Name" />
+                        <DataGridTextColumn
+                            Width="20*"
+                            Binding="{Binding Code}"
+                            Header="Code" />
+                        <DataGridTextColumn
+                            Width="10*"
+                            Binding="{Binding Count}"
+                            Header="Count" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="Sheets &amp; Bands">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <Label
+                            Margin="5,2,0,0"
+                            Padding="0"
+                            HorizontalAlignment="Left"
+                            Content="Sheets"
+                            FontSize="10" />
+                        <DataGrid
+                            AutoGenerateColumns="False"
+                            ItemsSource="{Binding Sheets}"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Width="30*"
+                                    Binding="{Binding Code}"
+                                    Header="Code" />
+                                <DataGridTextColumn
+                                    Width="70*"
+                                    Binding="{Binding Name}"
+                                    Header="Name" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <Label
+                            Margin="5,2,0,0"
+                            Padding="0"
+                            HorizontalAlignment="Left"
+                            Content="Bands"
+                            FontSize="10" />
+                        <DataGrid
+                            Height="Auto"
+                            HorizontalContentAlignment="Right"
+                            AutoGenerateColumns="False"
+                            ItemsSource="{Binding Bands}"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            SelectedItem="{Binding SelectedBand}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Width="20*"
+                                    Binding="{Binding Code}"
+                                    Header="Code" />
+                                <DataGridTextColumn
+                                    Width="70*"
+                                    Binding="{Binding Name}"
+                                    Header="Name" />
+                                <DataGridTextColumn
+                                    Width="5*"
+                                    Binding="{Binding InternalSymbol}"
+                                    Header="Int. Sign" />
+                                <DataGridTextColumn
+                                    Width="5*"
+                                    Binding="{Binding ExternalSymbol}"
+                                    Header="Ext. Sign" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
         <DockPanel
             Grid.Row="1"
             Grid.Column="1"

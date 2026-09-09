@@ -2179,6 +2179,29 @@ namespace XncOptimizerUI.Services
             return _sheets;
         }
 
+        public List<Product> ReadProducts()
+        {
+            var products = new List<Product>();
+
+            if (_project == null)
+            {
+                return products;
+            }
+
+            foreach (var good in GetProductGoods())
+            {
+                products.Add(new Product
+                {
+                    Id = int.Parse(good.GetIdValue()!),
+                    Name = good.GetNameValue() ?? string.Empty,
+                    Code = good.GetCodeValue() ?? string.Empty,
+                    Count = int.Parse(good.Attribute("count")?.Value ?? "0"),
+                });
+            }
+
+            return products;
+        }
+
         public List<Part> ReadParts()
         {
             var parts = new List<Part>();

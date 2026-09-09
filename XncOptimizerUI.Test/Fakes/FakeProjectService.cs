@@ -16,6 +16,7 @@ namespace XncOptimizerUI.Test.Fakes
         public List<Part> Parts { get; set; } = [];
         public List<Band> Bands { get; set; } = [];
         public List<Sheet> Sheets { get; set; } = [];
+        public List<Product> Products { get; set; } = [];
         public IReadOnlyList<XncProgram> XncPrograms { get; set; } = [];
 
         public string FullPath { get; set; } = string.Empty;
@@ -137,6 +138,13 @@ namespace XncOptimizerUI.Test.Fakes
             Calls.Add(nameof(ReadSheets));
 
             return Sheets;
+        }
+
+        public List<Product> ReadProducts()
+        {
+            Calls.Add(nameof(ReadProducts));
+
+            return Products;
         }
     }
 }

@@ -261,6 +261,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private ObservableCollection<SheetVM> _sheets = [];
 
         [ObservableProperty]
+        private ObservableCollection<ProductVM> _products = [];
+
+        [ObservableProperty]
         private ObservableCollection<string> _labelsToProcess;
 
         [ObservableProperty]
@@ -659,6 +662,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             Parts = [];
             Bands = [];
             Sheets = [];
+            Products = [];
         }
 
         [RelayCommand]
@@ -735,6 +739,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
             Sheets = new ObservableCollection<SheetVM>(sheets);
+
+            var products = _projectService.ReadProducts().Select(p => new ProductVM(p));
+            Products = new ObservableCollection<ProductVM>(products);
 
             SelectedPart = null;
             _applyPartsFilter = false;
