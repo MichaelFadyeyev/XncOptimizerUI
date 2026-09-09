@@ -1,24 +1,24 @@
 ---
 name: code-analysis
-description: Analysis of the XncOptimizerUI repo — what the app does, its architecture, and open questions/gaps found while reading the code. Updated after the dev-01 -> main merge (PR #1, commit 9d16fdc) which turned it from a 2-button batch tool into a parts/bands/sheets browser and editor.
+description: Analysis of the XncOptimizerUI repo — what the app does, its architecture, and open questions/gaps found while reading the code. Keep this document aligned with the current source and the project-file-processing skill.
 ---
 
 # What XncOptimizerUI is
 
-A Windows desktop app (WPF, .NET 9, MVVM) for opening, inspecting, editing, and batch-transforming `.project` XML files produced by **GibLab** CAM/nesting software (furniture/panel-cutting production). As of commit `00aa63c` it has grown from a bare 3-button batch script into a small parts database browser with live editing, filtering, CSV/clipboard export, persisted user configuration, **XNC machining-program reading and copying**, and dependency injection (DI) for testability.
+A Windows desktop app (WPF, .NET 9, MVVM) for opening, inspecting, editing, and batch-transforming `.project` XML files produced by **GibLab** CAM/nesting software (furniture/panel-cutting production). It provides a parts/bands/sheets browser with live editing, filtering, CSV/clipboard export, persisted user configuration, XNC machining-program reading and copying, groove/mill conversion, mill-traversal optimization, and dependency injection (DI) for testability.
 
 # Domain model of the .project file (unchanged)
 
-Root `<project>` containing `<good typeId="product">` (finished product, holding `<part>` panels: name, id, dimensions `l`/`w`/`dw`/`cw`, `count`, edge-band refs `elt`/`elb`/`ell`/`elr` each encoded as `text#id`), `<good typeId="sheet">` (raw sheet stock) and `<good typeId="band">` (edge-banding material), plus `<operation typeId="...">`: `XNC` (CNC drill/rout, with an inline `program` sub-doc of bores `bf/bt/bb/bl/br`), `CS` (saw cut, references parts + a trailing sheet + `<material>`), `EL` (edge-banding, references a `<material>` = band good).
+Root `<project>` containing `<good typeId="product">` (finished product, holding `<part>` panels: name, id, dimensions `l`/`w` plus detail/cut/trimmed size fields, `count`, edge-band refs `elt`/`elb`/`ell`/`elr` encoded as `@operation#<EL id>` and matching `*Mat` names), `<good typeId="sheet">` (raw sheet stock), `<good typeId="band">` (edge-banding material), and tool goods. Operations are flat `<operation typeId="...">` children: `XNC` (CNC drill/rout with an escaped XML `program` sub-document), `CS` (saw cut, references parts plus a trailing sheet part and `<material>`), and `EL` (edge-banding, references a `<material>` = band good).
 
 # Architecture
 
 ## Core abstractions & services
 
-- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `FullPath`), implemented by `GibLabProjectService`.
-- **`Services/GibLabProjectService.cs`** — contains the old `XmlOperator`/`XncOperator` class library's logic, moved and extended with: XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), and groove ⇄ mill conversion (`ConvertGroovesAndMills`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
+- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `OptimizeMillTraversal`, `FullPath`), implemented by `GibLabProjectService`.
+- **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), and mill traversal optimization (`OptimizeMillTraversal`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
-- **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `text#id` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
+- **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `@operation#<id>` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
 
 ## Domain models & presentation
 
@@ -29,7 +29,7 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 
 ## Configuration & testing
 
-- **`Services/ConfigService.cs`** + **`Configuration/AppOptions.cs`** — persists user settings as JSON at `%AppData%\XncOptimizerUI\configuration.json`: `SawWidth` (kerf width, default 4.0) and `LabelsToProcess` (text labels for filtering, default `["поріз.2х40"]`), with last-selected label remembered.
+- **`Services/ConfigService.cs`** + **`Configuration/AppOptions.cs`** — persists user settings as JSON at `%AppData%\XncOptimizerUI\configuration.json`: `SawWidth` (kerf width, default 4.0), `LabelsToProcess` (text labels for filtering, default `["поріз.2х40"]`), `MillingToolDiams` (default `[6, 10, 20]`), and the remembered last-selected label. `GroovingToolWidths` is present in `AppOptions` but currently unused by conversion.
 - **`App.xaml.cs`** — DI composition root using `Microsoft.Extensions.DependencyInjection`; configures `IProjectService` → `GibLabProjectService`, `IConfigService` → `ConfigService`, `IDialogService` → `DialogService`, injects `TimeProvider`.
 - **`XncOptimizerUI.Test`** — NUnit test project with `AppViewModelTests`, `GibLabProjectServiceTests`, `ConfigServiceTests`, `XncProgramReaderTests`, `XncExpressionEvaluatorTests`, `Fakes/FakeProjectService.cs`. Headless (no `MessageBox`, `SaveFileDialog`, or static config singletons).
 - **`MainWindow.xaml`** — 3-column layout: command buttons + label management (left), Bands `DataGrid` (top-right), filterable Parts `DataGrid` + log box (bottom). Icon `xnc_logo.ico`.
@@ -51,26 +51,32 @@ Programs: 1
 ```
 Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[project-file-processing-skill]].
 
-**Replace XNC programs** — new: source part's drill programs (one per face: front/back) are validated, then copied to selected target parts. Before copying, all targets are checked for: (1) identical dimensions & banding, (2) same number of XNC faces, (3) matching face/turn orientations. If validation passes, the `program` attribute and `countBore` metadata are overwritten, and the file is saved as `_replaced-XNC.project` with a timestamp description. Implemented in `GibLabProjectService.ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)` with detailed validation and error logging.
+**Replace XNC programs** — source part's drill programs (one per face: front/back) are validated, then copied to selected target parts. Before copying, all targets are checked for: (1) identical dimensions & banding, (2) same number of XNC faces, and (3) matching face/turn orientations. If validation passes, the `program` attribute and `countBore` metadata are overwritten, and the file is saved with the `_ren.project` suffix (or a numbered collision suffix) with an audit description. Implemented in `GibLabProjectService.ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)` with detailed validation and error logging.
 
-**Convert grooves ⇄ mills** — new: for the parts **checked** in the Parts grid (the "Sel"
-`PartVM.IsSelected` column), rewrites every XNC program in the chosen direction (radio toggle
-bound via `Helpers/EnumToBooleanConverter`). *Grooves → Mills*: each axis-parallel primary-pass
-`<gr>` (`p="0"` or absent) becomes a single-segment milling contour (`<ms>` + `<ml>`) cut with
-a round tool of diameter = groove width `t` (an existing `<tool>` of that diameter is reused,
-else a `Bore<t>` tool is added); endpoints that reach the part outline overshoot it by **half a
-tool diameter** (so the tool centre clears the edge) along the groove axis. Secondary-pass
-grooves (`p != "0"`) are left untouched. *Mills → Grooves*: the inverse, but only
-for a contour that is one straight segment, axis-parallel, shallower than `dz`, and not a
-pocket (`c≠3`); outside endpoints are clamped onto the outline. After each program is rewritten,
-any `<tool>` that the converted grooves/mills referenced and that nothing else in the program
-still uses is removed. Diagonal / non-compliant elements (and all `<mr>` rectangles) are left
-untouched and tallied as *ignored*; per-part and batch converted / ignored / tools-added /
-tools-removed counts go to the log. Nothing converted ⇒ returns `false`, saves nothing. Output
-saved as `_gm.project` with a timestamped description.
-`GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction)`.
+**Convert grooves ⇄ mills** — for the parts **checked** in the Parts grid (the
+`PartVM.IsSelected` column), rewrites every XNC program in the chosen direction. The service
+also accepts a `processPockets` flag. *Grooves → Mills*: an axis-parallel primary-pass `<gr>`
+(`p="0"` or absent) with an exact configured milling-tool diameter becomes a single-segment
+`<ms>` + `<ml>` contour. An off-size groove becomes a rectangular pocket using the smallest
+configured cutter when that cutter fits; otherwise it is ignored. Edge-reaching contour
+endpoints overshoot by half the relevant cutter diameter. Secondary-pass and diagonal grooves
+remain untouched. *Mills → Grooves*: a shallow, axis-parallel, single-straight-segment
+non-pocket contour is converted and its outside endpoints are clamped to the outline. With
+`processPockets`, supported axis-parallel rectangular `<mr>` pockets and rectangular contour
+pockets are converted too. The grooving cutter is hard-coded to 2.8 mm;
+`AppOptions.GroovingToolWidths` is not wired into this operation. Non-compliant elements are
+left untouched and tallied as ignored; logs include converted/ignored and tools
+added/removed counts. Nothing converted ⇒ returns `false`, saves nothing. Output is
+`_gm.project` with collision numbering and an audit description.
+`GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)`.
 
 **Group identical elements** — (originally "Optimize") clusters XNC operations by: program content + edge-band materials. Groups are renumbered, consolidated into one product good, saved as `_opt.project`. Guards against re-running on already-optimized files or files with no XNC operations (logs warning instead of silently no-op'ing).
+
+**Optimize mill traversal** — for checked parts, re-sequences eligible one-segment,
+axis-parallel milling contours per XNC face and tool using a greedy nearest-neighbour walk,
+reversing passes as needed to form a serpentine path. Arcs, multi-segment contours, pockets,
+and `<mr>` rectangles remain in place and are counted as ignored. Nothing reordered ⇒ returns
+`false`, saves nothing. Output is `_mo.project` with collision numbering and an audit description.
 
 **Prep for split along X** — two variants (same core algorithm): (1) hardcoded text label `"_поріз.2х40мм"` (button 1), (2) user-selected label from config (button 2). Algorithm: double width by `2× + SawWidth`, halve count rounding up, double/mirror the drill program's bores. Saw-kerf width is now configurable via `ConfigService.SawWidth` (injected; can be changed at runtime, default 4.0).
 
@@ -88,7 +94,7 @@ saved as `_gm.project` with a timestamped description.
 **Still present:**
 - **`DecimalValidationRule`** is wired but inactive — the XAML binding for filter length/width is commented out (lines 248, 264 in MainWindow.xaml). The filters currently accept free text, validated only by lenient `TryParseToDecimal()` (unparsable input silently means "no filter"). If validation is desired, uncomment the bindings.
 - **Unused extension + interface method**: `GetOperationMaterialIdIntValue` (extension) and `IConfigService.UpdateSawWidth()` (interface + implementation) are defined but have no callers. There is no UI control to change the saw-width at runtime; it can only be changed by hand-editing the JSON config file. These may be stubs for a future "settings" dialog.
-- **Bug in `CheckBendsAreIdentical`** (GibLabProjectService.cs:329–332): each clause is shaped `(part1.GetXxxMat() != null && part1.GetXxxMatValue() == part2.GetXxxMatValue() || true)`. Due to `&&`/`||` precedence, the `|| true` term makes every clause always true, so banding materials are never actually compared. The logic was likely intended to be `(part1.GetXxxMat() != null && part1.GetXxxMatValue() == part2.GetXxxMatValue())` without the `|| true`, or the method should use a different pattern entirely. This makes the `GroupIdenticalElements` optimization less aggressive than it could be.
+- **Bug in `CheckBendsAreIdentical`** (GibLabProjectService.cs:329–332): each clause is shaped `(part1.GetXxxMat() != null && part1.GetXxxMatValue() == part2.GetXxxMatValue() || true)`. Due to `&&`/`||` precedence, the `|| true` term makes every clause always true, so banding materials are never actually compared. This makes `GroupIdenticalElements` less discriminating than intended and can group parts with different banding.
 - **Incomplete test coverage**: real tests exist for AppViewModel, GibLabProjectService, ConfigService, and XncProgram reading/evaluation. However, UpdatePart edge cases, CSV export formatting, and some PrepForSplitAlongX branches have minimal or no coverage.
 
 **New observations:**
@@ -97,7 +103,7 @@ saved as `_gm.project` with a timestamped description.
 
 # For developers / contributors
 
-See [[project-file-processing-skill]] (`.claude/skills/project-file-processing-skill/`, especially `references/project-file-schema.md` and `references/xnc-program-format.md`) for a comprehensive reference on the GibLab `.project` XML format, especially:
+See [[project-file-processing-skill]] (`.agents/skills/project-file-processing-skill/`, especially `references/project-file-schema.md` and `references/xnc-program-format.md`) for a comprehensive reference on the GibLab `.project` XML format, especially:
 - How XNC machining programs are encoded as escaped XML inside the `program` attribute of `<operation typeId="XNC">` elements
 - The coordinate frame, symbol table, expression evaluation, and all element types (tools, bores, groovings, milling contours, rectangles)
 - A worked example from the test fixture
