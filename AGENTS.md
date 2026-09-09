@@ -32,8 +32,8 @@
 ## Setup
 
 <!-- Commands to install dependencies and get a working dev environment. -->
-- Before implementing new feature or bug fixingread read `.agents/code-analysis.md`;
-after user submits implementation or bug fixing ask to update information in `.agents/code-analysis.md`.
+- Before implementing new feature or bug fixingread read `.agents/code-analysis.md`.
+<!-- after user submits implementation or bug fixing ask to update information in `.agents/code-analysis.md`. -->
 
 ## Build, test, and lint commands
 

@@ -22,6 +22,10 @@
         <Style x:Key="TextWrappingStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
+
+        <Style x:Key="FileOpsButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="2" />
+        </Style>
         <Style x:Key="CommandButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="40" />
         </Style>
@@ -69,15 +73,12 @@
             <RowDefinition Height="0.5*" MinHeight="120" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+
         <DockPanel
-            Grid.Row="0"
-            Grid.RowSpan="4"
+            Grid.Row="1"
+            Grid.RowSpan="3"
             Grid.Column="0">
-            <StackPanel DockPanel.Dock="Top">
-                <Button
-                    Command="{Binding OpenFileCommand}"
-                    Content="Open file"
-                    Style="{StaticResource CommandButtonStyle}" />
+            <StackPanel Margin="5,5,5,10" DockPanel.Dock="Top">
                 <Button
                     Command="{Binding ExecuteOptimizeCommand}"
                     Content="Optimize"
@@ -180,13 +181,13 @@
                         Content="Grooves → Mills"
                         FontSize="10"
                         GroupName="GrooveMillDir"
-                        IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}}" />
+                        IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}" />
                     <StackPanel Orientation="Horizontal">
                         <RadioButton
                             Content="Mills → Grooves"
                             FontSize="10"
                             GroupName="GrooveMillDir"
-                            IsChecked="{Binding GrooveMillDirection, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}}" />
+                            IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}" />
                         <CheckBox
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
@@ -203,14 +204,6 @@
                 <Button
                     Command="{Binding CopyPartsListCommand}"
                     Content="Copy parts"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <Button
-                    Command="{Binding SaveFileCommand}"
-                    Content="Save file"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <Button
-                    Command="{Binding CloseFileCommand}"
-                    Content="CloseFile"
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
         </DockPanel>
@@ -338,12 +331,8 @@
                     Grid.ColumnSpan="11"
                     HorizontalAlignment="Left"
                     Orientation="Horizontal">
-                    <Label
-                        VerticalAlignment="Center"
-                        Content="Checked no:" />
-                    <Label
-                        VerticalAlignment="Center"
-                        Content="{Binding CheckedCount}" />
+                    <Label VerticalAlignment="Center" Content="Checked no:" />
+                    <Label VerticalAlignment="Center" Content="{Binding CheckedCount}" />
                 </StackPanel>
                 <StackPanel
                     Grid.Row="0"
@@ -351,12 +340,8 @@
                     Grid.ColumnSpan="11"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">
-                    <Label
-                        VerticalAlignment="Center"
-                        Content="Filtered no:" />
-                    <Label
-                        VerticalAlignment="Center"
-                        Content="{Binding Parts.Count}" />
+                    <Label VerticalAlignment="Center" Content="Filtered no:" />
+                    <Label VerticalAlignment="Center" Content="{Binding Parts.Count}" />
                 </StackPanel>
 
                 <Button
@@ -367,7 +352,7 @@
                     Margin="2,0,0,0"
                     Padding="0,2"
                     Command="{Binding CheckAllCommand}"
-                    Content="Check all"/>
+                    Content="Check all" />
                 <Button
                     x:Name="UncheckAllButton"
                     Grid.Row="1"
@@ -382,14 +367,15 @@
                     Grid.Row="1"
                     Grid.Column="2"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Length min"
-                    TextChanged="RangeInput_TextChanged">
+                    TextChanged="RangeInput_TextChanged"
+                    ToolTip="Length min">
                     <TextBox.Text>
-                        <Binding Path="LengthMin"
-                                 UpdateSourceTrigger="PropertyChanged"
-                                 ValidatesOnDataErrors="True"
-                                 NotifyOnValidationError="True"
-                                 Mode="TwoWay">
+                        <Binding
+                            Mode="TwoWay"
+                            NotifyOnValidationError="True"
+                            Path="LengthMin"
+                            UpdateSourceTrigger="PropertyChanged"
+                            ValidatesOnDataErrors="True">
                             <Binding.ValidationRules>
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
@@ -406,14 +392,15 @@
                     Grid.Row="1"
                     Grid.Column="4"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Length max"
-                    TextChanged="RangeInput_TextChanged">
+                    TextChanged="RangeInput_TextChanged"
+                    ToolTip="Length max">
                     <TextBox.Text>
-                        <Binding Path="LengthMax"
-                                 UpdateSourceTrigger="PropertyChanged"
-                                 ValidatesOnDataErrors="True"
-                                 NotifyOnValidationError="True"
-                                 Mode="TwoWay">
+                        <Binding
+                            Mode="TwoWay"
+                            NotifyOnValidationError="True"
+                            Path="LengthMax"
+                            UpdateSourceTrigger="PropertyChanged"
+                            ValidatesOnDataErrors="True">
                             <Binding.ValidationRules>
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
@@ -424,14 +411,15 @@
                     Grid.Row="1"
                     Grid.Column="5"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Width min"
-                    TextChanged="RangeInput_TextChanged">
+                    TextChanged="RangeInput_TextChanged"
+                    ToolTip="Width min">
                     <TextBox.Text>
-                        <Binding Path="WidthMin"
-                                 UpdateSourceTrigger="PropertyChanged"
-                                 ValidatesOnDataErrors="True"
-                                 NotifyOnValidationError="True"
-                                 Mode="TwoWay">
+                        <Binding
+                            Mode="TwoWay"
+                            NotifyOnValidationError="True"
+                            Path="WidthMin"
+                            UpdateSourceTrigger="PropertyChanged"
+                            ValidatesOnDataErrors="True">
                             <Binding.ValidationRules>
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
@@ -448,14 +436,15 @@
                     Grid.Row="1"
                     Grid.Column="7"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Width max"
-                    TextChanged="RangeInput_TextChanged">
+                    TextChanged="RangeInput_TextChanged"
+                    ToolTip="Width max">
                     <TextBox.Text>
-                        <Binding Path="WidthMax"
-                                 UpdateSourceTrigger="PropertyChanged"
-                                 ValidatesOnDataErrors="True"
-                                 NotifyOnValidationError="True"
-                                 Mode="TwoWay">
+                        <Binding
+                            Mode="TwoWay"
+                            NotifyOnValidationError="True"
+                            Path="WidthMax"
+                            UpdateSourceTrigger="PropertyChanged"
+                            ValidatesOnDataErrors="True">
                             <Binding.ValidationRules>
                                 <validators:DecimalValidationRule />
                             </Binding.ValidationRules>
@@ -466,8 +455,8 @@
                     Grid.Row="1"
                     Grid.Column="8"
                     Style="{StaticResource FilterInputStyle}"
-                    ToolTip="Name contains"
-                    Text="{Binding FilterName}" />
+                    Text="{Binding FilterName}"
+                    ToolTip="Name contains" />
                 <Button
                     Grid.Row="1"
                     Grid.Column="9"
@@ -591,5 +580,39 @@
             Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="WrapWithOverflow"
             VerticalScrollBarVisibility="Auto" />
+        <Grid Margin="5,5,5,5" RenderTransformOrigin="0.579,0.512">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Button
+                Grid.Row="0"
+                Grid.Column="0"
+                Command="{Binding OpenFileCommand}"
+                Content="Open file"
+                Style="{StaticResource FileOpsButtonStyle}" />
+
+            <Button
+                Grid.Row="0"
+                Grid.Column="1"
+                Background="#FFFF6A3D"
+                Command="{Binding CloseFileCommand}"
+                Content="CloseFile"
+                Style="{StaticResource FileOpsButtonStyle}" />
+
+            <Button
+                Grid.Row="1"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Command="{Binding SaveFileCommand}"
+                Content="Save file"
+                Style="{StaticResource FileOpsButtonStyle}" />
+
+        </Grid>
+
     </Grid>
 </Window>
