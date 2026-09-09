@@ -764,6 +764,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             Parts = new ObservableCollection<PartVM>(_allParts);
             FilterName = string.Empty;
+
+            // Pre-select the first part so the preview viewport has something to draw
+            // the moment a project opens. _selectedPart was just set to null above, so
+            // OnSelectedPartChanging skips its auto-save on this assignment.
+            SelectedPart = Parts.FirstOrDefault();
         }
 
         /// <summary>

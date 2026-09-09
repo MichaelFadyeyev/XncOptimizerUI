@@ -6,6 +6,7 @@
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:local="clr-namespace:XncOptimizerUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:validators="clr-namespace:XncOptimizerUI.MVVM.Validators"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
     xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
@@ -39,6 +40,21 @@
             <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="Padding" Value="0,2" />
         </Style>
+
+        <!--  Part preview: colors  -->
+        <SolidColorBrush x:Key="PartPreviewBackgroundBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="PartFaceBrush" Color="#8DB9D9" />
+        <SolidColorBrush x:Key="PartEdgeProjectionBrush" Color="#8DB9D9" />
+        <SolidColorBrush x:Key="PartOutlineBrush" Color="#5A6B78" />
+        <SolidColorBrush x:Key="AxisXBrush" Color="#D00000" />
+        <SolidColorBrush x:Key="AxisYBrush" Color="#0A7A0A" />
+
+        <!--  Part preview: line widths and screen-space metrics (px)  -->
+        <sys:Double x:Key="PartOutlineThickness">1.5</sys:Double>
+        <sys:Double x:Key="AxisThickness">1.5</sys:Double>
+        <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
+        <sys:Double x:Key="ProjectionGapMm">10</sys:Double>
+        <sys:Double x:Key="PartPreviewMargin">24</sys:Double>
     </Window.Resources>
 
     <Grid x:Name="MainGrid">
@@ -50,7 +66,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="0.5*" MinHeight="120" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <DockPanel
@@ -492,17 +508,35 @@
                 </DataGrid.Columns>
             </DataGrid>
         </DockPanel>
-        <TextBox
-            x:Name="ProgramsTextBlox"
+        <Grid
             Grid.Row="2"
             Grid.Column="1"
             Grid.ColumnSpan="2"
-            Height="60"
-            HorizontalScrollBarVisibility="Auto"
-            IsReadOnly="True"
-            Text="{Binding SelectedPartPrograms, Mode=OneWay}"
-            TextWrapping="NoWrap"
-            VerticalScrollBarVisibility="Auto" />
+            Margin="5,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="350" />
+            </Grid.ColumnDefinitions>
+            <Border
+                Grid.Column="0"
+                Margin="0,0,4,0"
+                Background="{StaticResource PartPreviewBackgroundBrush}"
+                BorderBrush="{StaticResource PartOutlineBrush}"
+                BorderThickness="1">
+                <Canvas
+                    x:Name="PartCanvas"
+                    Background="Transparent"
+                    ClipToBounds="True" />
+            </Border>
+            <TextBox
+                x:Name="ProgramsTextBlox"
+                Grid.Column="1"
+                HorizontalScrollBarVisibility="Auto"
+                IsReadOnly="True"
+                Text="{Binding SelectedPartPrograms, Mode=OneWay}"
+                TextWrapping="NoWrap"
+                VerticalScrollBarVisibility="Auto" />
+        </Grid>
         <TextBox
             x:Name="LogTextBox"
             Grid.Row="3"

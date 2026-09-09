@@ -237,6 +237,28 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void OpeningProject_SelectsTheFirstPart()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.That(vm.SelectedPart, Is.SameAs(vm.Parts[0]));
+        }
+
+        [Test]
+        public void OpeningProjectWithNoParts_LeavesSelectionNull()
+        {
+            _dialogs.ShowOpenProjectDialog().Returns(@"C:\empty.project");
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.That(vm.SelectedPart, Is.Null);
+        }
+
+        [Test]
         public void SelectingAnotherPart_SavesTheOutgoingPart()
         {
             SeedTwoParts();
