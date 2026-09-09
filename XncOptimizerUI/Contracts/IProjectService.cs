@@ -44,6 +44,7 @@ namespace XncOptimizerUI.Contracts
         List<Part> ReadParts();
         List<Band> ReadBands();
         List<Sheet> ReadSheets();
+        List<Product> ReadProducts();
         string FullPath { get; }
 
     }
