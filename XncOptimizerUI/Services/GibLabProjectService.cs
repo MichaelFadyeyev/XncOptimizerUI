@@ -1150,17 +1150,8 @@ namespace XncOptimizerUI.Services
                     continue;
                 }
 
-                var toolName = FindToolByDiameter(toolsByName, width);
-
-                if (toolName == null)
-                {
-                    toolName = MakeToolName(width, toolsByName, "Bore");
-                    gr.AddBeforeSelf(new XElement("tool",
-                        new XAttribute("name", toolName),
-                        new XAttribute("d", XmlConvert.ToString(width))));
-                    toolsByName[toolName] = width;
-                    addedToolNames.Add(toolName); // counted (distinct) as toolsAdded at the end
-                }
+                var toolName = EnsureConversionTool(
+                    gr, width, "Mill", toolsByName, addedToolNames);
 
                 // Overshoot the part outline by half a tool diameter (the tool centre must clear
                 // the edge), but only along the axis the groove actually runs (the constant axis
@@ -1328,17 +1319,8 @@ namespace XncOptimizerUI.Services
 
                 // The groove is cut by a fixed-diameter grooving cutter (multiple passes when the
                 // slot is wider); the mill's own tool is only used for the slot width `t`.
-                var grooveToolName = FindToolByDiameter(toolsByName, GroovingToolDiameter);
-
-                if (grooveToolName == null)
-                {
-                    grooveToolName = MakeToolName(GroovingToolDiameter, toolsByName, "Cut");
-                    ms.AddBeforeSelf(new XElement("tool",
-                        new XAttribute("name", grooveToolName),
-                        new XAttribute("d", XmlConvert.ToString(GroovingToolDiameter))));
-                    toolsByName[grooveToolName] = GroovingToolDiameter;
-                    addedToolNames.Add(grooveToolName);
-                }
+                var grooveToolName = EnsureConversionTool(
+                    ms, GroovingToolDiameter, "Cut", toolsByName, addedToolNames);
 
                 // Any endpoint that lies outside the part is pulled onto the boundary line;
                 // on-edge / interior endpoints keep their value. Only the axis the mill runs
@@ -1574,17 +1556,8 @@ namespace XncOptimizerUI.Services
                 slot = spanX;
             }
 
-            var grooveToolName = FindToolByDiameter(toolsByName, GroovingToolDiameter);
-
-            if (grooveToolName == null)
-            {
-                grooveToolName = MakeToolName(GroovingToolDiameter, toolsByName, "Cut");
-                anchor.AddBeforeSelf(new XElement("tool",
-                    new XAttribute("name", grooveToolName),
-                    new XAttribute("d", XmlConvert.ToString(GroovingToolDiameter))));
-                toolsByName[grooveToolName] = GroovingToolDiameter;
-                addedToolNames.Add(grooveToolName);
-            }
+            var grooveToolName = EnsureConversionTool(
+                anchor, GroovingToolDiameter, "Cut", toolsByName, addedToolNames);
 
             var gr = new XElement("gr",
                 new XAttribute("x1", XmlConvert.ToString(x1)),
@@ -1678,17 +1651,8 @@ namespace XncOptimizerUI.Services
                 w = length;
             }
 
-            var toolName = FindToolByDiameter(toolsByName, toolDiam);
-
-            if (toolName == null)
-            {
-                toolName = MakeToolName(toolDiam, toolsByName, "Mill");
-                gr.AddBeforeSelf(new XElement("tool",
-                    new XAttribute("name", toolName),
-                    new XAttribute("d", XmlConvert.ToString(toolDiam))));
-                toolsByName[toolName] = toolDiam;
-                addedToolNames.Add(toolName);
-            }
+            var toolName = EnsureConversionTool(
+                gr, toolDiam, "Mill", toolsByName, addedToolNames);
 
             var mr = new XElement("mr",
                 new XAttribute("x", XmlConvert.ToString(cx)),
@@ -1821,17 +1785,29 @@ namespace XncOptimizerUI.Services
             return map;
         }
 
-        private static string? FindToolByDiameter(Dictionary<string, double> toolsByName, double diameter)
+        private static string EnsureConversionTool(
+            XElement anchor,
+            double diameter,
+            string prefix,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames)
         {
-            foreach (var tool in toolsByName)
+            var canonicalName = prefix + XmlConvert.ToString(diameter);
+
+            if (toolsByName.TryGetValue(canonicalName, out var canonicalDiameter)
+                && Math.Abs(canonicalDiameter - diameter) <= DiameterEpsilon)
             {
-                if (Math.Abs(tool.Value - diameter) <= DiameterEpsilon)
-                {
-                    return tool.Key;
-                }
+                return canonicalName;
             }
 
-            return null;
+            var toolName = MakeToolName(diameter, toolsByName, prefix);
+            anchor.AddBeforeSelf(new XElement("tool",
+                new XAttribute("name", toolName),
+                new XAttribute("d", XmlConvert.ToString(diameter))));
+            toolsByName[toolName] = diameter;
+            addedToolNames.Add(toolName);
+
+            return toolName;
         }
 
         private static string MakeToolName(double diameter, Dictionary<string, double> toolsByName, string prefix)
@@ -2361,4 +2337,3 @@ namespace XncOptimizerUI.Services
         #endregion
     }
 }
-

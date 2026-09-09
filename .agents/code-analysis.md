@@ -60,10 +60,14 @@ also accepts a `processPockets` flag. *Grooves → Mills*: an axis-parallel prim
 `<ms>` + `<ml>` contour. An off-size groove becomes a rectangular pocket using the smallest
 configured cutter when that cutter fits; otherwise it is ignored. Edge-reaching contour
 endpoints overshoot by half the relevant cutter diameter. Secondary-pass and diagonal grooves
-remain untouched. *Mills → Grooves*: a shallow, axis-parallel, single-straight-segment
+remain untouched. Generated milling tools use the conversion-specific `Mill<diameter>` name.
+An existing tool with the same diameter but an unrelated name (for example `Bore8`) is not
+reused; a separate `Mill8` declaration is created. Existing matching `Mill...` declarations
+are reused. *Mills → Grooves*: a shallow, axis-parallel, single-straight-segment
 non-pocket contour is converted and its outside endpoints are clamped to the outline. With
 `processPockets`, supported axis-parallel rectangular `<mr>` pockets and rectangular contour
-pockets are converted too. The grooving cutter is hard-coded to 2.8 mm;
+pockets are converted too. Generated grooving tools use `Cut<diameter>` (currently `Cut2.8`);
+unrelated same-diameter tools are preserved and not reused. The grooving cutter is hard-coded to 2.8 mm;
 `AppOptions.GroovingToolWidths` is not wired into this operation. Non-compliant elements are
 left untouched and tallied as ignored; logs include converted/ignored and tools
 added/removed counts. Nothing converted ⇒ returns `false`, saves nothing. Output is

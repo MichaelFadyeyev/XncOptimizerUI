@@ -242,6 +242,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(program.Groovings, Is.Empty);
                 Assert.That(program.MillingContours, Has.Count.EqualTo(1));
                 Assert.That(program.Tools.Select(t => t.Diameter), Does.Contain(10d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Mill10"));
                 // Cut3.2 was the groove's only user; after conversion nothing references it.
                 Assert.That(program.Tools.Select(t => t.Name), Does.Not.Contain("Cut3.2"));
             });
@@ -258,6 +259,33 @@ namespace XncOptimizerUI.Test
                 Assert.That(segment.End.Y, Is.EqualTo(50d));
                 Assert.That(contour.EntryDepth, Is.EqualTo(4d));
                 Assert.That(contour.Position, Is.EqualTo(ToolPosition.Right)); // groove c="1"
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_GroovesToMills_DoesNotReuseUnrelatedSameDiameterTool()
+        {
+            var service = CreateService();
+            var path = CopyFixture("td-grooving.project");
+            var xml = File.ReadAllText(path)
+                .Replace("&lt;tool name=&quot;Cut3.2&quot; d=&quot;3.2&quot;/&gt;",
+                    "&lt;tool name=&quot;Bore10&quot; d=&quot;10&quot;/&gt;&lt;tool name=&quot;Cut3.2&quot; d=&quot;3.2&quot;/&gt;");
+            File.WriteAllText(path, xml);
+            service.OpenProject(path);
+
+            var log = string.Empty;
+            Assert.That(service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }],
+                GrooveMillDirection.GroovesToMills, processPockets: false), Is.True);
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.MillingContours.Single().ToolName, Is.EqualTo("Mill10"));
+                Assert.That(program.Tools.Single(t => t.Name == "Bore10").Diameter, Is.EqualTo(10d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Bore10"));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Mill10"));
             });
         }
 
@@ -329,6 +357,33 @@ namespace XncOptimizerUI.Test
                 Assert.That(groove.Start.Y, Is.EqualTo(80d));
                 Assert.That(groove.End.X, Is.EqualTo(1000d));
                 Assert.That(groove.End.Y, Is.EqualTo(80d));
+            });
+        }
+
+        [Test]
+        public void ConvertGroovesAndMills_MillsToGrooves_DoesNotReuseUnrelatedSameDiameterTool()
+        {
+            var service = CreateService();
+            var path = CopyFixture("td-milling-shallow.project");
+            var xml = File.ReadAllText(path)
+                .Replace("&lt;tool name=&quot;Mill6&quot; d=&quot;6&quot;/&gt;",
+                    "&lt;tool name=&quot;Bore2.8&quot; d=&quot;2.8&quot;/&gt;&lt;tool name=&quot;Mill6&quot; d=&quot;6&quot;/&gt;");
+            File.WriteAllText(path, xml);
+            service.OpenProject(path);
+
+            var log = string.Empty;
+            Assert.That(service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 2, Name = "panel-1" }],
+                GrooveMillDirection.MillsToGrooves, processPockets: false), Is.True);
+
+            var program = service.ReadXncPrograms(2).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Groovings.Single().ToolName, Is.EqualTo("Cut2.8"));
+                Assert.That(program.Tools.Single(t => t.Name == "Bore2.8").Diameter, Is.EqualTo(2.8d));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Bore2.8"));
+                Assert.That(program.Tools.Select(t => t.Name), Does.Contain("Cut2.8"));
             });
         }
 
