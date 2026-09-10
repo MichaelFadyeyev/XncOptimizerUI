@@ -15,11 +15,19 @@ element it contains:
 - **tools** — name and diameter
 - **bores** — surface ("side"), tool, centre coordinates, depth
 - **groovings** — side, tool, start/end coordinates, depth, width, tool-to-centre-line position
-- **milling entry points** — side, tool, coordinates, depth, tool-to-centre-line position
-- **milling segments** — straight (`<ml>`) and arc (`<mac>`) and their parameters
+- **milling operations** — contour starts (`<ms>`), ellipses (`<me>`), and rectangles (`<mr>`)
+- **milling segments** — straight (`<ml>`) and arcs (`<mac>` / `<ma>`) and their parameters
 - **milling rectangles** — the `<mr>` pocket/frame primitive (length, width, angle, corner radius)
 - **variables / expressions** — `dx`, `dy`, `dz`, `tool.dia`, and custom `<var>` such as
   `contMillDepth`; all identifiers are **case-insensitive**
+
+### Attribute precedence
+
+`comment` attributes are descriptive text only. They must never be used to determine geometry,
+depth, tool behavior, entry/exit behavior, direction, or operation type. Readers and converters
+must use the structural element name and machining attributes (`x`, `y`, `cx`, `cy`, `r`, `dp`,
+`in`, `out`, `fwd`, `sxy`, `l`, `w`, `a`, `c`, and so on). If a comment conflicts with an
+attribute, the attribute is authoritative.
 
 ## 2. Where XNC programs live in the file
 
@@ -79,8 +87,8 @@ LINQ-to-XML has already decoded the entities, but harmless — keep it for parit
 
 - **Children are ordered and stateful.** Process them top-to-bottom. Every `<tool>` and
   `<var>` seen so far defines the context (available tools, symbol values) for every element
-  that comes after it. A milling contour is the run of `<ml>` / `<mac>` elements immediately
-  following an `<ms>`.
+  that comes after it. A milling contour is the run of `<ml>` / `<mac>` / `<ma>` elements
+  immediately following an `<ms>`.
 - **Coordinate frame** (inferred from the data — no explicit metadata):
   - origin `(0,0)` at a part corner; **X along `dx`** (length), **Y along `dy`** (width).
   - **Z** measured through the thickness from the working face; `z` on edge bores is a
@@ -100,13 +108,16 @@ LINQ-to-XML has already decoded the entities, but harmless — keep it for parit
    | `<tool>` | register / replace tool by `name` (last wins) |
    | `<var>` | evaluate `expr` against the current symbol table, add result under `name` |
    | `<ms>` | **open a new milling contour**; its `name` is the contour tool → set `tool.dia` = that tool's `d` for the contour and its segments |
+   | `<me>` | close any open contour; emit a standalone elliptical milling operation |
    | `<ml>` | append a line segment to the open contour |
    | `<mac>` | append an arc segment to the open contour |
+   | `<ma>` | append a radius-defined arc segment to the open contour |
    | `<gr>` | close any open contour; emit a standalone grooving |
    | `<mr>` | close any open contour; emit a standalone rectangle pocket |
    | `<bf> <bt> <bb> <bl> <br>` | close any open contour; emit a standalone bore (surface = element name) |
 
-   Any element other than `<ml>` / `<mac>` closes the open contour (as does end of program).
+   Any element other than `<ml>` / `<mac>` / `<ma>` closes the open contour (as does end of
+   program). A `<me>` is self-contained and does not consume following segment elements.
 
 4. For every coordinate / depth attribute, **resolve the value** (§5): a plain number, or an
    expression string, or a bare variable name.
@@ -236,14 +247,23 @@ bore / groove / tool / var / end of program) belongs to it.
 | `x`, `y` | **entry point** coordinates (literal or expression) |
 | `dp` | milling **depth** at the entry (literal, expression, or a `<var>` name such as `contMillDepth`) |
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left, `3` = pocket |
-| `in` | lead-in code (seen `0` = none) |
-| `out` | lead-out code (seen `0` = none, `1` = present) |
+| `in` | entry movement code; `0` means no special lead-in |
+| `out` | exit movement code; `1` means lead-out movement is enabled |
 | `sxy` | optional start offset in the XY plane, expression, e.g. `tool.dia/2` |
-| `fwd` | optional contour-direction flag (bool, seen `true`) |
+| `fwd` | machining direction flag for closed paths; `true` means clockwise |
 
 **side** comes from the operation's `side`. A program may contain several `<ms>` contours in a
 row (the fixture has three straight ones followed by the circle); each `<ms>` closes the
 previous contour and opens a new one.
+
+For every newly created milling operation, set:
+
+```xml
+in="0" out="1" fwd="true"
+```
+
+For closed contours, rectangles, ellipses, and pockets, `fwd="true"` means clockwise machining.
+Do not generalize the meaning of `fwd` to open contours beyond the source dialect's semantics.
 
 ### 6.5 Milling segments
 
@@ -262,7 +282,7 @@ A segment's **start point is implicit** — it is the end point of the previous 
 | `x`, `y` | segment **end** point (literal or expression) |
 | `dp` | **optional** depth at the end of the segment. Present → a (possibly ramped) cut to that depth. Absent → carry the contour's current depth forward (the `<ms>` entry depth, or the previous segment's). |
 
-#### Arc — `<mac>`
+#### Center-defined arc — `<mac>`
 
 ```xml
 <mac x="232.5" y="400" cx="250" cy="400" dir="false"/>
@@ -278,24 +298,63 @@ There is **no explicit radius, sweep angle, or start point**. Derive them:
 
 - `radius = distance(centre, start) = distance(centre, end)` (equal within rounding).
 - sweep goes from `start` to `end` around `(cx, cy)` in the sense given by `dir`.
-- In the fixture the four `dir="false"` arcs trace
-  `(250,382.5) → (232.5,400) → (250,417.5) → (267.5,400) → (250,382.5)` — a full `r = 17.5`
-  circle centred at `(250,400)`, traversed **clockwise** in a Y-up part frame. So
-  `dir="false"` ⇒ **CW**, `dir="true"` ⇒ **CCW** — *verify against `td-2.project` before
-  relying on it.*
 - `dp` on `<mac>` is optional (none seen in the fixtures) → the arc holds the contour's current depth.
 
-`td-2.project` contains only `ml` and `mac` segment element types (no others). The reader
-tracks a running depth per contour: seeded from the `<ms>` entry `dp`, replaced whenever an
-`<ml>` / `<mac>` carries its own `dp`, and stamped onto every segment as `XncMillingSegment.Depth`.
+#### Radius-defined arc — `<ma>`
 
-### 6.6 Milling rectangles — `<mr>`
-
-A self-contained rectangular milling primitive (a pocket or frame), **not** a contour of
-segments — it has no following `<ml>`/`<mac>`.
+`<ma>` is also a contour segment. Its start point is implicit and its endpoint is `x/y`, as
+with `<mac>`, but its radius is explicit:
 
 ```xml
-<mr x="100" y="100" dp="8" in="0" out="0" sxy="tool.dia/2" fwd="true" l="100" w="20" a="0" r="0" c="3" name="Mill6"/>
+<ma x="dx/2" y="dy/2+20" dp="15" r="20" dir="true"/>
+```
+
+| attribute | meaning |
+|---|---|
+| `x`, `y` | arc end point |
+| `r` | arc radius |
+| `dir` | arc sweep direction flag (bool) |
+| `dp` | optional depth at the endpoint; absent means keep the current contour depth |
+
+The centre is reconstructed from the implicit start point, endpoint, radius, and `dir`. Do not
+infer an `<ma>` centre from comments or from the face on which the operation appears.
+
+The reader tracks a running depth per contour: seeded from the `<ms>` entry `dp`, replaced
+whenever an `<ml>`, `<mac>`, or `<ma>` carries its own `dp`, and stamped onto every segment as
+`XncMillingSegment.Depth`.
+
+### 6.6 Elliptical milling — `<me>`
+
+`<me>` is a self-contained milling operation. It does not open a segment contour and is not
+followed by `<ml>`, `<mac>`, or `<ma>` segments.
+
+```xml
+<me x="150" y="200" dp="20" in="0" out="1" sxy="tool.dia/2"
+    fwd="true" l="20" w="20" a="0" c="1" name="Mill6"/>
+```
+
+| attribute | meaning |
+|---|---|
+| `name` | milling tool |
+| `x`, `y` | ellipse reference position |
+| `l`, `w` | ellipse dimensions/radii as defined by the source dialect |
+| `a` | rotation angle |
+| `dp` | milling depth |
+| `c` | tool-to-path or pocket positioning mode |
+| `in`, `out` | entry and exit movement codes |
+| `sxy` | XY start/path offset |
+| `fwd` | for a closed ellipse, `true` means clockwise machining |
+
+Newly created ellipse mills must set `in="0"`, `out="1"`, and `fwd="true"`. If the ellipse is
+created as a pocket (`c="3"`), it must also set `sxy="tool.dia/2"`.
+
+### 6.7 Milling rectangles — `<mr>`
+
+A self-contained rectangular milling primitive (a pocket or frame), **not** a contour of
+segments — it has no following `<ml>`/`<mac>`/`<ma>`.
+
+```xml
+<mr x="100" y="100" dp="8" in="0" out="1" sxy="tool.dia/2" fwd="true" l="100" w="20" a="0" r="0" c="3" name="Mill6"/>
 ```
 
 | attribute | meaning |
@@ -307,10 +366,32 @@ segments — it has no following `<ml>`/`<mac>`.
 | `r` | corner radius, mm (seen `0` = sharp corners) |
 | `dp` | milling **depth**, mm |
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left, `3` = pocket (the fixture uses `3`) |
-| `in`, `out`, `sxy`, `fwd` | lead-in / lead-out / start-offset / direction, as for `<ms>` |
+| `in`, `out` | entry and exit movement codes; newly created mills use `0` and `1` |
+| `sxy` | XY start/path offset; pocket-type mills must use `tool.dia/2` |
+| `fwd` | for a closed rectangle or pocket, `true` means clockwise machining |
 
 **side** comes from the operation's `side`. Attribute meanings are inferred from the single
 fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.project`.
+
+### 6.8 Generated milling defaults
+
+When a converter creates any milling primitive, it must set:
+
+```xml
+in="0" out="1" fwd="true"
+```
+
+This applies to contour starts (`<ms>`), ellipses (`<me>`), rectangles (`<mr>`), and other
+closed milling paths supported by the dialect. For every pocket-type mill, also set:
+
+```xml
+sxy="tool.dia/2"
+```
+
+This includes rectangular pockets (`<mr c="3">`), elliptical pockets (`<me c="3">`), and
+contour-based pockets. Keep `sxy` as the expression so it follows the active tool diameter.
+The `c` attribute selects centre-line/tool-position or pocket mode; it is distinct from `in`,
+`out`, `fwd`, and `sxy`.
 
 ## 7. Worked example — `TestData/td-programs.project`
 
