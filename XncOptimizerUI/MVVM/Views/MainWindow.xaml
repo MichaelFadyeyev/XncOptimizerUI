@@ -194,8 +194,35 @@
                             Content="incl. pockets"
                             FontSize="10"
                             IsChecked="{Binding ProcessPockets}"
+                            IsEnabled="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Also convert axis-parallel rectangular pockets (&lt;mr&gt;) to grooves" />
                     </StackPanel>
+                </StackPanel>
+                <Button
+                    Command="{Binding ConvertBoresAndMillsCommand}"
+                    Content="Convert bores / mills"
+                    Style="{StaticResource CommandButtonStyle}" />
+                <StackPanel Margin="5,0,5,5" Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton
+                            Content="Bores → Mills"
+                            FontSize="10"
+                            GroupName="BoreMillDir"
+                            IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}" />
+                        <CheckBox
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            Content="as ellipses"
+                            FontSize="10"
+                            IsChecked="{Binding ConvertBoresToEllipses}"
+                            IsEnabled="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}"
+                            ToolTip="Bores → Mills: emit an elliptical mill (&lt;me&gt;) per bore instead of a closed two-arc path" />
+                    </StackPanel>
+                    <RadioButton
+                        Content="Mills → Bores"
+                        FontSize="10"
+                        GroupName="BoreMillDir"
+                        IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.MillsToBores}, Converter={StaticResource EnumToBool}}" />
                 </StackPanel>
                 <Button
                     Command="{Binding OptimizeMillTraversalCommand}"

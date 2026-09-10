@@ -20,6 +20,7 @@ All `.project` I/O goes through **`GibLabProjectService`** (behind **`IProjectSe
 | `void PrepForSplitAlongX(ref string log, string[] selectedPartsIds)` | uses `config.SawWidth` (`width = w*2 + SawWidth`) |
 | `bool ReplaceXncPrograms(ref string log, Part source, IList<Part> targets)` | copy `program`+`countBore` onto identical parts (face key `"{side}|{turn}"`); saves `*_ren.project` |
 | `bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)` | see §Conversions; saves `*_gm.project` |
+| `bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)` | face bore (Ø>35) <-> round mill (fixed 6 mm `Mill6`); see §Conversions; saves `*_bm.project` |
 | `bool OptimizeMillTraversal(ref string log, IList<Part> parts)` | greedy nearest-neighbour re-sequence of straight axis-parallel passes; saves `*_mo.project` |
 | `int GetXncProgramsCount(int partId)` | count XNC ops for a part |
 | `IReadOnlyList<XncProgram> ReadXncPrograms(int partId)` | parse every XNC program for a part (read-only model) |
@@ -131,6 +132,27 @@ Persisted JSON at `%AppData%/XncOptimizerUI/configuration.json`. `IConfigService
 - non-compliant / through / diagonal / `<mr>` (without `processPockets`) -> ignored, tallied.
 
 Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter = 2.8`.
+
+`ConvertBoresAndMills(ref log, parts, BoreMillDirection, useEllipse)` — face bores <-> round mills:
+
+- **`BoresToMills`**, per `<bf>` whose `<tool>` diameter `> BoreMillMinDiameter` (35 mm): mill it
+  out with a fixed 6 mm cutter, `EnsureConversionTool(bf, 6.0, "Mill", ...)` -> `Mill6` (reused
+  if already declared at 6 mm). `dp` is carried across verbatim (string). Default form emits a
+  closed contour: `<ms x=cx+r y=cy dp in="0" out="1" sxy="tool.dia/2" fwd="true" c=? name="Mill6"/>`
+  then two `<mac>` half-circle arcs about `(cx, cy)` with `dir="true"` (clockwise) back to the
+  entry. `useEllipse` emits one `<me x=cx y=cy dp ... l=r w=r a="0" c=? name="Mill6"/>` instead
+  (**`<me>` `l`/`w` are semi-axes = radius, not diameter**). Both forms pick `c` the same way:
+  `c="3"` (pocket) when the bore is blind (`av != "true"` and `dp < dz`), else `c="1"`. Edge
+  bores and Ø<=35 bores are untouched (not tallied). Orphaned `Bore*` tools dropped via
+  `RemoveUnreferencedTools`.
+- **`MillsToBores`**: an `<me>` with `l == w` (Ø = `2*l`), or an `<ms>` + a run of >= 2 arc
+  segments — `<mac>` (centre = `cx`/`cy`) or `<ma>` (centre reconstructed from chord + `r` + `dir`;
+  half-circle case is centre = chord midpoint) — that share one centre and radius and whose last
+  end point returns to the entry. Ø must exceed 35 mm. Emits `<bf x=cx y=cy dp ac="1" av="false"
+  name="Bore<Ø>"/>` (depth = max of entry + segment depths), `EnsureConversionTool(anchor, Ø,
+  "Bore", ...)`. Non-compliant `<ms>`/`<me>` are tallied as ignored. Orphaned `Mill*` tools dropped.
+- Nothing converted ⇒ returns `false`, saves nothing. Constants: `BoreMillMinDiameter = 35.0`,
+  `BoreMillCutterDiameter = 6.0`, `BoreMillGeomTolerance = 1e-3`.
 
 ## §Merge recipe — merging N `.project` files (not implemented; build with this)
 

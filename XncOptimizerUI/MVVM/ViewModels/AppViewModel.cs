@@ -572,6 +572,53 @@ namespace XncOptimizerUI.MVVM.ViewModels
             ReadItems();
         }
 
+        [ObservableProperty]
+        private BoreMillDirection _boreMillDirection = BoreMillDirection.BoresToMills;
+
+        /// <summary>
+        /// When set, a Bores → Mills conversion emits an elliptical mill (<c>&lt;me&gt;</c>) per
+        /// bore instead of a closed two-arc contour. Opt-in: off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _convertBoresToEllipses;
+
+        [RelayCommand]
+        private void ConvertBoresAndMills()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var parts = _allParts
+                .Where(p => p.IsSelected)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += "No parts checked for bore/mill conversion!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.ConvertBoresAndMills(ref log, parts, BoreMillDirection, ConvertBoresToEllipses);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
         [RelayCommand]
         private void OptimizeMillTraversal()
         {

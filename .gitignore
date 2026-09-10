@@ -380,3 +380,7 @@ FodyWeavers.xsd
 !/XncOptimizerUI/TestData/td-mills-optimization.project
 !/XncOptimizerUI/TestData/td-missing-ml-error.project
 !/XncOptimizerUI/TestData/td-programs.project
+!/XncOptimizerUI/TestData/td-bores-large.project
+!/XncOptimizerUI/TestData/td-mill-circle.project
+!/XncOptimizerUI/TestData/td-mill-ellipse.project
+!/XncOptimizerUI/TestData/td-br-ml-conversion.project

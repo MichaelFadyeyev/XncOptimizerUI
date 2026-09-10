@@ -27,6 +27,7 @@ namespace XncOptimizerUI.Test.Fakes
         public bool GroupIdenticalElementsResult { get; set; } = true;
         public bool ReplaceXncProgramsResult { get; set; } = true;
         public bool ConvertGroovesAndMillsResult { get; set; } = true;
+        public bool ConvertBoresAndMillsResult { get; set; } = true;
         public bool OptimizeMillTraversalResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
 
@@ -38,6 +39,9 @@ namespace XncOptimizerUI.Test.Fakes
         public IList<Part>? LastGrooveMillParts { get; private set; }
         public GrooveMillDirection? LastGrooveMillDirection { get; private set; }
         public bool? LastGrooveMillProcessPockets { get; private set; }
+        public IList<Part>? LastBoreMillParts { get; private set; }
+        public BoreMillDirection? LastBoreMillDirection { get; private set; }
+        public bool? LastBoreMillUseEllipse { get; private set; }
         public IList<Part>? LastMillTraversalParts { get; private set; }
 
         public void OpenProject(string path)
@@ -80,6 +84,17 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return ConvertGroovesAndMillsResult;
+        }
+
+        public bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)
+        {
+            Calls.Add(nameof(ConvertBoresAndMills));
+            LastBoreMillParts = parts;
+            LastBoreMillDirection = direction;
+            LastBoreMillUseEllipse = useEllipse;
+            log += LogToAppend;
+
+            return ConvertBoresAndMillsResult;
         }
 
         public bool OptimizeMillTraversal(ref string log, IList<Part> parts)
