@@ -15,7 +15,7 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 
 ## Core abstractions & services
 
-- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `OptimizeMillTraversal`, `FullPath`), implemented by `GibLabProjectService`.
+- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `ConvertBoresAndMills`, `OptimizeMillTraversal`, `FullPath`), implemented by `GibLabProjectService`.
 - **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), and mill traversal optimization (`OptimizeMillTraversal`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
 - **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `@operation#<id>` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
@@ -75,6 +75,22 @@ left untouched and tallied as ignored; logs include converted/ignored and tools
 added/removed counts. Nothing converted ⇒ returns `false`, saves nothing. Output is
 `_gm.project` with collision numbering and an audit description.
 `GibLabProjectService.ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)`.
+
+**Convert bores ⇄ mills** — for the parts **checked** in the Parts grid, rewrites every XNC
+program in the chosen direction. *Bores → Mills*: each face bore (`<bf>`) whose tool diameter
+exceeds 35 mm is milled out with a fixed 6 mm cutter (`Mill6`, created if absent) — by default
+a closed two-arc contour (`<ms>` entry at `(cx+r, cy)` + two `<mac>` half circles about the
+bore centre), or a single elliptical mill (`<me>` with `l = w = radius`) when the "as ellipses"
+checkbox is set. Traversal is clockwise (`<ms>`/`<me>` `fwd="true"`, `<mac> dir="true"`). A through
+bore keeps the right-of-centre-line position (`c="1"`); a blind bore is milled as a pocket
+(`c="3"`) — in both the contour and the ellipse form. The mill depth equals the bore depth.
+Smaller bores and edge bores are left untouched. *Mills → Bores*: a round mill — an `<ms>` entry plus ≥ 2 arc
+segments (`<mac>` or radius-defined `<ma>`) that share one centre and radius and close onto the
+entry point, or an `l == w` `<me>` ellipse — with diameter > 35 mm becomes a face bore, cut
+with a `Bore<diameter>` tool (created if absent, e.g. `Bore40`). Orphaned tools are dropped.
+Nothing converted ⇒ returns `false`, saves nothing. Output is `_bm.project` with collision
+numbering and an audit description.
+`GibLabProjectService.ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)`.
 
 **Group identical elements** — (originally "Optimize") clusters XNC operations by: program content + edge-band materials. Groups are renumbered, consolidated into one product good, saved as `_opt.project`. Guards against re-running on already-optimized files or files with no XNC operations (logs warning instead of silently no-op'ing).
 

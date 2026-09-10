@@ -256,13 +256,13 @@ bore / groove / tool / var / end of program) belongs to it.
 row (the fixture has three straight ones followed by the circle); each `<ms>` closes the
 previous contour and opens a new one.
 
-For every newly created milling operation, set:
+For every newly created milling operation, set `in="0" out="1"` and encode a **clockwise**
+traversal:
 
-```xml
-in="0" out="1" fwd="true"
-```
+- a **straight / linear** contour (`<ms>` + `<ml>`), an ellipse (`<me>`) and a rectangle
+  (`<mr>`) carry `fwd="true"`;
+- a **curved** contour's arc segments (`<mac>` / `<ma>`) carry `dir="true"`.
 
-For closed contours, rectangles, ellipses, and pockets, `fwd="true"` means clockwise machining.
 Do not generalize the meaning of `fwd` to open contours beyond the source dialect's semantics.
 
 ### 6.5 Milling segments
@@ -292,12 +292,12 @@ A segment's **start point is implicit** — it is the end point of the previous 
 |---|---|
 | `x`, `y` | arc **end** point |
 | `cx`, `cy` | arc **centre** |
-| `dir` | direction flag (bool) |
+| `dir` | sweep direction (bool). `dir="true"` = **clockwise** (the value a converter emits for a CW arc). |
 
 There is **no explicit radius, sweep angle, or start point**. Derive them:
 
 - `radius = distance(centre, start) = distance(centre, end)` (equal within rounding).
-- sweep goes from `start` to `end` around `(cx, cy)` in the sense given by `dir`.
+- sweep goes from `start` to `end` around `(cx, cy)` in the sense given by `dir` (`true` = CW).
 - `dp` on `<mac>` is optional (none seen in the fixtures) → the arc holds the contour's current depth.
 
 #### Radius-defined arc — `<ma>`
@@ -337,7 +337,7 @@ followed by `<ml>`, `<mac>`, or `<ma>` segments.
 |---|---|
 | `name` | milling tool |
 | `x`, `y` | ellipse reference position |
-| `l`, `w` | ellipse dimensions/radii as defined by the source dialect |
+| `l`, `w` | ellipse **semi-axes** (radii), mm — a round `<me>` has `l == w` and diameter `2*l` (confirmed by `TestData/td-br-ml-conversion.project`, where an "R20" circle is `l="20" w="20"`) |
 | `a` | rotation angle |
 | `dp` | milling depth |
 | `c` | tool-to-path or pocket positioning mode |
@@ -345,8 +345,11 @@ followed by `<ml>`, `<mac>`, or `<ma>` segments.
 | `sxy` | XY start/path offset |
 | `fwd` | for a closed ellipse, `true` means clockwise machining |
 
-Newly created ellipse mills must set `in="0"`, `out="1"`, and `fwd="true"`. If the ellipse is
-created as a pocket (`c="3"`), it must also set `sxy="tool.dia/2"`.
+Newly created ellipse mills must set `in="0"`, `out="1"`, and `fwd="true"` (CW). A mill created
+over a **blind** feature is a pocket (`c="3"`); one over a **through** feature keeps its
+tool-to-centre-line position (`c="1"`). This blind/through rule applies to every generated
+milling form (`<me>`, and the `<ms>` of a generated contour), not just ellipses. Any pocket
+also sets `sxy="tool.dia/2"`.
 
 ### 6.7 Milling rectangles — `<mr>`
 
@@ -375,14 +378,14 @@ fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.pro
 
 ### 6.8 Generated milling defaults
 
-When a converter creates any milling primitive, it must set:
+When a converter creates any milling primitive, it must set `in="0" out="1"` and encode a
+**clockwise** traversal:
 
-```xml
-in="0" out="1" fwd="true"
-```
+- **linear** contour starts (`<ms>` + `<ml>`), ellipses (`<me>`) and rectangles (`<mr>`) carry
+  `fwd="true"`;
+- the arc segments of a **curved** contour (`<mac>` / `<ma>`) carry `dir="true"`.
 
-This applies to contour starts (`<ms>`), ellipses (`<me>`), rectangles (`<mr>`), and other
-closed milling paths supported by the dialect. For every pocket-type mill, also set:
+For every pocket-type mill, also set:
 
 ```xml
 sxy="tool.dia/2"
@@ -446,7 +449,10 @@ The reader described above is implemented:
 
 ## 9. Open items — verify against `TestData/td-2.project`
 
-- `dir="false"` / `"true"` ↔ CW / CCW (reader assumes `false` = CW).
+- `<mac>`/`<ma>` `dir`: **`dir="true"` = clockwise** (the value `ConvertBoresAndMills` emits for
+  a CW arc; `td-br-ml-conversion.project` uses it). `XncProgramReader` still reads it the other
+  way round (`Clockwise = !dir`) — its `XncArcSegment.Clockwise` is inverted for this dialect
+  and should not be trusted until the reader is fixed.
 - `bt` / `bb` / `br` exact attribute set and the reference for `z` (reader pins the drilled
   edge coordinate to `0` / `dx` / `dy` and reads the other axis + `z`).
 - `<mr>` — whether `x`/`y` is a corner or the centre; units of `a` (degrees assumed) and `r`.

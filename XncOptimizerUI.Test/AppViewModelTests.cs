@@ -457,6 +457,94 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void ConvertBoresAndMills_PassesCheckedPartsDirectionAndEllipseFlagToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.BoreMillDirection = BoreMillDirection.MillsToBores;
+            vm.ConvertBoresToEllipses = true;
+            _projectService.Calls.Clear();
+
+            vm.ConvertBoresAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.ConvertBoresAndMills)));
+                Assert.That(_projectService.LastBoreMillParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
+                Assert.That(_projectService.LastBoreMillDirection, Is.EqualTo(BoreMillDirection.MillsToBores));
+                Assert.That(_projectService.LastBoreMillUseEllipse, Is.True);
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful conversion reloads the project");
+            });
+        }
+
+        [Test]
+        public void ConvertBoresAndMills_DefaultsToBoresToMillsWithNoEllipse()
+        {
+            var vm = CreateViewModel();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.BoreMillDirection, Is.EqualTo(BoreMillDirection.BoresToMills));
+                Assert.That(vm.ConvertBoresToEllipses, Is.False);
+            });
+        }
+
+        [Test]
+        public void ConvertBoresAndMills_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
+        {
+            SeedTwoParts();
+            _projectService.ConvertBoresAndMillsResult = false;
+            _projectService.LogToAppend = "***\nNo bores converted (ignored 0).";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.ConvertBoresAndMillsCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning("No bores converted (ignored 0).", Arg.Any<string>());
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertBoresAndMills) }),
+                "a failed conversion should not reload the project");
+        }
+
+        [Test]
+        public void ConvertBoresAndMills_WithNoPartsChecked_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.ConvertBoresAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No parts checked"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void ConvertBoresAndMills_WithNoFileOpen_LogsAndDoesNothing()
+        {
+            var vm = CreateViewModel();
+
+            vm.ConvertBoresAndMillsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
         public void OptimizeMillTraversal_PassesCheckedPartsToService_ThenReloads()
         {
             SeedTwoParts();

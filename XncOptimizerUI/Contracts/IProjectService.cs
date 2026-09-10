@@ -25,6 +25,21 @@ namespace XncOptimizerUI.Contracts
         bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets);
 
         /// <summary>
+        /// For every supplied part, rewrites each XNC machining program so that face bores wider
+        /// than 35 mm become round mills cut with a fixed 6 mm cutter ("Mill6"), or vice versa.
+        /// <see cref="BoreMillDirection.BoresToMills"/> emits a closed two-arc contour per bore,
+        /// or an elliptical mill when <paramref name="useEllipse"/> is <c>true</c>; the mill depth
+        /// equals the bore depth, traversal is clockwise and the cutter sits right of the centre
+        /// line. <see cref="BoreMillDirection.MillsToBores"/> turns a closed all-arc contour (an
+        /// entry point plus at least two centre-defined arcs sharing one centre and radius that
+        /// close onto the entry) or an <c>l == w</c> ellipse back into a face bore, declaring a
+        /// "Bore&lt;diameter&gt;" tool sized to the mill. Non-compliant elements are left
+        /// untouched and counted as ignored. Returns <c>false</c> (and saves nothing) when
+        /// nothing was converted.
+        /// </summary>
+        bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse);
+
+        /// <summary>
         /// For every supplied part, re-sequences the straight axis-parallel milling contours in
         /// each XNC machining program so that the entry point of every pass sits next to the exit
         /// point of the previous one (a serpentine path that removes the long rapid returns).

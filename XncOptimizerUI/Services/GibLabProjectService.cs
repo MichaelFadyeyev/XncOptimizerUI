@@ -664,6 +664,108 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
+        public bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for bore/mill conversion.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+
+            var totalConverted = 0;
+            var totalIgnored = 0;
+            var totalToolsAdded = 0;
+            var totalToolsRemoved = 0;
+            var touchedParts = 0;
+
+            try
+            {
+                foreach (var part in parts)
+                {
+                    var partOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == part.Id).ToList();
+
+                    if (partOps.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var partConverted = 0;
+                    var partIgnored = 0;
+                    var partToolsAdded = 0;
+                    var partToolsRemoved = 0;
+
+                    foreach (var op in partOps)
+                    {
+                        var programAttribute = op.GetProgram();
+
+                        if (programAttribute == null)
+                        {
+                            continue;
+                        }
+
+                        var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+                        var program = programXml.Element("program")
+                            ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
+
+                        var (converted, ignored, toolsAdded, toolsRemoved) = direction == BoreMillDirection.BoresToMills
+                            ? ConvertBoresToMills(program, useEllipse)
+                            : ConvertMillsToBores(program);
+
+                        if (converted > 0)
+                        {
+                            programAttribute.Value = program.ToString();
+                        }
+
+                        partConverted += converted;
+                        partIgnored += ignored;
+                        partToolsAdded += toolsAdded;
+                        partToolsRemoved += toolsRemoved;
+                    }
+
+                    if (partConverted > 0 || partIgnored > 0)
+                    {
+                        touchedParts++;
+
+                        log += direction == BoreMillDirection.BoresToMills
+                            ? $"Bores->Mills: \"{part.Name}\" (id={part.Id}): {partConverted} bore(s) -> mill(s), {partToolsAdded} tool(s) added, {partToolsRemoved} tool(s) removed, {partIgnored} ignored\n"
+                            : $"Mills->Bores: \"{part.Name}\" (id={part.Id}): {partConverted} mill(s) -> bore(s), {partToolsAdded} tool(s) added, {partToolsRemoved} tool(s) removed, {partIgnored} ignored\n";
+                    }
+
+                    totalConverted += partConverted;
+                    totalIgnored += partIgnored;
+                    totalToolsAdded += partToolsAdded;
+                    totalToolsRemoved += partToolsRemoved;
+                }
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{e.Message}";
+                return false;
+            }
+
+            if (totalConverted == 0)
+            {
+                var what = direction == BoreMillDirection.BoresToMills ? "bores" : "mills";
+                log += $"***\nNo {what} converted (ignored {totalIgnored}).";
+                return false;
+            }
+
+            AppendDescription(direction == BoreMillDirection.BoresToMills
+                ? "converted bores to mills"
+                : "converted mills to bores");
+
+            var result = GetBoreMillFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nBore/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}";
+
+            return true;
+        }
+
         /// <summary>
         /// Re-sequences the straight axis-parallel milling passes in every XNC program of the
         /// supplied parts so the entry of each pass is next to the exit of the previous one.
@@ -1048,6 +1150,407 @@ namespace XncOptimizerUI.Services
 
         /// <summary>Diameter of the grooving cutter a mill is turned back into a groove with.</summary>
         private const double GroovingToolDiameter = 2.8;
+
+        // --- Bore <-> Mill conversion ---------------------------------------------------------
+        // A face bore wider than BoreMillMinDiameter is milled out with a fixed 6 mm cutter
+        // ("Mill6"): a closed two-arc contour (<ms> + two <mac> half circles), or a single
+        // elliptical mill (<me>) when the caller opts in. Traversal is clockwise: <ms>/<me>
+        // carry fwd="true", the curved <mac> segments carry dir="true". A through bore keeps the
+        // right-of-centre-line position (c="1"); a blind bore is milled as a pocket (c="3") --
+        // in both the contour and the ellipse form. The mill depth equals the bore depth. The
+        // reverse turns a round mill (a closed contour of <mac>/<ma> arcs, or an l==w ellipse)
+        // back into a face bore and declares a "Bore<diameter>" tool sized to the mill.
+        //
+        // <me> / <ms> geometry note: this dialect's <me> l and w are the ellipse semi-axes
+        // (radii), so a round mill has l == w and diameter 2*l (see TestData/td-br-ml-conversion).
+
+        /// <summary>A bore only converts to a mill when its diameter exceeds this (mm).</summary>
+        private const double BoreMillMinDiameter = 35.0;
+
+        /// <summary>Diameter of the cutter a bore is milled out with, and its tool name.</summary>
+        private const double BoreMillCutterDiameter = 6.0;
+
+        /// <summary>Geometry-comparison slack (mm) when matching arc centres / radii on the reverse pass.</summary>
+        private const double BoreMillGeomTolerance = 1e-3;
+
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertBoresToMills(
+            XElement program, bool useEllipse)
+        {
+            var symbols = SeedProgramSymbols(program);
+            var toolsByName = ReadToolDiameters(program);
+            symbols.TryGet("dz", out var dz);
+
+            var converted = 0;
+            var addedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var originalToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var bore in program.Elements("bf").ToList())
+            {
+                if (bore.GetNameValue() is not { } boreToolName
+                    || !toolsByName.TryGetValue(boreToolName, out var diameter)
+                    || diameter <= BoreMillMinDiameter)
+                {
+                    continue;
+                }
+
+                originalToolNames.Add(boreToolName);
+
+                var cx = EvalXnc(bore.GetXValue(), symbols);
+                var cy = EvalXnc(bore.GetYValue(), symbols);
+                var depth = bore.GetDpValue() ?? "0";
+                var radius = diameter / 2d;
+
+                var millTool = EnsureConversionTool(
+                    bore, BoreMillCutterDiameter, "Mill", toolsByName, addedToolNames);
+
+                // A blind bore is milled as a pocket (c="3"); a through bore keeps the
+                // right-of-centre-line position (c="1"). "Through" = the av flag is set, or the
+                // depth reaches the far face. Applies to both the contour and the ellipse form.
+                var through = string.Equals(bore.GetAvValue(), "true", StringComparison.OrdinalIgnoreCase)
+                    || EvalXnc(depth, symbols) >= dz - BoreMillGeomTolerance;
+                var positionCode = through ? "1" : "3";
+
+                if (useEllipse)
+                {
+                    // <me> l/w are semi-axes, so a Ø(2*radius) circle has l = w = radius.
+                    bore.AddBeforeSelf(new XElement("me",
+                        new XAttribute("x", XmlConvert.ToString(cx)),
+                        new XAttribute("y", XmlConvert.ToString(cy)),
+                        new XAttribute("dp", depth),
+                        new XAttribute("in", "0"),
+                        new XAttribute("out", "1"),
+                        new XAttribute("sxy", "tool.dia/2"),
+                        new XAttribute("fwd", "true"),
+                        new XAttribute("l", XmlConvert.ToString(radius)),
+                        new XAttribute("w", XmlConvert.ToString(radius)),
+                        new XAttribute("a", "0"),
+                        new XAttribute("c", positionCode),
+                        new XAttribute("name", millTool)));
+                }
+                else
+                {
+                    var entryX = cx + radius;
+                    var oppositeX = cx - radius;
+
+                    bore.AddBeforeSelf(new XElement("ms",
+                        new XAttribute("x", XmlConvert.ToString(entryX)),
+                        new XAttribute("y", XmlConvert.ToString(cy)),
+                        new XAttribute("dp", depth),
+                        new XAttribute("in", "0"),
+                        new XAttribute("out", "1"),
+                        new XAttribute("sxy", "tool.dia/2"),
+                        new XAttribute("fwd", "true"),
+                        new XAttribute("c", positionCode),
+                        new XAttribute("name", millTool)));
+
+                    // Curved paths are machined clockwise with dir="true".
+                    bore.AddBeforeSelf(new XElement("mac",
+                        new XAttribute("x", XmlConvert.ToString(oppositeX)),
+                        new XAttribute("y", XmlConvert.ToString(cy)),
+                        new XAttribute("cx", XmlConvert.ToString(cx)),
+                        new XAttribute("cy", XmlConvert.ToString(cy)),
+                        new XAttribute("dp", depth),
+                        new XAttribute("dir", "true")));
+
+                    bore.AddBeforeSelf(new XElement("mac",
+                        new XAttribute("x", XmlConvert.ToString(entryX)),
+                        new XAttribute("y", XmlConvert.ToString(cy)),
+                        new XAttribute("cx", XmlConvert.ToString(cx)),
+                        new XAttribute("cy", XmlConvert.ToString(cy)),
+                        new XAttribute("dp", depth),
+                        new XAttribute("dir", "true")));
+                }
+
+                bore.Remove();
+                converted++;
+            }
+
+            var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
+
+            return (converted, 0, addedToolNames.Count, toolsRemoved);
+        }
+
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToBores(XElement program)
+        {
+            var symbols = SeedProgramSymbols(program);
+            var toolsByName = ReadToolDiameters(program);
+
+            var converted = 0;
+            var ignored = 0;
+            var addedToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var originalToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var elements = program.Elements().ToList();
+
+            for (var i = 0; i < elements.Count; i++)
+            {
+                var tag = elements[i].Name.LocalName;
+
+                if (tag == "me")
+                {
+                    if (TryConvertEllipseToBore(elements[i], symbols, toolsByName, addedToolNames, originalToolNames))
+                    {
+                        converted++;
+                    }
+                    else
+                    {
+                        ignored++;
+                    }
+
+                    continue;
+                }
+
+                if (tag != "ms")
+                {
+                    continue;
+                }
+
+                var segments = new List<XElement>();
+
+                for (var j = i + 1; j < elements.Count; j++)
+                {
+                    var segTag = elements[j].Name.LocalName;
+
+                    if (segTag is not ("ml" or "mac" or "ma"))
+                    {
+                        break;
+                    }
+
+                    segments.Add(elements[j]);
+                }
+
+                if (TryConvertArcContourToBore(elements[i], segments, symbols, toolsByName, addedToolNames, originalToolNames))
+                {
+                    converted++;
+                }
+                else
+                {
+                    ignored++;
+                }
+            }
+
+            var toolsRemoved = RemoveUnreferencedTools(program, originalToolNames);
+
+            return (converted, ignored, addedToolNames.Count, toolsRemoved);
+        }
+
+        private static bool TryConvertEllipseToBore(
+            XElement me,
+            XncSymbolTable symbols,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames,
+            HashSet<string> originalToolNames)
+        {
+            var l = EvalXnc(me.GetLengthValue(), symbols);
+            var w = EvalXnc(me.GetWidthValue(), symbols);
+
+            if (Math.Abs(l - w) > BoreMillGeomTolerance)
+            {
+                return false; // not round
+            }
+
+            // l/w are semi-axes: a round mill of semi-axis l has diameter 2*l.
+            var diameter = l * 2d;
+
+            if (diameter <= BoreMillMinDiameter)
+            {
+                return false;
+            }
+
+            var cx = EvalXnc(me.GetXValue(), symbols);
+            var cy = EvalXnc(me.GetYValue(), symbols);
+            var depth = EvalXnc(me.GetDpValue(), symbols);
+
+            if (me.GetNameValue() is { } millTool)
+            {
+                originalToolNames.Add(millTool);
+            }
+
+            var boreTool = EnsureConversionTool(me, diameter, "Bore", toolsByName, addedToolNames);
+
+            me.AddBeforeSelf(MakeFaceBore(cx, cy, depth, boreTool));
+            me.Remove();
+
+            return true;
+        }
+
+        private static bool TryConvertArcContourToBore(
+            XElement ms,
+            IReadOnlyList<XElement> segments,
+            XncSymbolTable symbols,
+            Dictionary<string, double> toolsByName,
+            HashSet<string> addedToolNames,
+            HashSet<string> originalToolNames)
+        {
+            // A round mill is an entry point plus at least two arcs (centre-defined <mac> or
+            // radius-defined <ma>) that share one centre and one radius and end back on the
+            // entry point.
+            if (segments.Count < 2
+                || segments.Any(s => s.Name.LocalName is not ("mac" or "ma")))
+            {
+                return false;
+            }
+
+            var entryX = EvalXnc(ms.GetXValue(), symbols);
+            var entryY = EvalXnc(ms.GetYValue(), symbols);
+
+            double? cx = null;
+            double? cy = null;
+            double? radius = null;
+
+            var currentX = entryX;
+            var currentY = entryY;
+
+            foreach (var seg in segments)
+            {
+                var endX = EvalXnc(seg.GetXValue(), symbols);
+                var endY = EvalXnc(seg.GetYValue(), symbols);
+
+                double segCx;
+                double segCy;
+                double segRadius;
+
+                if (seg.Name.LocalName == "mac")
+                {
+                    segCx = EvalXnc(seg.GetCxValue(), symbols);
+                    segCy = EvalXnc(seg.GetCyValue(), symbols);
+                    segRadius = Hypot(segCx, segCy, currentX, currentY);
+                }
+                else // <ma>: reconstruct the centre from the chord and the explicit radius
+                {
+                    segRadius = EvalXnc(seg.GetRValue(), symbols);
+
+                    if (!TryReconstructArcCentre(
+                            currentX, currentY, endX, endY, segRadius,
+                            ParseDirSign(seg.GetDirValue()), out segCx, out segCy))
+                    {
+                        return false;
+                    }
+                }
+
+                if (Math.Abs(Hypot(segCx, segCy, endX, endY) - segRadius) > BoreMillGeomTolerance)
+                {
+                    return false; // arc end is off its own circle
+                }
+
+                if (cx is null)
+                {
+                    cx = segCx;
+                    cy = segCy;
+                    radius = segRadius;
+                }
+                else if (Hypot(segCx, segCy, cx.Value, cy!.Value) > BoreMillGeomTolerance
+                         || Math.Abs(segRadius - radius!.Value) > BoreMillGeomTolerance)
+                {
+                    return false; // arcs disagree on centre or radius
+                }
+
+                currentX = endX;
+                currentY = endY;
+            }
+
+            if (radius is null || radius.Value <= BoreMillGeomTolerance)
+            {
+                return false;
+            }
+
+            if (Math.Abs(Hypot(cx!.Value, cy!.Value, entryX, entryY) - radius.Value) > BoreMillGeomTolerance)
+            {
+                return false; // entry point is not on the shared circle
+            }
+
+            if (Hypot(currentX, currentY, entryX, entryY) > BoreMillGeomTolerance)
+            {
+                return false; // contour does not close onto its entry point
+            }
+
+            var diameter = radius.Value * 2d;
+
+            if (diameter <= BoreMillMinDiameter)
+            {
+                return false;
+            }
+
+            var depth = EvalXnc(ms.GetDpValue(), symbols);
+
+            foreach (var seg in segments)
+            {
+                if (seg.GetDpValue() is { } rawDp)
+                {
+                    depth = Math.Max(depth, EvalXnc(rawDp, symbols));
+                }
+            }
+
+            if (ms.GetNameValue() is { } millTool)
+            {
+                originalToolNames.Add(millTool);
+            }
+
+            var boreTool = EnsureConversionTool(ms, diameter, "Bore", toolsByName, addedToolNames);
+
+            ms.AddBeforeSelf(MakeFaceBore(cx.Value, cy.Value, depth, boreTool));
+
+            foreach (var seg in segments)
+            {
+                seg.Remove();
+            }
+
+            ms.Remove();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reconstructs the centre of a radius-defined arc (<c>&lt;ma&gt;</c>) from its chord.
+        /// For the closed-circle-in-two-half-arcs case the chord equals the diameter and the
+        /// centre is the chord midpoint regardless of <paramref name="dirSign"/>.
+        /// </summary>
+        private static bool TryReconstructArcCentre(
+            double startX, double startY, double endX, double endY, double radius, int dirSign,
+            out double centreX, out double centreY)
+        {
+            centreX = 0d;
+            centreY = 0d;
+
+            var chord = Hypot(startX, startY, endX, endY);
+
+            if (chord <= BoreMillGeomTolerance || chord > (2d * radius) + BoreMillGeomTolerance)
+            {
+                return false;
+            }
+
+            var midX = (startX + endX) / 2d;
+            var midY = (startY + endY) / 2d;
+            var halfChord = chord / 2d;
+            var offset = Math.Sqrt(Math.Max(0d, (radius * radius) - (halfChord * halfChord)));
+
+            // Unit vector perpendicular to the chord.
+            var perpX = -(endY - startY) / chord;
+            var perpY = (endX - startX) / chord;
+
+            centreX = midX + (dirSign * offset * perpX);
+            centreY = midY + (dirSign * offset * perpY);
+
+            return true;
+        }
+
+        private static int ParseDirSign(string? raw) => bool.TryParse(raw, out var value) && value ? 1 : -1;
+
+        private static XElement MakeFaceBore(double x, double y, double depth, string toolName)
+        {
+            return new XElement("bf",
+                new XAttribute("x", XmlConvert.ToString(x)),
+                new XAttribute("y", XmlConvert.ToString(y)),
+                new XAttribute("dp", XmlConvert.ToString(depth)),
+                new XAttribute("ac", "1"),
+                new XAttribute("av", "false"),
+                new XAttribute("name", toolName));
+        }
+
+        private static double Hypot(double x1, double y1, double x2, double y2)
+        {
+            return Math.Sqrt(SquaredDistance(x1, y1, x2, y2));
+        }
 
         /// <summary>
         /// Rewrites every axis-parallel primary-pass <c>&lt;gr&gt;</c> groove as a milling
@@ -2011,6 +2514,27 @@ namespace XncOptimizerUI.Services
             var version = int.Parse(collection[0].Groups[1].Value);
 
             return regex2.Replace(_source, $"_gm({version + 1}).project");
+        }
+
+        private string GetBoreMillFileName()
+        {
+            var regex1 = new Regex(@"_bm\.project$");
+            var regex2 = new Regex(@"_bm\((\d*)\)\.project$");
+
+            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            {
+                return _source.Replace(".project", "_bm.project");
+            }
+
+            if (regex1.IsMatch(_source))
+            {
+                return regex1.Replace(_source, "_bm(1).project");
+            }
+
+            var collection = regex2.Matches(_source);
+            var version = int.Parse(collection[0].Groups[1].Value);
+
+            return regex2.Replace(_source, $"_bm({version + 1}).project");
         }
 
         private string GetMillOrderFileName()
