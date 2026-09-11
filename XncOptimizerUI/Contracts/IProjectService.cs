@@ -52,6 +52,14 @@ namespace XncOptimizerUI.Contracts
 
         int GetXncProgramsCount(int partId);
 
+        /// <summary>
+        /// Names of parts that carry more than one XNC program whose operations disagree on the
+        /// <c>turn</c> value (part orientation vs. the machine coordinate origin). A differing
+        /// turn between a part's programs is a processing hazard. Empty when every multi-program
+        /// part is consistent, or when no project is open.
+        /// </summary>
+        IReadOnlyList<string> GetPartsWithXncTurnDiscordance();
+
         /// <summary>Reads and parses every XNC machining program attached to the part with the given id.</summary>
         IReadOnlyList<XncProgram> ReadXncPrograms(int partId);
         void SaveProject();

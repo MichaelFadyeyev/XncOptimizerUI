@@ -21,7 +21,9 @@ per selected part. Deferred:
 - **Machining overlay** — draw bores, mills, groovings, pockets as a separate shape
   layer on top of the face, sourced from `IProjectService.ReadXncPrograms(partId)`
   (`XncProgram` / `XncBore` / `XncGrooving` / `XncMillingContour` / `XncMillingRectangle`).
-  Explicitly out of scope for iteration 1.
+  Explicitly out of scope for iteration 1. When it lands, the overlay coordinates must be
+  rotated into the display frame by `XncProgram.Turn` (the face rectangle is already sized
+  from the turned `dx`/`dy`, but per-feature `x`/`y` are still in each program's own frame).
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.

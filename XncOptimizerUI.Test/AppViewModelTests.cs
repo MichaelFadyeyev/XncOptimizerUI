@@ -381,6 +381,99 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SelectingPart_WithPrograms_TakesDisplayDimsAndTurnFromFirstProgram()
+        {
+            SeedTwoParts(); // Полиця is 600 x 400
+            _projectService.XncPrograms =
+            [
+                new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 1 },
+                new XncProgram { Side = false, Dx = 111, Dy = 222, Dz = 19, Turn = 3 }
+            ];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null); // auto-selects the first part
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(400)); // first program's dx, not Part.Length
+                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(800));  // first program's dy
+                Assert.That(vm.SelectedPartTurn, Is.EqualTo(1));
+                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("90°"));
+            });
+        }
+
+        [Test]
+        public void SelectingPart_WithNoPrograms_FallsBackToPartDimensionsAndZeroTurn()
+        {
+            SeedTwoParts(); // Полиця is 600 x 400
+            _projectService.XncPrograms = [];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(600));
+                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(400));
+                Assert.That(vm.SelectedPartTurn, Is.Null);       // no XNC program -> no turn code
+                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("0°")); // preview still reads 0°
+            });
+        }
+
+        [Test]
+        public void SelectingPart_ToNull_ClearsDisplayDimsAndTurn()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.SelectedPart = null;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartDisplayLength, Is.Zero);
+                Assert.That(vm.SelectedPartDisplayWidth, Is.Zero);
+                Assert.That(vm.SelectedPartTurn, Is.Null);
+                Assert.That(vm.SelectedPartTurnText, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void OpeningProject_WithXncTurnDiscordance_WarnsAndLogsEachPartName()
+        {
+            SeedTwoParts();
+            _projectService.PartsWithXncTurnDiscordance = ["Полиця", "Кришка"];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning(
+                "Discordance in xnc programs turn corner for parts: Полиця, Кришка",
+                Arg.Any<string>());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("Discordance in xnc programs turn corner for parts: Полиця, Кришка"));
+                Assert.That(vm.Log, Does.Contain("turn discordance: Полиця"));
+                Assert.That(vm.Log, Does.Contain("turn discordance: Кришка"));
+            });
+        }
+
+        [Test]
+        public void OpeningProject_WithNoXncTurnDiscordance_DoesNotWarn()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            _dialogs.DidNotReceive().ShowWarning(
+                Arg.Is<string>(s => s.Contains("Discordance in xnc programs turn corner")),
+                Arg.Any<string>());
+        }
+
+        [Test]
         public void ConvertGroovesAndMills_PassesCheckedPartsAndDirectionToService_ThenReloads()
         {
             SeedTwoParts();

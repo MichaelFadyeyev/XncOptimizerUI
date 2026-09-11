@@ -287,7 +287,23 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         partial void OnSelectedPartChanged(PartVM? value)
         {
-            SelectedPartPrograms = BuildSelectedPartPrograms(value);
+            string? readError = null;
+            IReadOnlyList<XncProgram> programs = [];
+
+            if (value is not null && !string.IsNullOrEmpty(FullPath))
+            {
+                try
+                {
+                    programs = _projectService.ReadXncPrograms(value.Id);
+                }
+                catch (Exception e)
+                {
+                    readError = e.Message;
+                }
+            }
+
+            SelectedPartPrograms = BuildSelectedPartPrograms(value, programs, readError);
+            UpdateSelectedPartDisplay(value, programs);
         }
 
         /// <summary>
@@ -296,6 +312,28 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         [ObservableProperty]
         private string _selectedPartPrograms = NoProgramsInfo;
+
+        /// <summary>
+        /// Length / width the part preview draws the selected part at: the first applied XNC
+        /// program's <c>dx</c> / <c>dy</c> when the part has any program, otherwise the part's
+        /// own <c>Length</c> / <c>Width</c>.
+        /// </summary>
+        [ObservableProperty]
+        private double _selectedPartDisplayLength;
+
+        [ObservableProperty]
+        private double _selectedPartDisplayWidth;
+
+        /// <summary>
+        /// First applied XNC program's <c>turn</c> code (0..3) for the selected part, or
+        /// <c>null</c> when it has no program. <see cref="SelectedPartTurnText"/> is the same
+        /// value formatted as degrees for the preview.
+        /// </summary>
+        [ObservableProperty]
+        private int? _selectedPartTurn;
+
+        [ObservableProperty]
+        private string _selectedPartTurnText = string.Empty;
 
         [ObservableProperty]
         private BandVM? _selectedBand;
@@ -339,12 +377,14 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private void OpenFile()
         {
             var fullPath = _dialogs.ShowOpenProjectDialog();
+            var opened = false;
 
             if (fullPath != null)
             {
                 try
                 {
                     LoadProject(fullPath, true);
+                    opened = true;
                 }
                 catch (Exception e)
                 {
@@ -353,6 +393,36 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             ReadItems();
+
+            if (opened)
+            {
+                WarnOnXncTurnDiscordance();
+            }
+        }
+
+        /// <summary>
+        /// After a project is opened, flag every part whose several XNC programs disagree on the
+        /// <c>turn</c> corner (part orientation vs. the machine coordinate origin): pop a warning
+        /// and log each offending part name.
+        /// </summary>
+        private void WarnOnXncTurnDiscordance()
+        {
+            var parts = _projectService.GetPartsWithXncTurnDiscordance();
+
+            if (parts.Count == 0)
+            {
+                return;
+            }
+
+            var list = string.Join(", ", parts);
+
+            Log += $"Discordance in xnc programs turn corner for parts: {list}\n";
+            foreach (var name in parts)
+            {
+                Log += $"  turn discordance: {name}\n";
+            }
+
+            _dialogs.ShowWarning($"Discordance in xnc programs turn corner for parts: {list}");
         }
 
         [RelayCommand]
@@ -929,22 +999,17 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// the shape <c>#/type/side/&lt;params&gt;</c> (one per tool, bore, groove,
         /// milling contour and rectangle), preceded by a <c>Programs: N</c> header.
         /// </summary>
-        private string BuildSelectedPartPrograms(PartVM? part)
+        private string BuildSelectedPartPrograms(
+            PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
         {
             if (part is null || string.IsNullOrEmpty(FullPath))
             {
                 return NoProgramsInfo;
             }
 
-            IReadOnlyList<XncProgram> programs;
-
-            try
+            if (readError != null)
             {
-                programs = _projectService.ReadXncPrograms(part.Id);
-            }
-            catch (Exception e)
-            {
-                return $"Programs: <read error: {e.Message}>";
+                return $"Programs: <read error: {readError}>";
             }
 
             if (programs.Count == 0)
@@ -1002,6 +1067,50 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             return sb.ToString().TrimEnd('\n');
+        }
+
+        /// <summary>
+        /// Sets the preview's display dimensions and turn readout from the selected part's XNC
+        /// programs: the first applied program's <c>dx</c> / <c>dy</c> and <c>turn</c> when the
+        /// part has any program, otherwise the part's own length / width and no turn.
+        /// </summary>
+        private void UpdateSelectedPartDisplay(PartVM? part, IReadOnlyList<XncProgram> programs)
+        {
+            if (part is null)
+            {
+                SelectedPartDisplayLength = 0;
+                SelectedPartDisplayWidth = 0;
+                SelectedPartTurn = null;
+                SelectedPartTurnText = string.Empty;
+                return;
+            }
+
+            var length = (double)part.Length;
+            var width = (double)part.Width;
+            int? turn = null;
+
+            if (programs.Count > 0)
+            {
+                var first = programs[0];
+
+                if (first.Dx > 0 && first.Dy > 0)
+                {
+                    length = first.Dx;
+                    width = first.Dy;
+                }
+
+                turn = first.Turn;
+                SelectedPartTurnText = $"{first.TurnDegrees}°";
+            }
+            else
+            {
+                // No XNC program -> no turn code, but the preview still reads 0° (untouched frame).
+                SelectedPartTurnText = "0°";
+            }
+
+            SelectedPartDisplayLength = length;
+            SelectedPartDisplayWidth = width;
+            SelectedPartTurn = turn;
         }
 
         private static string DescribeSegments(IReadOnlyList<XncMillingSegment> segments)

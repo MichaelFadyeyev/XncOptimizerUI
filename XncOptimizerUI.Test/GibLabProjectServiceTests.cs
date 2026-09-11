@@ -143,6 +143,23 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void GetPartsWithXncTurnDiscordance_ReturnsOnlyMultiProgramPartsWithDisagreeingTurn()
+        {
+            // Fixture: panel-A has two XNC ops with turn 0 and turn 1 (discordant);
+            // panel-B has two ops both turn 2 (consistent); panel-C has a single op.
+            var path = CopyFixture("td-turn-discordance.project");
+            var service = OpenAndRead(CreateService(), path);
+
+            Assert.That(service.GetPartsWithXncTurnDiscordance(), Is.EqualTo(new[] { "panel-A" }));
+        }
+
+        [Test]
+        public void GetPartsWithXncTurnDiscordance_WithNoProjectOpen_ReturnsEmpty()
+        {
+            Assert.That(CreateService().GetPartsWithXncTurnDiscordance(), Is.Empty);
+        }
+
+        [Test]
         public void ReplaceXncPrograms_WithNoTargets_ReturnsFalseAndLogs()
         {
             var service = OpenAndRead(CreateService(), _projectPath);

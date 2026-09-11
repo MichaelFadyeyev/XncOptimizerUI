@@ -2358,6 +2358,27 @@ namespace XncOptimizerUI.Services
                 .ToList();
         }
 
+        // A part machined by several XNC operations that disagree on `turn` is oriented
+        // inconsistently between its own programs -- a processing hazard the operator must see
+        // at file-open time. `turn` is compared as the raw attribute string (absent == "0").
+        public IReadOnlyList<string> GetPartsWithXncTurnDiscordance()
+        {
+            if (_project == null) return [];
+
+            var nameById = ReadParts()
+                .GroupBy(p => p.Id)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+
+            return GetXncOperations()
+                .Select(o => (id: o.GetPart()?.GetIdIntValue(), turn: o.GetTurnValue() ?? "0"))
+                .Where(x => x.id is not null)
+                .GroupBy(x => x.id!.Value)
+                .Where(g => g.Count() > 1)
+                .Where(g => g.Select(x => x.turn).Distinct().Count() > 1)
+                .Select(g => nameById.TryGetValue(g.Key, out var n) ? n : $"id={g.Key}")
+                .ToList();
+        }
+
         // A part's XNC operations are matched by both the drilled face ("side", front/back) and the
         // part's rotation in the layout ("turn"): the program's bore coordinates are only valid when
         // the target is oriented the same way, so a differing turn must block the copy.

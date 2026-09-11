@@ -43,6 +43,53 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        private static XncProgram ReadWithTurn(string? turn)
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"10\" dy=\"20\" dz=\"19\"><tool name=\"Bore8\" d=\"8\"/></program>"));
+
+            if (turn != null)
+            {
+                operation.SetAttributeValue("turn", turn);
+            }
+
+            return XncProgramReader.Read(operation);
+        }
+
+        [Test]
+        public void Reads_turn_fromOperationAttribute_asCodeAndDegrees()
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(ReadWithTurn("0").Turn, Is.EqualTo(0));
+                Assert.That(ReadWithTurn("0").TurnDegrees, Is.EqualTo(0));
+                Assert.That(ReadWithTurn("1").Turn, Is.EqualTo(1));
+                Assert.That(ReadWithTurn("1").TurnDegrees, Is.EqualTo(90));
+                Assert.That(ReadWithTurn("2").TurnDegrees, Is.EqualTo(180));
+                Assert.That(ReadWithTurn("3").TurnDegrees, Is.EqualTo(270));
+            });
+        }
+
+        [Test]
+        public void Reads_turn_asZero_whenAbsentOrUnparseable()
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(ReadWithTurn(null).Turn, Is.EqualTo(0));
+                Assert.That(ReadWithTurn(null).TurnDegrees, Is.EqualTo(0));
+                Assert.That(ReadWithTurn("nonsense").Turn, Is.EqualTo(0));
+            });
+        }
+
+        [Test]
+        public void Reads_fixtureOperations_withTurnZero()
+        {
+            Assert.That(ReadFixture(), Has.All.Property(nameof(XncProgram.Turn)).EqualTo(0));
+        }
+
         [Test]
         public void Reads_tools_withNameAndDiameter()
         {

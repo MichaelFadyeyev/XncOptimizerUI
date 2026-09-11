@@ -36,10 +36,13 @@ namespace XncOptimizerUI.Services.Xnc
             var program = document.Element("program")
                 ?? throw new XncProgramFormatException("The 'program' document has no <program> root element.");
 
-            return Parse(program, ParseBool(xncOperation.GetSideValue(), false));
+            return Parse(
+                program,
+                ParseBool(xncOperation.GetSideValue(), false),
+                ParseInt(xncOperation.GetTurnValue()));
         }
 
-        private static XncProgram Parse(XElement program, bool side)
+        private static XncProgram Parse(XElement program, bool side, int turn)
         {
             var symbols = new XncSymbolTable();
             var dx = RequireDouble(program.GetDxValue(), "<program> @dx");
@@ -251,6 +254,7 @@ namespace XncOptimizerUI.Services.Xnc
                 Dy = dy,
                 Dz = dz,
                 Side = side,
+                Turn = turn,
                 Tools = tools,
                 Bores = bores,
                 Groovings = groovings,

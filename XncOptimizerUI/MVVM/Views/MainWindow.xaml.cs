@@ -53,7 +53,9 @@ namespace XncOptimizerUI.MVVM.Views
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AppViewModel.SelectedPart))
+            if (e.PropertyName == nameof(AppViewModel.SelectedPart)
+                || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
+                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn))
             {
                 RenderPart(_viewModel.SelectedPart);
             }
@@ -76,9 +78,14 @@ namespace XncOptimizerUI.MVVM.Views
             var canvasWidth = PartCanvas.ActualWidth;
             var canvasHeight = PartCanvas.ActualHeight;
 
+            // Display size follows the first applied XNC program's dx/dy (already in the turned
+            // machine frame); with no program it falls back to the part's own length/width.
+            var partLength = _viewModel.SelectedPartDisplayLength; // X, horizontal
+            var partWidth = _viewModel.SelectedPartDisplayWidth;   // Y, vertical (points down)
+
             if (part is null
-                || part.Length <= 0m
-                || part.Width <= 0m
+                || partLength <= 0
+                || partWidth <= 0
                 || canvasWidth <= 0
                 || canvasHeight <= 0)
             {
@@ -92,9 +99,6 @@ namespace XncOptimizerUI.MVVM.Views
             var minEdgeThickness = (double)FindResource("MinEdgeProjectionThickness");
             var gapMm = (double)FindResource("ProjectionGapMm");
             var margin = (double)FindResource("PartPreviewMargin");
-
-            var partLength = (double)part.Length; // X, horizontal
-            var partWidth = (double)part.Width;   // Y, vertical (points down)
 
             // Sheet thickness (mm) is the depth of every side view. Missing / zero
             // sheet -> the bands collapse to the min visible thickness below.
@@ -165,11 +169,44 @@ namespace XncOptimizerUI.MVVM.Views
             MakeRect("Face", originX, originY, faceWidth, faceHeight, faceBrush);
 
             DrawAxisGlyph(margin);
+            DrawTurnLabel(_viewModel.SelectedPartTurnText, margin);
+        }
+
+        /// <summary>
+        /// Writes the selected part's XNC turn as degrees (e.g. "90°") in the bottom-right
+        /// corner of <see cref="PartCanvas"/>. Empty text (part has no XNC program) draws nothing.
+        /// </summary>
+        private void DrawTurnLabel(string text, double margin)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            var brush = (Brush)FindResource("TurnLabelBrush");
+            var fontSize = (double)FindResource("TurnLabelFontSize");
+
+            var label = new TextBlock
+            {
+                Text = text,
+                Foreground = brush,
+                FontSize = fontSize,
+                FontWeight = FontWeights.Bold,
+            };
+
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            var pad = margin * 0.5;
+            Canvas.SetLeft(label, PartCanvas.ActualWidth - label.DesiredSize.Width - pad);
+            Canvas.SetTop(label, PartCanvas.ActualHeight - label.DesiredSize.Height - pad);
+            PartCanvas.Children.Add(label);
         }
 
         /// <summary>
         /// Small X (right, red) / Y (down, green) axis marker in the top-left corner,
-        /// mirroring the reference image. Purely decorative for now.
+        /// mirroring the reference image. Deliberately NOT rotated by the part's XNC
+        /// <c>turn</c>: the on-screen axes stay X-horizontal / Y-vertical regardless of turn,
+        /// which is only reflected in the display dimensions and the bottom-right turn label.
         /// </summary>
         private void DrawAxisGlyph(double margin)
         {

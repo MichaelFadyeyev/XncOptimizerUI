@@ -19,6 +19,17 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Which panel face this program machines (the operation's <c>side</c> attribute).</summary>
         public bool Side { get; init; }
 
+        /// <summary>
+        /// Part orientation relative to the XNC machine coordinate origin, from the operation's
+        /// <c>turn</c> attribute: <c>0</c>..<c>3</c> = 0° / 90° / 180° / 270° clockwise. The
+        /// <c>&lt;program&gt;</c> <see cref="Dx"/> / <see cref="Dy"/> are already given in this
+        /// turned frame. Absent / unparseable <c>turn</c> is read as <c>0</c>.
+        /// </summary>
+        public int Turn { get; init; }
+
+        /// <summary><see cref="Turn"/> expressed in degrees clockwise: 0, 90, 180, or 270.</summary>
+        public int TurnDegrees => ((Turn % 4 + 4) % 4) * 90;
+
         /// <summary>Tools declared by <c>&lt;tool&gt;</c>, in declaration order.</summary>
         public IReadOnlyList<XncTool> Tools { get; init; } = [];
 

@@ -52,7 +52,7 @@ bores only. **One XNC operation per machined face.**
 | attribute | meaning |
 |---|---|
 | `side` | boolean string `true` / `false` — which panel face this program machines. Every bore / groove / milling inside inherits this as its "side"; the sub-elements have no `side` of their own. |
-| `turn` | face rotation code (seen `0`) |
+| `turn` | part orientation relative to the XNC machine coordinate origin: `0`→0°, `1`→90°, `2`→180°, `3`→270°, **clockwise**. The part is rotated about the machine-coords origin; `<program>` `dx`/`dy` are already given in this turned frame. Absent / unparseable → `0`. (seen `0`) |
 | `mirHor`, `mirVert` | mirror flags (seen `false`) |
 | `code`, `typeName` | part / program identifiers, e.g. `10_08_06x001x1`, `10.08.06.ПАН-600` |
 | `countBore`, `countCut`, `countMill` | summary counters (informational) |
@@ -437,7 +437,7 @@ The reader described above is implemented:
 | piece | location |
 |---|---|
 | Parsed models (read-only classes) | `MVVM/Models/Xnc/` — `XncProgram`, `XncTool`, `XncBore` + `BoreSurface`, `XncGrooving`, `XncMillingContour` + `XncMillingSegment`/`XncLineSegment`/`XncArcSegment`, `XncMillingRectangle`, `ToolPosition`, `XncPoint` |
-| Parser | `Services/Xnc/XncProgramReader.cs` — `XncProgramReader.Read(XElement xncOperation)`; two-layer parse mirroring `GibLabProjectService.cs:388-390` |
+| Parser | `Services/Xnc/XncProgramReader.cs` — `XncProgramReader.Read(XElement xncOperation)`; two-layer parse mirroring `GibLabProjectService.cs:388-390`. Reads the operation-level `side` → `XncProgram.Side` and `turn` → `XncProgram.Turn` (0..3; `XncProgram.TurnDegrees` = ×90 clockwise) |
 | Expression evaluator | `Services/Xnc/XncExpressionEvaluator.cs` + `XncSymbolTable.cs` — recursive-descent `+ - * /`, parens, unary sign, dotted identifiers; case-insensitive symbols; no new dependency |
 | Attribute getters | `Extensions/XContainersExtensions.cs` `#region XNC program sub-document` |
 | Service entry point | `IProjectService.ReadXncPrograms(int partId)` → `GibLabProjectService` / `FakeProjectService` |

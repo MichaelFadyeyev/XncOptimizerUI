@@ -113,6 +113,15 @@ namespace XncOptimizerUI.Test.Fakes
             return 0;
         }
 
+        public IReadOnlyList<string> PartsWithXncTurnDiscordance { get; set; } = [];
+
+        public IReadOnlyList<string> GetPartsWithXncTurnDiscordance()
+        {
+            Calls.Add(nameof(GetPartsWithXncTurnDiscordance));
+
+            return PartsWithXncTurnDiscordance;
+        }
+
         public IReadOnlyList<XncProgram> ReadXncPrograms(int partId)
         {
             Calls.Add(nameof(ReadXncPrograms));
