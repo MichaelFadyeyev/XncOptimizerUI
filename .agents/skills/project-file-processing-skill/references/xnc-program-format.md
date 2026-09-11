@@ -197,9 +197,22 @@ Attributes:
 | `y`, `z` | `bl`, `br` | `y` = distance along the edge; `z` = through-thickness position of the horizontal hole |
 | `x`, `z` | `bt`, `bb` | `x` = distance along the edge; `z` = through-thickness position |
 | `ver` | `bl` (seen `2`) | element schema version |
-| `ac` | all (seen `1`) | active / repetition-count flag |
-| `av` | `bf` (bool, seen `false`) | boolean flag — treat as through-hole indicator (blind when `false`) |
+| `ac` | all (seen `1`) | repeated-bore **array count**, integer, `1` by default (no repetition) |
+| `as` | all | repeated-bore **array step**, mm, `null`/absent by default |
+| `av` | all (bool, seen `false`) | repeated-bore **array is vertical** — step direction for the array (`ac`/`as`), unrelated to hole depth |
 | `m` | `bl` (bool, seen `false`) | mirrored flag |
+
+`ac`/`as`/`av` together describe one `<bf>`/`<bt>`/… element expanding into a row (or
+column, when `av="true"`) of `ac` evenly-spaced holes starting at `(x, y)`, step `as` mm
+apart. With `ac="1"` (the default seen everywhere so far) there is no repetition and
+`as`/`av` are moot. **Not implemented by `XncProgramReader`** — it only reads the first
+hole of the array; if array bores turn up in real data, expanding them into `ac`
+separate `XncBore`s is future work.
+
+Through-ness is not carried by any attribute: a bore is through when its `dp` (drill
+depth) reaches the panel dimension it drills into — `dz` for a face bore (`bf`), `dx`
+for an edge bore drilled from the left/right (`bl`/`br`), `dy` for one drilled from the
+top/bottom (`bt`/`bb`).
 
 **What to extract:** side = element name (+ operation `side` for `bf`); tool = `name`;
 centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `edgeConst ∈ {0, dx}`,
@@ -425,7 +438,7 @@ The `c` attribute selects centre-line/tool-position or pocket mode; it is distin
 | # | element | resolved reading |
 |---|---|---|
 | 1–2 | `<tool>` ×2 | `Bore15` d=15, `Bore8` d=8 |
-| 3 | `<bf>` | face bore, `Bore8`, centre `(1353, 65)`, depth `dp=12`, `av=false` (blind) |
+| 3 | `<bf>` | face bore, `Bore8`, centre `(1353, 65)`, depth `dp=12` (blind: `12 < dz=19`) |
 | 4 | `<bf>` | face bore, `Bore8`, centre `(1353, 545)`, depth `dp=12` |
 | 5 | `<bf>` | face bore, `Bore15`, centre `(34, 65)`, depth `dp=14` |
 | 6 | `<bf>` | face bore, `Bore15`, centre `(34, 545)`, depth `dp=14` |

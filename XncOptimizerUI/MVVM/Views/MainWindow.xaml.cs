@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.Views.PartPreview;
 
 namespace XncOptimizerUI.MVVM.Views
 {
@@ -55,7 +56,8 @@ namespace XncOptimizerUI.MVVM.Views
         {
             if (e.PropertyName == nameof(AppViewModel.SelectedPart)
                 || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
-                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn))
+                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn)
+                || e.PropertyName == nameof(AppViewModel.SelectedXncPrograms))
             {
                 RenderPart(_viewModel.SelectedPart);
             }
@@ -167,6 +169,18 @@ namespace XncOptimizerUI.MVVM.Views
             MakeRect("Right", originX + faceWidth + gap, originY, bandThickness, faceHeight, edgeBrush);
 
             MakeRect("Face", originX, originY, faceWidth, faceHeight, faceBrush);
+
+            var boreLayout = new BorePreviewRenderer.FaceLayout(
+                originX, originY, faceWidth, faceHeight, scale, gap, bandThickness);
+            var boreBrushes = new BorePreviewRenderer.BoreBrushes(
+                (Brush)FindResource("BoreSideTrueBrush"),
+                (Brush)FindResource("BoreSideFalseBrush"),
+                (Brush)FindResource("BoreSelectedBrush"),
+                (Brush)FindResource("PartPreviewBackgroundBrush"),
+                (double)FindResource("BoreOutlineThickness"),
+                (double)FindResource("BoreCenterLineThickness"),
+                (double)FindResource("BoreCenterLineOvershootMm"));
+            BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
 
             DrawAxisGlyph(margin);
             DrawTurnLabel(_viewModel.SelectedPartTurnText, margin);

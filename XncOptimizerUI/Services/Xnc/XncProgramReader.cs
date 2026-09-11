@@ -227,6 +227,20 @@ namespace XncOptimizerUI.Services.Xnc
                             _ => throw new XncProgramFormatException($"<{tag}> is not a bore element.")
                         };
 
+                        var boreDepth = Eval(element.GetDpValue(), $"<{tag}> @dp");
+
+                        // "Through" isn't carried by any attribute - av/ac/as describe a
+                        // repeated-bore array (array-is-vertical / count / step), unrelated to
+                        // hole depth. A bore is through when its depth reaches the panel
+                        // dimension it drills into: dz for a face bore, dx for an edge bore
+                        // drilled from the left/right, dy for one drilled from the top/bottom.
+                        var throughAt = tag switch
+                        {
+                            "bl" or "br" => dx,
+                            "bt" or "bb" => dy,
+                            _ => dz
+                        };
+
                         bores.Add(new XncBore
                         {
                             Surface = surface,
@@ -234,8 +248,8 @@ namespace XncOptimizerUI.Services.Xnc
                             X = bx,
                             Y = by,
                             Z = bz,
-                            Depth = Eval(element.GetDpValue(), $"<{tag}> @dp"),
-                            Through = ParseBool(element.GetAvValue(), false)
+                            Depth = boreDepth,
+                            Through = boreDepth >= throughAt
                         });
                         break;
                     }

@@ -303,6 +303,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             SelectedPartPrograms = BuildSelectedPartPrograms(value, programs, readError);
+            SelectedXncPrograms = programs;
             UpdateSelectedPartDisplay(value, programs);
         }
 
@@ -312,6 +313,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         [ObservableProperty]
         private string _selectedPartPrograms = NoProgramsInfo;
+
+        /// <summary>
+        /// The XNC programs attached to <see cref="SelectedPart"/>, for the preview's
+        /// machining overlay (e.g. bores). Refreshed whenever the selection changes.
+        /// </summary>
+        [ObservableProperty]
+        private IReadOnlyList<XncProgram> _selectedXncPrograms = [];
 
         /// <summary>
         /// Length / width the part preview draws the selected part at: the first applied XNC

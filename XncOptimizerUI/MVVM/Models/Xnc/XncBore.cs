@@ -25,7 +25,11 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Drill depth into the surface, in millimetres (the <c>dp</c> attribute).</summary>
         public double Depth { get; init; }
 
-        /// <summary>True when the hole goes all the way through (the <c>av</c> flag on face bores).</summary>
+        /// <summary>
+        /// True when the hole goes all the way through: <see cref="Depth"/> reaches the panel
+        /// dimension it drills into (not carried by any XNC attribute - <c>av</c>/<c>ac</c>/<c>as</c>
+        /// describe a repeated-bore array, unrelated to depth).
+        /// </summary>
         public bool Through { get; init; }
     }
 }

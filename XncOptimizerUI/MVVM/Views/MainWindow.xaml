@@ -49,7 +49,7 @@
         <SolidColorBrush x:Key="PartPreviewBackgroundBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="PartFaceBrush" Color="#8DB9D9" />
         <SolidColorBrush x:Key="PartEdgeProjectionBrush" Color="#8DB9D9" />
-        <SolidColorBrush x:Key="PartOutlineBrush" Color="#5A6B78" />
+        <SolidColorBrush x:Key="PartOutlineBrush" Color="#444444" />
         <SolidColorBrush x:Key="AxisXBrush" Color="#D00000" />
         <SolidColorBrush x:Key="AxisYBrush" Color="#0A7A0A" />
         <SolidColorBrush x:Key="TurnLabelBrush" Color="#444444" />
@@ -61,6 +61,16 @@
         <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
         <sys:Double x:Key="ProjectionGapMm">10</sys:Double>
         <sys:Double x:Key="PartPreviewMargin">24</sys:Double>
+
+        <!--  Part preview: bore overlay colors  -->
+        <SolidColorBrush x:Key="BoreSideTrueBrush" Color="#444444" />
+        <SolidColorBrush x:Key="BoreSideFalseBrush" Color="#808080" />
+        <SolidColorBrush x:Key="BoreSelectedBrush" Color="#FF0000" />
+
+        <!--  Part preview: bore overlay line widths (px) and center line overshoot (mm)  -->
+        <sys:Double x:Key="BoreOutlineThickness">1</sys:Double>
+        <sys:Double x:Key="BoreCenterLineThickness">0.75</sys:Double>
+        <sys:Double x:Key="BoreCenterLineOvershootMm">3</sys:Double>
     </Window.Resources>
 
     <Grid x:Name="MainGrid">
