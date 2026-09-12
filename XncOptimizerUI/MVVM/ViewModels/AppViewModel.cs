@@ -305,7 +305,31 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SelectedPartPrograms = BuildSelectedPartPrograms(value, programs, readError);
             SelectedXncPrograms = programs;
             UpdateSelectedPartDisplay(value, programs);
+
+            CheckedBores.Clear();
+            SelectedPartBores = BuildSelectedPartBoreRows(programs);
+            HasSelectedPartBores = SelectedPartBores.Count > 0;
         }
+
+        /// <summary>
+        /// The bores of <see cref="SelectedPart"/>'s XNC programs, flattened across all programs
+        /// and numbered in order, for the bores <c>DataGrid</c>. Refreshed whenever the selection
+        /// changes.
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<BoreRowVM> _selectedPartBores = [];
+
+        /// <summary>
+        /// Whether the bores <c>DataGrid</c> should be shown at all for <see cref="SelectedPart"/>.
+        /// </summary>
+        [ObservableProperty]
+        private bool _hasSelectedPartBores;
+
+        /// <summary>
+        /// Bores checked via the bores <c>DataGrid</c>'s checkbox column. Reset whenever the
+        /// selected part changes. Not consumed by anything yet - reserved for future features.
+        /// </summary>
+        public ObservableCollection<XncBore> CheckedBores { get; } = [];
 
         /// <summary>
         /// Brief, one-line-per-feature summary of the XNC programs attached to
@@ -1075,6 +1099,65 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             return sb.ToString().TrimEnd('\n');
+        }
+
+        /// <summary>
+        /// Flattens every bore across the selected part's XNC programs into numbered,
+        /// display-ready <see cref="BoreRowVM"/> rows for the bores <c>DataGrid</c>.
+        /// </summary>
+        private ObservableCollection<BoreRowVM> BuildSelectedPartBoreRows(IReadOnlyList<XncProgram> programs)
+        {
+            var rows = new ObservableCollection<BoreRowVM>();
+            var number = 0;
+
+            foreach (var program in programs)
+            {
+                foreach (var bore in program.Bores)
+                {
+                    var side = bore.Surface switch
+                    {
+                        BoreSurface.Face => program.Side ? "Front" : "Back",
+                        BoreSurface.Top => "Top",
+                        BoreSurface.Bottom => "Bottom",
+                        BoreSurface.Left => "Left",
+                        BoreSurface.Right => "Right",
+                        _ => bore.Surface.ToString()
+                    };
+
+                    var (x, y) = bore.Surface switch
+                    {
+                        BoreSurface.Top or BoreSurface.Bottom => (bore.X, bore.Z),
+                        BoreSurface.Left or BoreSurface.Right => (bore.Z, bore.Y),
+                        _ => (bore.X, bore.Y)
+                    };
+
+                    var diameter = program.Tools.FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter;
+
+                    rows.Add(new BoreRowVM(
+                        ++number,
+                        side,
+                        Num(x),
+                        Num(y),
+                        diameter is null ? null : Num(diameter.Value),
+                        Num(bore.Depth),
+                        bore,
+                        OnBoreRowSelectionChanged));
+                }
+            }
+
+            return rows;
+        }
+
+        private void OnBoreRowSelectionChanged(BoreRowVM row, bool isSelected)
+        {
+            if (isSelected)
+            {
+                CheckedBores.Add(row.Bore);
+            }
+            else
+            {
+                CheckedBores.Remove(row.Bore);
+            }
         }
 
         /// <summary>
