@@ -19,6 +19,7 @@
 
     <Window.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBool" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <Style x:Key="TextWrappingStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
@@ -601,14 +602,72 @@
                     Background="Transparent"
                     ClipToBounds="True" />
             </Border>
-            <TextBox
-                x:Name="ProgramsTextBlox"
-                Grid.Column="1"
-                HorizontalScrollBarVisibility="Auto"
-                IsReadOnly="True"
-                Text="{Binding SelectedPartPrograms, Mode=OneWay}"
-                TextWrapping="NoWrap"
-                VerticalScrollBarVisibility="Auto" />
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <DataGrid
+                    x:Name="SelectedPartBoresGrid"
+                    Grid.Row="0"
+                    MaxHeight="250"
+                    Margin="0,0,0,4"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="False"
+                    ItemsSource="{Binding SelectedPartBores}"
+                    SelectionMode="Extended"
+                    Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn
+                            Width="Auto"
+                            Binding="{Binding Number}"
+                            Header="#"
+                            IsReadOnly="True" />
+                        <DataGridTemplateColumn Width="Auto" Header="Sel">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox
+                                        HorizontalAlignment="Center"
+                                        IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn
+                            Width="Auto"
+                            Binding="{Binding Side}"
+                            Header="Side"
+                            IsReadOnly="True" />
+                        <DataGridTextColumn
+                            Width="*"
+                            Binding="{Binding X}"
+                            Header="X"
+                            IsReadOnly="True" />
+                        <DataGridTextColumn
+                            Width="*"
+                            Binding="{Binding Y}"
+                            Header="Y"
+                            IsReadOnly="True" />
+                        <DataGridTextColumn
+                            Width="*"
+                            Binding="{Binding Diameter}"
+                            Header="Ø"
+                            IsReadOnly="True" />
+                        <DataGridTextColumn
+                            Width="*"
+                            Binding="{Binding Depth}"
+                            Header="Depth"
+                            IsReadOnly="True" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBox
+                    x:Name="ProgramsTextBlox"
+                    Grid.Row="1"
+                    HorizontalScrollBarVisibility="Auto"
+                    IsReadOnly="True"
+                    Text="{Binding SelectedPartPrograms, Mode=OneWay}"
+                    TextWrapping="NoWrap"
+                    VerticalScrollBarVisibility="Auto" />
+            </Grid>
         </Grid>
         <TextBox
             x:Name="LogTextBox"
