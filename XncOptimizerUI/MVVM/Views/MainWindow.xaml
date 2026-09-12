@@ -20,30 +20,44 @@
     <Window.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBool" />
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
         <Style x:Key="TextWrappingStyle" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
         <Style x:Key="FileOpsButtonStyle" TargetType="Button">
             <Setter Property="Margin" Value="2" />
+            <Setter Property="Height" Value="24" />
         </Style>
+
         <Style x:Key="CommandButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="40" />
+            <Setter Property="Height" Value="30" />
         </Style>
+
         <Style x:Key="SetOptionButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="24" />
             <Setter Property="Width" Value="34" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="Margin" Value="2,2,2,2" />
         </Style>
+
         <Style x:Key="SetOptionButtonStyle2" TargetType="Button">
             <Setter Property="Height" Value="24" />
             <Setter Property="Margin" Value="1,0,1,0" />
         </Style>
+
         <Style x:Key="FilterInputStyle" TargetType="TextBox">
             <Setter Property="Height" Value="20" />
             <Setter Property="Margin" Value="2,0,0,0" />
             <Setter Property="Padding" Value="0,2" />
+        </Style>
+
+        <Style x:Key="MenuGroupBorder" TargetType="Border">
+            <Setter Property="Margin" Value="2,2,2,12" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="BorderBrush" Value="#BCBCBC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
         </Style>
 
         <!--  Part preview: colors  -->
@@ -58,7 +72,7 @@
         <!--  Part preview: line widths and screen-space metrics (px)  -->
         <sys:Double x:Key="PartOutlineThickness">1.5</sys:Double>
         <sys:Double x:Key="AxisThickness">1.5</sys:Double>
-        <sys:Double x:Key="TurnLabelFontSize">27.5</sys:Double>
+        <sys:Double x:Key="TurnLabelFontSize">24</sys:Double>
         <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
         <sys:Double x:Key="ProjectionGapMm">10</sys:Double>
         <sys:Double x:Key="PartPreviewMargin">24</sys:Double>
@@ -74,134 +88,253 @@
         <sys:Double x:Key="BoreCenterLineOvershootMm">3</sys:Double>
     </Window.Resources>
 
+    <!--  Main grid  -->
     <Grid x:Name="MainGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="200" />
             <RowDefinition Height="*" />
             <RowDefinition Height="0.5*" MinHeight="120" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <DockPanel
-            Grid.Row="1"
-            Grid.RowSpan="3"
-            Grid.Column="0">
-            <StackPanel Margin="5,5,5,10" DockPanel.Dock="Top">
+        <!--  Menu bar  -->
+        <StackPanel
+            Grid.Row="0"
+            Grid.RowSpan="4"
+            Grid.Column="0"
+            Margin="5,5,5,5">
+
+            <!--  File operations buttons  -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+
+                </Grid.RowDefinitions>
+
                 <Button
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Command="{Binding OpenFileCommand}"
+                    Content="Open"
+                    Style="{StaticResource FileOpsButtonStyle}" />
+
+                <Button
+                    Grid.Row="0"
+                    Grid.Column="1"
+                    Background="#FFFF6A3D"
+                    Command="{Binding CloseFileCommand}"
+                    Content="Close"
+                    Style="{StaticResource FileOpsButtonStyle}" />
+
+                <Button
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Command="{Binding SaveFileCommand}"
+                    Content="Save"
+                    Style="{StaticResource FileOpsButtonStyle}" />
+
+                <Button
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Content="Save as..."
+                    IsEnabled="False"
+                    Style="{StaticResource FileOpsButtonStyle}" />
+
+                <Button
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Margin="2,15,2,15"
+                    Content="Options"
+                    IsEnabled="False"
+                    Style="{StaticResource FileOpsButtonStyle}" />
+
+            </Grid>
+
+            <!--  Group by XNC panel  -->
+            <StackPanel Margin="2,2,2,2">
+                <Button
+                    Margin="0,0,0,5"
                     Command="{Binding ExecuteOptimizeCommand}"
-                    Content="Optimize"
+                    Content="Group by XNC"
                     Style="{StaticResource CommandButtonStyle}" />
-                <Button
-                    Command="{Binding ExecutePrepForSplitAlongXCommand}"
-                    Content="Prep. For Split Along X"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <Label
-                    Margin="5,2,0,0"
-                    Padding="0"
-                    HorizontalAlignment="Left"
-                    Content="Add new label:"
-                    FontSize="10" />
-                <Grid Margin="5,0" HorizontalAlignment="Stretch">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox
-                        Grid.Column="0"
-                        Height="24"
-                        Text="{Binding NewLabelToProcess, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <!--  Preparation pannel  -->
+            <Border Style="{StaticResource MenuGroupBorder}">
+                <StackPanel>
+
                     <Button
-                        Grid.Column="1"
-                        Command="{Binding AddNewLabelCommand}"
-                        Content="ADD"
-                        Style="{StaticResource SetOptionButtonStyle}" />
-                </Grid>
-                <Label
-                    Margin="5,2,0,0"
-                    Padding="0"
-                    HorizontalAlignment="Left"
-                    Content="Select label to process:"
-                    FontSize="10" />
-                <Grid Margin="5,0,5,5" HorizontalAlignment="Stretch">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ComboBox
-                        Grid.Column="0"
-                        Height="24"
-                        ItemsSource="{Binding LabelsToProcess}"
-                        SelectedItem="{Binding SelectedLabel}" />
+                        Command="{Binding ExecutePrepForSplitAlongXCommand}"
+                        Content="Prep. For Split Along X"
+                        Style="{StaticResource CommandButtonStyle}" />
+
+                    <Label
+                        Margin="0,5,0,0"
+                        Padding="0"
+                        HorizontalAlignment="Left"
+                        Content="Add new label:"
+                        FontSize="10" />
+
+                    <Grid Margin="0,5,0,0" HorizontalAlignment="Stretch">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox
+                            Grid.Column="0"
+                            Height="24"
+                            Text="{Binding NewLabelToProcess, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Button
+                            Grid.Column="1"
+                            Command="{Binding AddNewLabelCommand}"
+                            Content="ADD"
+                            Style="{StaticResource SetOptionButtonStyle}" />
+                    </Grid>
+
+                    <Label
+                        Margin="0,5,0,0"
+                        Padding="0"
+                        HorizontalAlignment="Left"
+                        Content="Select label to process:"
+                        FontSize="10" />
+
+                    <Grid Margin="0,5,0,0" HorizontalAlignment="Stretch">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox
+                            Grid.Column="0"
+                            Height="24"
+                            ItemsSource="{Binding LabelsToProcess}"
+                            SelectedItem="{Binding SelectedLabel}" />
+
+                        <Button
+                            Grid.Column="1"
+                            Command="{Binding DeleteLabelCommand}"
+                            Content="DEL"
+                            Style="{StaticResource SetOptionButtonStyle}" />
+
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!--  Replace XNCs panel  -->
+            <Border Style="{StaticResource MenuGroupBorder}">
+
+                <StackPanel>
                     <Button
-                        Grid.Column="1"
-                        Command="{Binding DeleteLabelCommand}"
-                        Content="DEL"
-                        Style="{StaticResource SetOptionButtonStyle}" />
-                </Grid>
-                <Button
-                    Command="{Binding ReplaceXNCsCommand}"
-                    Content="Replace XNCs"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <Label
-                    Margin="5,2,0,0"
-                    Padding="0"
-                    HorizontalAlignment="Left"
-                    Content="Source part to copy from:"
-                    FontSize="10" />
-                <Grid Margin="5,0,5,5" HorizontalAlignment="Stretch">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="2"
-                        Height="60"
-                        VerticalAlignment="Center"
-                        FontSize="10"
-                        Text="{Binding SourcePartInfo}"
-                        TextTrimming="CharacterEllipsis"
-                        ToolTip="{Binding SourcePartInfo}" />
+                        Command="{Binding ReplaceXNCsCommand}"
+                        Content="Replace XNCs"
+                        Style="{StaticResource CommandButtonStyle}" />
+
+                    <Label
+                        Margin="5,2,0,0"
+                        Padding="0"
+                        HorizontalAlignment="Left"
+                        Content="Source part to copy from:"
+                        FontSize="10" />
+
+                    <Grid Margin="5,0,5,5" HorizontalAlignment="Stretch">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Height="60"
+                            VerticalAlignment="Center"
+                            FontSize="10"
+                            Text="{Binding SourcePartInfo}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip="{Binding SourcePartInfo}" />
+
+                        <Button
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Command="{Binding SetSourcePartCommand}"
+                            Content="SET"
+                            Style="{StaticResource SetOptionButtonStyle2}" />
+
+                        <Button
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Command="{Binding ResetSourcePartCommand}"
+                            Content="RESET"
+                            Style="{StaticResource SetOptionButtonStyle2}" />
+
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!--  Convert grooves and mills panel  -->
+            <Border Style="{StaticResource MenuGroupBorder}">
+                <StackPanel>
                     <Button
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Command="{Binding SetSourcePartCommand}"
-                        Content="SET"
-                        Style="{StaticResource SetOptionButtonStyle2}" />
-                    <Button
-                        Grid.Row="1"
-                        Grid.Column="1"
-                        Command="{Binding ResetSourcePartCommand}"
-                        Content="RESET"
-                        Style="{StaticResource SetOptionButtonStyle2}" />
-                </Grid>
-                <Button
-                    Command="{Binding ConvertGroovesAndMillsCommand}"
-                    Content="Convert grooves / mills"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <StackPanel Margin="5,0,5,5" Orientation="Vertical">
-                    <RadioButton
-                        Content="Grooves → Mills"
-                        FontSize="10"
-                        GroupName="GrooveMillDir"
-                        IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}" />
-                    <StackPanel Orientation="Horizontal">
+                        Command="{Binding ConvertGroovesAndMillsCommand}"
+                        Content="Convert grooves / mills"
+                        Style="{StaticResource CommandButtonStyle}" />
+
+                    <Grid Margin="0,7,0,0">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
                         <RadioButton
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Height="20"
+                            Content="Grooves → Mills"
+                            FontSize="10"
+                            GroupName="GrooveMillDir"
+                            IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}" />
+
+                        <RadioButton
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Height="20"
                             Content="Mills → Grooves"
                             FontSize="10"
                             GroupName="GrooveMillDir"
                             IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}" />
+
                         <CheckBox
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Height="20"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             Content="incl. pockets"
@@ -209,20 +342,44 @@
                             IsChecked="{Binding ProcessPockets}"
                             IsEnabled="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Also convert axis-parallel rectangular pockets (&lt;mr&gt;) to grooves" />
-                    </StackPanel>
+
+                    </Grid>
                 </StackPanel>
-                <Button
-                    Command="{Binding ConvertBoresAndMillsCommand}"
-                    Content="Convert bores / mills"
-                    Style="{StaticResource CommandButtonStyle}" />
-                <StackPanel Margin="5,0,5,5" Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
+            </Border>
+
+
+            <!--  Convert bores and mills panel  -->
+            <Border Style="{StaticResource MenuGroupBorder}">
+                <StackPanel>
+                    <Button
+                        Command="{Binding ConvertBoresAndMillsCommand}"
+                        Content="Convert bores / mills"
+                        Style="{StaticResource CommandButtonStyle}" />
+
+                    <Grid Margin="0,7,0,0">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
                         <RadioButton
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Height="20"
                             Content="Bores → Mills"
                             FontSize="10"
                             GroupName="BoreMillDir"
                             IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}" />
+
                         <CheckBox
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Height="20"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             Content="as ellipses"
@@ -230,445 +387,495 @@
                             IsChecked="{Binding ConvertBoresToEllipses}"
                             IsEnabled="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Bores → Mills: emit an elliptical mill (&lt;me&gt;) per bore instead of a closed two-arc path" />
-                    </StackPanel>
-                    <RadioButton
-                        Content="Mills → Bores"
-                        FontSize="10"
-                        GroupName="BoreMillDir"
-                        IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.MillsToBores}, Converter={StaticResource EnumToBool}}" />
+
+                        <RadioButton
+                            Grid.Row="1"
+                            Grid.RowSpan="2"
+                            Grid.Column="0"
+                            Height="20"
+                            Content="Mills → Bores"
+                            FontSize="10"
+                            GroupName="BoreMillDir"
+                            IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.MillsToBores}, Converter={StaticResource EnumToBool}}" />
+
+                    </Grid>
                 </StackPanel>
+            </Border>
+
+
+            <!--  Optimize Mill Traversal panel  -->
+            <StackPanel Margin="2,2,2,2">
                 <Button
                     Command="{Binding OptimizeMillTraversalCommand}"
                     Content="Optimize mill order"
                     Style="{StaticResource CommandButtonStyle}" />
+            </StackPanel>
+
+            <!--  Copy Parts List panel  -->
+            <StackPanel Margin="2,2,2,2">
                 <Button
                     Command="{Binding CopyPartsListCommand}"
                     Content="Copy parts"
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
-        </DockPanel>
+        </StackPanel>
+
+        <!--  Parts, Products, Materials  -->
         <TabControl
             Grid.Row="0"
+            Grid.RowSpan="3"
             Grid.Column="1"
-            Grid.ColumnSpan="2"
-            MaxHeight="240">
-            <TabItem Header="Products">
-                <DataGrid
-                    AutoGenerateColumns="False"
-                    ItemsSource="{Binding Products}"
-                    ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn
-                            Width="70*"
-                            Binding="{Binding Name}"
-                            Header="Name" />
-                        <DataGridTextColumn
-                            Width="20*"
-                            Binding="{Binding Code}"
-                            Header="Code" />
-                        <DataGridTextColumn
-                            Width="10*"
-                            Binding="{Binding Count}"
-                            Header="Count" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-            <TabItem Header="Sheets &amp; Bands">
+            Grid.ColumnSpan="2">
+
+            <!--  Parts  -->
+            <TabItem Header="Parts">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="0.6*" />
+                        <RowDefinition Height="0.4*" />
+                    </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Column="0">
-                        <Label
-                            Margin="5,2,0,0"
-                            Padding="0"
-                            HorizontalAlignment="Left"
-                            Content="Sheets"
-                            FontSize="10" />
+                    <DockPanel Grid.Row="0">
+
+                        <!--  Filter params  -->
+                        <Grid Margin="5,0,5,0" DockPanel.Dock="Top">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="0.22*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="0.22*" />
+                                <ColumnDefinition Width="0.22*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="0.22*" />
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="40" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel
+                                x:Name="CheckedCountPanel"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="11"
+                                HorizontalAlignment="Left"
+                                Orientation="Horizontal">
+                                <Label VerticalAlignment="Center" Content="Checked no:" />
+                                <Label VerticalAlignment="Center" Content="{Binding CheckedCount}" />
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="11"
+                                HorizontalAlignment="Right"
+                                Orientation="Horizontal">
+                                <Label VerticalAlignment="Center" Content="Filtered no:" />
+                                <Label VerticalAlignment="Center" Content="{Binding Parts.Count}" />
+                            </StackPanel>
+
+                            <Button
+                                x:Name="CheckAllButton"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Height="20"
+                                Margin="2,0,0,0"
+                                Padding="0,2"
+                                Command="{Binding CheckAllCommand}"
+                                Content="Check all" />
+                            <Button
+                                x:Name="UncheckAllButton"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Height="20"
+                                Margin="2,0,0,0"
+                                Padding="0,2"
+                                Command="{Binding UncheckAllCommand}"
+                                Content="Uncheck all" />
+
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="2"
+                                Style="{StaticResource FilterInputStyle}"
+                                TextChanged="RangeInput_TextChanged"
+                                ToolTip="Length min">
+                                <TextBox.Text>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        NotifyOnValidationError="True"
+                                        Path="LengthMin"
+                                        UpdateSourceTrigger="PropertyChanged"
+                                        ValidatesOnDataErrors="True">
+                                        <Binding.ValidationRules>
+                                            <validators:DecimalValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="3"
+                                Margin="2,0,0,0"
+                                VerticalAlignment="Center"
+                                Text="&#8211;" />
+
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="4"
+                                Style="{StaticResource FilterInputStyle}"
+                                TextChanged="RangeInput_TextChanged"
+                                ToolTip="Length max">
+                                <TextBox.Text>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        NotifyOnValidationError="True"
+                                        Path="LengthMax"
+                                        UpdateSourceTrigger="PropertyChanged"
+                                        ValidatesOnDataErrors="True">
+                                        <Binding.ValidationRules>
+                                            <validators:DecimalValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="5"
+                                Style="{StaticResource FilterInputStyle}"
+                                TextChanged="RangeInput_TextChanged"
+                                ToolTip="Width min">
+                                <TextBox.Text>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        NotifyOnValidationError="True"
+                                        Path="WidthMin"
+                                        UpdateSourceTrigger="PropertyChanged"
+                                        ValidatesOnDataErrors="True">
+                                        <Binding.ValidationRules>
+                                            <validators:DecimalValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Grid.Column="6"
+                                Margin="2,0,0,0"
+                                VerticalAlignment="Center"
+                                Text="&#8211;" />
+
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="7"
+                                Style="{StaticResource FilterInputStyle}"
+                                TextChanged="RangeInput_TextChanged"
+                                ToolTip="Width max">
+                                <TextBox.Text>
+                                    <Binding
+                                        Mode="TwoWay"
+                                        NotifyOnValidationError="True"
+                                        Path="WidthMax"
+                                        UpdateSourceTrigger="PropertyChanged"
+                                        ValidatesOnDataErrors="True">
+                                        <Binding.ValidationRules>
+                                            <validators:DecimalValidationRule />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="8"
+                                Style="{StaticResource FilterInputStyle}"
+                                Text="{Binding FilterName}"
+                                ToolTip="Name contains" />
+
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="9"
+                                Height="20"
+                                Margin="2,0,0,0"
+                                Padding="0,2"
+                                Command="{Binding ApplyFilterCommand}"
+                                Content="Filter" />
+
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="10"
+                                Height="20"
+                                Margin="2,0,0,0"
+                                Padding="0,2"
+                                Command="{Binding ClearFiltersCommand}"
+                                Content="Clear" />
+
+                        </Grid>
+
+                        <!--  Parts list  -->
                         <DataGrid
                             AutoGenerateColumns="False"
-                            ItemsSource="{Binding Sheets}"
-                            ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            CanUserAddRows="False"
+                            ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
+                            SelectedItem="{Binding SelectedPart}">
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="Auto" Header="Sel">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn
-                                    Width="30*"
-                                    Binding="{Binding Code}"
-                                    Header="Code" />
+                                    Width="2*"
+                                    Binding="{Binding Number}"
+                                    Header="No" />
                                 <DataGridTextColumn
-                                    Width="70*"
+                                    Width="5*"
+                                    Binding="{Binding Length}"
+                                    Header="Length" />
+                                <DataGridTextColumn
+                                    Width="5*"
+                                    Binding="{Binding Width}"
+                                    Header="Width" />
+                                <DataGridTextColumn
+                                    Width="5*"
+                                    Binding="{Binding Count}"
+                                    Header="Count" />
+                                <DataGridTextColumn
+                                    Width="15*"
+                                    Binding="{Binding TopBandingMat}"
+                                    Header="Top Band">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="15*"
+                                    Binding="{Binding BottomBandingMat}"
+                                    Header="Bottom Band">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="15*"
+                                    Binding="{Binding LeftBandingMat}"
+                                    Header="Left band">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="15*"
+                                    Binding="{Binding RightBandingMat}"
+                                    Header="Right Band">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="22*"
                                     Binding="{Binding Name}"
                                     Header="Name" />
                             </DataGrid.Columns>
                         </DataGrid>
+                    </DockPanel>
+                    <Grid Grid.Row="1" Margin="5,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="350" />
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            Grid.Column="0"
+                            Margin="0,0,4,0"
+                            Background="{StaticResource PartPreviewBackgroundBrush}"
+                            BorderBrush="{StaticResource PartOutlineBrush}"
+                            BorderThickness="1">
+                            <Canvas
+                                x:Name="PartCanvas"
+                                Background="Transparent"
+                                ClipToBounds="True" />
+                        </Border>
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DataGrid
+                                x:Name="SelectedPartBoresGrid"
+                                Grid.Row="0"
+                                MaxHeight="250"
+                                Margin="0,0,0,4"
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="False"
+                                ItemsSource="{Binding SelectedPartBores}"
+                                SelectionMode="Extended"
+                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="Auto"
+                                        Binding="{Binding Number}"
+                                        Header="#"
+                                        IsReadOnly="True" />
+                                    <DataGridTemplateColumn Width="Auto" Header="Sel">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn
+                                        Width="Auto"
+                                        Binding="{Binding Side}"
+                                        Header="Side"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="*"
+                                        Binding="{Binding X}"
+                                        Header="X"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="*"
+                                        Binding="{Binding Y}"
+                                        Header="Y"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="*"
+                                        Binding="{Binding Diameter}"
+                                        Header="Ø"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="*"
+                                        Binding="{Binding Depth}"
+                                        Header="Depth"
+                                        IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBox
+                                x:Name="ProgramsTextBlox"
+                                Grid.Row="1"
+                                HorizontalScrollBarVisibility="Auto"
+                                IsReadOnly="True"
+                                Text="{Binding SelectedPartPrograms, Mode=OneWay}"
+                                TextWrapping="NoWrap"
+                                VerticalScrollBarVisibility="Auto" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!--  Products & Materials  -->
+            <TabItem Header="Materials">
+                <Grid VerticalAlignment="Center">
+                    <StackPanel MaxWidth="1200">
+
+                        <!--  Prodicts  -->
+                        <StackPanel Margin="0,15,0,0">
+                            <Label
+                                Margin="5,2,0,5"
+                                Padding="0"
+                                HorizontalAlignment="Left"
+                                Content="Products"
+                                FontSize="12" />
+                            <DataGrid
+                                MaxHeight="450"
+                                AutoGenerateColumns="False"
+                                ItemsSource="{Binding Products}"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="80*"
+                                        Binding="{Binding Name}"
+                                        Header="Name" />
+                                    <DataGridTextColumn
+                                        Width="10*"
+                                        Binding="{Binding Code}"
+                                        Header="Code" />
+                                    <DataGridTextColumn
+                                        Width="10*"
+                                        Binding="{Binding Count}"
+                                        Header="Count" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+
+                        <!--  Sheets  -->
+                        <StackPanel Margin="0,15,0,0">
+                            <Label
+                                Margin="5,2,0,5"
+                                Padding="0"
+                                HorizontalAlignment="Left"
+                                Content="Sheets"
+                                FontSize="12" />
+                            <DataGrid
+                                MaxHeight="450"
+                                AutoGenerateColumns="False"
+                                ItemsSource="{Binding Sheets}"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="10*"
+                                        Binding="{Binding Code}"
+                                        Header="Code" />
+                                    <DataGridTextColumn
+                                        Width="90*"
+                                        Binding="{Binding Name}"
+                                        Header="Name" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+
+                        <!--  Bands  -->
+                        <StackPanel Margin="0,15,0,0">
+                            <Label
+                                Margin="5,2,0,5"
+                                Padding="0"
+                                HorizontalAlignment="Left"
+                                Content="Bands"
+                                FontSize="12" />
+                            <DataGrid
+                                MaxHeight="450"
+                                HorizontalContentAlignment="Right"
+                                AutoGenerateColumns="False"
+                                ItemsSource="{Binding Bands}"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                SelectedItem="{Binding SelectedBand}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="10*"
+                                        Binding="{Binding Code}"
+                                        Header="Code" />
+                                    <DataGridTextColumn
+                                        Width="80*"
+                                        Binding="{Binding Name}"
+                                        Header="Name" />
+                                    <DataGridTextColumn
+                                        Width="5*"
+                                        Binding="{Binding InternalSymbol}"
+                                        Header="Int. Sign" />
+                                    <DataGridTextColumn
+                                        Width="5*"
+                                        Binding="{Binding ExternalSymbol}"
+                                        Header="Ext. Sign" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1">
-                        <Label
-                            Margin="5,2,0,0"
-                            Padding="0"
-                            HorizontalAlignment="Left"
-                            Content="Bands"
-                            FontSize="10" />
-                        <DataGrid
-                            Height="Auto"
-                            HorizontalContentAlignment="Right"
-                            AutoGenerateColumns="False"
-                            ItemsSource="{Binding Bands}"
-                            ScrollViewer.VerticalScrollBarVisibility="Auto"
-                            SelectedItem="{Binding SelectedBand}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn
-                                    Width="20*"
-                                    Binding="{Binding Code}"
-                                    Header="Code" />
-                                <DataGridTextColumn
-                                    Width="70*"
-                                    Binding="{Binding Name}"
-                                    Header="Name" />
-                                <DataGridTextColumn
-                                    Width="5*"
-                                    Binding="{Binding InternalSymbol}"
-                                    Header="Int. Sign" />
-                                <DataGridTextColumn
-                                    Width="5*"
-                                    Binding="{Binding ExternalSymbol}"
-                                    Header="Ext. Sign" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>
-        <DockPanel
-            Grid.Row="1"
-            Grid.Column="1"
-            Grid.ColumnSpan="2">
-            <Grid Margin="5,0,5,0" DockPanel.Dock="Top">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="40" />
-                    <ColumnDefinition Width="40" />
-                    <ColumnDefinition Width="0.22*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="0.22*" />
-                    <ColumnDefinition Width="0.22*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="0.22*" />
-                    <ColumnDefinition Width="1*" />
-                    <ColumnDefinition Width="40" />
-                    <ColumnDefinition Width="40" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
 
-                <StackPanel
-                    x:Name="CheckedCountPanel"
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="11"
-                    HorizontalAlignment="Left"
-                    Orientation="Horizontal">
-                    <Label VerticalAlignment="Center" Content="Checked no:" />
-                    <Label VerticalAlignment="Center" Content="{Binding CheckedCount}" />
-                </StackPanel>
-                <StackPanel
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="11"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-                    <Label VerticalAlignment="Center" Content="Filtered no:" />
-                    <Label VerticalAlignment="Center" Content="{Binding Parts.Count}" />
-                </StackPanel>
-
-                <Button
-                    x:Name="CheckAllButton"
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    Height="20"
-                    Margin="2,0,0,0"
-                    Padding="0,2"
-                    Command="{Binding CheckAllCommand}"
-                    Content="Check all" />
-                <Button
-                    x:Name="UncheckAllButton"
-                    Grid.Row="1"
-                    Grid.Column="1"
-                    Height="20"
-                    Margin="2,0,0,0"
-                    Padding="0,2"
-                    Command="{Binding UncheckAllCommand}"
-                    Content="Uncheck all" />
-
-                <TextBox
-                    Grid.Row="1"
-                    Grid.Column="2"
-                    Style="{StaticResource FilterInputStyle}"
-                    TextChanged="RangeInput_TextChanged"
-                    ToolTip="Length min">
-                    <TextBox.Text>
-                        <Binding
-                            Mode="TwoWay"
-                            NotifyOnValidationError="True"
-                            Path="LengthMin"
-                            UpdateSourceTrigger="PropertyChanged"
-                            ValidatesOnDataErrors="True">
-                            <Binding.ValidationRules>
-                                <validators:DecimalValidationRule />
-                            </Binding.ValidationRules>
-                        </Binding>
-                    </TextBox.Text>
-                </TextBox>
-                <TextBlock
-                    Grid.Row="1"
-                    Grid.Column="3"
-                    Margin="2,0,0,0"
-                    VerticalAlignment="Center"
-                    Text="&#8211;" />
-                <TextBox
-                    Grid.Row="1"
-                    Grid.Column="4"
-                    Style="{StaticResource FilterInputStyle}"
-                    TextChanged="RangeInput_TextChanged"
-                    ToolTip="Length max">
-                    <TextBox.Text>
-                        <Binding
-                            Mode="TwoWay"
-                            NotifyOnValidationError="True"
-                            Path="LengthMax"
-                            UpdateSourceTrigger="PropertyChanged"
-                            ValidatesOnDataErrors="True">
-                            <Binding.ValidationRules>
-                                <validators:DecimalValidationRule />
-                            </Binding.ValidationRules>
-                        </Binding>
-                    </TextBox.Text>
-                </TextBox>
-                <TextBox
-                    Grid.Row="1"
-                    Grid.Column="5"
-                    Style="{StaticResource FilterInputStyle}"
-                    TextChanged="RangeInput_TextChanged"
-                    ToolTip="Width min">
-                    <TextBox.Text>
-                        <Binding
-                            Mode="TwoWay"
-                            NotifyOnValidationError="True"
-                            Path="WidthMin"
-                            UpdateSourceTrigger="PropertyChanged"
-                            ValidatesOnDataErrors="True">
-                            <Binding.ValidationRules>
-                                <validators:DecimalValidationRule />
-                            </Binding.ValidationRules>
-                        </Binding>
-                    </TextBox.Text>
-                </TextBox>
-                <TextBlock
-                    Grid.Row="1"
-                    Grid.Column="6"
-                    Margin="2,0,0,0"
-                    VerticalAlignment="Center"
-                    Text="&#8211;" />
-                <TextBox
-                    Grid.Row="1"
-                    Grid.Column="7"
-                    Style="{StaticResource FilterInputStyle}"
-                    TextChanged="RangeInput_TextChanged"
-                    ToolTip="Width max">
-                    <TextBox.Text>
-                        <Binding
-                            Mode="TwoWay"
-                            NotifyOnValidationError="True"
-                            Path="WidthMax"
-                            UpdateSourceTrigger="PropertyChanged"
-                            ValidatesOnDataErrors="True">
-                            <Binding.ValidationRules>
-                                <validators:DecimalValidationRule />
-                            </Binding.ValidationRules>
-                        </Binding>
-                    </TextBox.Text>
-                </TextBox>
-                <TextBox
-                    Grid.Row="1"
-                    Grid.Column="8"
-                    Style="{StaticResource FilterInputStyle}"
-                    Text="{Binding FilterName}"
-                    ToolTip="Name contains" />
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="9"
-                    Height="20"
-                    Margin="2,0,0,0"
-                    Padding="0,2"
-                    Command="{Binding ApplyFilterCommand}"
-                    Content="Filter" />
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="10"
-                    Height="20"
-                    Margin="2,0,0,0"
-                    Padding="0,2"
-                    Command="{Binding ClearFiltersCommand}"
-                    Content="Clear" />
-            </Grid>
-            <DataGrid
-                AutoGenerateColumns="False"
-                CanUserAddRows="False"
-                ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
-                SelectedItem="{Binding SelectedPart}">
-                <DataGrid.Columns>
-                    <DataGridTemplateColumn Width="Auto" Header="Sel">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn
-                        Width="2*"
-                        Binding="{Binding Number}"
-                        Header="No" />
-                    <DataGridTextColumn
-                        Width="5*"
-                        Binding="{Binding Length}"
-                        Header="Length" />
-                    <DataGridTextColumn
-                        Width="5*"
-                        Binding="{Binding Width}"
-                        Header="Width" />
-                    <DataGridTextColumn
-                        Width="5*"
-                        Binding="{Binding Count}"
-                        Header="Count" />
-                    <DataGridTextColumn
-                        Width="15*"
-                        Binding="{Binding TopBandingMat}"
-                        Header="Top Band">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn
-                        Width="15*"
-                        Binding="{Binding BottomBandingMat}"
-                        Header="Bottom Band">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn
-                        Width="15*"
-                        Binding="{Binding LeftBandingMat}"
-                        Header="Left band">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn
-                        Width="15*"
-                        Binding="{Binding RightBandingMat}"
-                        Header="Right Band">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn
-                        Width="22*"
-                        Binding="{Binding Name}"
-                        Header="Name" />
-                </DataGrid.Columns>
-            </DataGrid>
-        </DockPanel>
-        <Grid
-            Grid.Row="2"
-            Grid.Column="1"
-            Grid.ColumnSpan="2"
-            Margin="5,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="350" />
-            </Grid.ColumnDefinitions>
-            <Border
-                Grid.Column="0"
-                Margin="0,0,4,0"
-                Background="{StaticResource PartPreviewBackgroundBrush}"
-                BorderBrush="{StaticResource PartOutlineBrush}"
-                BorderThickness="1">
-                <Canvas
-                    x:Name="PartCanvas"
-                    Background="Transparent"
-                    ClipToBounds="True" />
-            </Border>
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <DataGrid
-                    x:Name="SelectedPartBoresGrid"
-                    Grid.Row="0"
-                    MaxHeight="250"
-                    Margin="0,0,0,4"
-                    AutoGenerateColumns="False"
-                    CanUserAddRows="False"
-                    ItemsSource="{Binding SelectedPartBores}"
-                    SelectionMode="Extended"
-                    Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn
-                            Width="Auto"
-                            Binding="{Binding Number}"
-                            Header="#"
-                            IsReadOnly="True" />
-                        <DataGridTemplateColumn Width="Auto" Header="Sel">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <CheckBox
-                                        HorizontalAlignment="Center"
-                                        IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn
-                            Width="Auto"
-                            Binding="{Binding Side}"
-                            Header="Side"
-                            IsReadOnly="True" />
-                        <DataGridTextColumn
-                            Width="*"
-                            Binding="{Binding X}"
-                            Header="X"
-                            IsReadOnly="True" />
-                        <DataGridTextColumn
-                            Width="*"
-                            Binding="{Binding Y}"
-                            Header="Y"
-                            IsReadOnly="True" />
-                        <DataGridTextColumn
-                            Width="*"
-                            Binding="{Binding Diameter}"
-                            Header="Ø"
-                            IsReadOnly="True" />
-                        <DataGridTextColumn
-                            Width="*"
-                            Binding="{Binding Depth}"
-                            Header="Depth"
-                            IsReadOnly="True" />
-                    </DataGrid.Columns>
-                </DataGrid>
-                <TextBox
-                    x:Name="ProgramsTextBlox"
-                    Grid.Row="1"
-                    HorizontalScrollBarVisibility="Auto"
-                    IsReadOnly="True"
-                    Text="{Binding SelectedPartPrograms, Mode=OneWay}"
-                    TextWrapping="NoWrap"
-                    VerticalScrollBarVisibility="Auto" />
-            </Grid>
-        </Grid>
+        <!--  Log  -->
         <TextBox
             x:Name="LogTextBox"
             Grid.Row="3"
@@ -678,39 +885,7 @@
             Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="WrapWithOverflow"
             VerticalScrollBarVisibility="Auto" />
-        <Grid Margin="5,5,5,5" RenderTransformOrigin="0.579,0.512">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="120" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Button
-                Grid.Row="0"
-                Grid.Column="0"
-                Command="{Binding OpenFileCommand}"
-                Content="Open file"
-                Style="{StaticResource FileOpsButtonStyle}" />
 
-            <Button
-                Grid.Row="0"
-                Grid.Column="1"
-                Background="#FFFF6A3D"
-                Command="{Binding CloseFileCommand}"
-                Content="CloseFile"
-                Style="{StaticResource FileOpsButtonStyle}" />
-
-            <Button
-                Grid.Row="1"
-                Grid.Column="0"
-                Grid.ColumnSpan="2"
-                Command="{Binding SaveFileCommand}"
-                Content="Save file"
-                Style="{StaticResource FileOpsButtonStyle}" />
-
-        </Grid>
 
     </Grid>
 </Window>
