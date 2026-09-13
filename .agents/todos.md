@@ -19,19 +19,26 @@ per selected part. Deferred:
   (`RenderPart`). If it grows, move to a `PartView` `UserControl`, or go full MVVM:
   build an observable shape collection in the view model and bind it to an
   `ItemsControl` with a `Canvas` `ItemsPanel`.
-- **Machining overlay** — face-drilled bores (`XncBore.Surface == Face`) are drawn by
-  `BorePreviewRenderer` (`MVVM/Views/PartPreview/BorePreviewRenderer.cs`): a circle +
-  crossed center lines on the Face rectangle, plus a rectangle + center line on each of
-  the four edge bands, colored by the owning `XncProgram.Side`, clickable (all five
-  projections of one bore toggle red together on click; selection state is local to the
-  current render pass, not yet wired into `AppViewModel`). Still deferred: edge-drilled
-  bores (`bt`/`bb`/`bl`/`br`), groovings, milling contours/rectangles, and pockets, all
-  sourced from the same `IProjectService.ReadXncPrograms(partId)` result
-  (`AppViewModel.SelectedXncPrograms`). When they land, note the overlay coordinates
-  must be rotated into the display frame by `XncProgram.Turn` (the face rectangle is
-  already sized from the turned `dx`/`dy`, but per-feature `x`/`y` are still in each
-  program's own frame) - bores are unaffected only because the sample data used so far
-  has `turn="0"`.
+- **Machining overlay** — all bores are drawn by `BorePreviewRenderer`
+  (`MVVM/Views/PartPreview/BorePreviewRenderer.cs`). A face-drilled bore
+  (`XncBore.Surface == Face`) gets a circle + crossed center lines on the Face
+  rectangle, plus a rectangle + center line on each of the four edge bands, colored by
+  the owning `XncProgram.Side` (all five projections toggle red together on click). An
+  edge-drilled bore (`Top`/`Bottom`/`Left`/`Right`) is the mirror image: a circle +
+  crossed center lines on the one band it was drilled from (perpendicular position from
+  `bore.Z`, anchored to the band edge nearest the Face when `program.Side` is true, else
+  the far/outer edge), plus a rectangle + center line on the Face rectangle, flush to
+  that same edge and always growing inward toward the panel center regardless of
+  `Side`; both shapes always use `BoreBrushes.SideTrue` regardless of the owning
+  program's actual `Side`, and neither uses `ThroughFill` (both projections stay
+  outline-only, unlike a face bore's front circle). Selection state is local to the
+  current render pass, not yet wired into `AppViewModel`. Still deferred: groovings,
+  milling contours/rectangles, and pockets, all sourced from the same
+  `IProjectService.ReadXncPrograms(partId)` result (`AppViewModel.SelectedXncPrograms`).
+  When they land, note the overlay coordinates must be rotated into the display frame
+  by `XncProgram.Turn` (the face rectangle is already sized from the turned `dx`/`dy`,
+  but per-feature `x`/`y` are still in each program's own frame) - bores are unaffected
+  only because the sample data used so far has `turn="0"`.
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
