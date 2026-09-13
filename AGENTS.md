@@ -34,6 +34,7 @@
 <!-- Commands to install dependencies and get a working dev environment. -->
 - Before implementing new feature or bug fixingread read `.agents/code-analysis.md`.
 <!-- after user submits implementation or bug fixing ask to update information in `.agents/code-analysis.md`. -->
+- Check `.agents/todos.md` for deferred work items / future hooks relevant to the area you're touching.
 
 ## Build, test, and lint commands
 
