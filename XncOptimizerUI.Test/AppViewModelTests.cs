@@ -351,6 +351,67 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SelectingPart_BuildsNumberedGrooveRowsWithMappedSides()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms =
+            [
+                new XncProgram
+                {
+                    Side = true,
+                    Groovings =
+                    [
+                        new XncGrooving
+                        {
+                            SideCode = 0,
+                            Start = new XncPoint(1, 2),
+                            End = new XncPoint(3, 4),
+                            Depth = 5,
+                            Width = 6,
+                            Position = ToolPosition.Center
+                        },
+                        new XncGrooving { SideCode = 1, Position = ToolPosition.Left },
+                        new XncGrooving { SideCode = 2, Position = ToolPosition.Right },
+                        new XncGrooving { SideCode = 3 },
+                        new XncGrooving { SideCode = 4 }
+                    ]
+                },
+                new XncProgram
+                {
+                    Side = false,
+                    Groovings = [new XncGrooving { SideCode = 0 }]
+                }
+            ];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartGrooves, Has.Count.EqualTo(6));
+                Assert.That(vm.SelectedPartGrooves.Select(g => g.Number),
+                    Is.EqualTo(Enumerable.Range(1, 6)));
+                Assert.That(vm.SelectedPartGrooves.Select(g => g.Side),
+                    Is.EqualTo(new[] { "Front", "Right", "Left", "Top", "Bottom", "Back" }));
+                Assert.That(vm.SelectedPartGrooves[0].StartX, Is.EqualTo("1"));
+                Assert.That(vm.SelectedPartGrooves[0].EndY, Is.EqualTo("4"));
+                Assert.That(vm.SelectedPartGrooves[0].Depth, Is.EqualTo("5"));
+                Assert.That(vm.SelectedPartGrooves[0].Width, Is.EqualTo("6"));
+                Assert.That(vm.SelectedPartGrooves[0].ToolToCenterLine, Is.EqualTo("C"));
+                Assert.That(vm.SelectedPartGrooves[1].ToolToCenterLine, Is.EqualTo("L"));
+                Assert.That(vm.SelectedPartGrooves[2].ToolToCenterLine, Is.EqualTo("R"));
+                Assert.That(vm.HasSelectedPartGrooves, Is.True);
+            });
+
+            vm.SelectedPartGrooves[0].IsSelected = true;
+            Assert.That(vm.CheckedGrooves, Has.Count.EqualTo(1));
+            Assert.That(vm.CheckedGrooves[0], Is.SameAs(vm.SelectedPartGrooves[0].Groove));
+
+            vm.SelectedPartGrooves[0].IsSelected = false;
+            Assert.That(vm.CheckedGrooves, Is.Empty);
+        }
+
+        [Test]
         public void SelectingPart_WithNoPrograms_ShowsNone()
         {
             SeedTwoParts();

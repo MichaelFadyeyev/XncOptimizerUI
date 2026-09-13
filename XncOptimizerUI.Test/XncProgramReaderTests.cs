@@ -164,6 +164,24 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void Reads_grooveSideCode_andDefaultsMissingCodeToFace()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"100\" dy=\"80\" dz=\"18\">"
+                    + "<tool name=\"Cut\" d=\"3\" />"
+                    + "<gr name=\"Cut\" x1=\"0\" y1=\"10\" x2=\"100\" y2=\"10\" dp=\"2\" t=\"3\" p=\"4\" />"
+                    + "<gr name=\"Cut\" x1=\"0\" y1=\"20\" x2=\"100\" y2=\"20\" dp=\"2\" t=\"3\" />"
+                    + "</program>"));
+
+            var groovings = XncProgramReader.Read(operation).Groovings;
+
+            Assert.That(groovings.Select(g => g.SideCode), Is.EqualTo(new[] { 4, 0 }));
+        }
+
+        [Test]
         public void Reads_millingLineContours_withExpressionEntryPointsAndPositions()
         {
             var contours = ReadFixture()[0].MillingContours;

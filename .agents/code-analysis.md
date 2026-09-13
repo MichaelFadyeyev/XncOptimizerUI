@@ -53,6 +53,14 @@ Programs: 1
 ```
 Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[project-file-processing-skill]].
 
+The selected-part panel also exposes separate read-only `DataGrid`s for bores and grooves.
+`SelectedPartGrooves` is flattened and numbered in XNC program/document order through
+`GrooveRowVM`. Groove rows display start/end coordinates, depth, width, and the
+`ToolPosition` center-line relation. Their side is derived from groove `p`: `0` maps to
+Front/Back from the XNC operation `side`, while `1`/`2`/`3`/`4` map to Right/Left/Top/Bottom.
+The groove grid uses extended full-row selection. `XncGrooving.SideCode` preserves the parsed
+`p` value (missing `p` defaults to `0`).
+
 **Replace XNC programs** — source part's drill programs (one per face: front/back) are validated, then copied to selected target parts. Before copying, all targets are checked for: (1) identical dimensions & banding, (2) same number of XNC faces, and (3) matching face/turn orientations. If validation passes, the `program` attribute and `countBore` metadata are overwritten, and the file is saved with the `_ren.project` suffix (or a numbered collision suffix) with an audit description. Implemented in `GibLabProjectService.ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)` with detailed validation and error logging.
 
 **Convert grooves ⇄ mills** — for the parts **checked** in the Parts grid (the
