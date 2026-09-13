@@ -182,3 +182,13 @@ second op can have `elLength="0"`, `count="0"` and **no `<part>` child**. Parts 
 | `td-missing-ml-error.project` | contour with `<mac>` arc + an `<ml>` with no `dp` |
 | `td-pocket-to-groove.project` | 8 products (7 empty); contour-traced thin pockets (`c="3"`); `turn="1"` |
 | `td-programs.project` | coverage: `<tool>`, `<ms>/<ml>`, `<bl>`, `<gr>` (c=0/1/2), `<var>`, `<mac>` circle, `<mr>`; 2nd op = `<bf>` face bores |
+| `td.project` | default base fixture for most `GibLabProjectServiceTests` — large multi-part real-world export, thousands of `<bf>/<bt>/<bb>/<bl>/<br>` bores and `<mac>`/`<ms>` mills, `turn` 0/1/2 across parts |
+| `td-2.project` | variant of `td.project` (same shape/scale); not wired into automated tests — dev/manual fixture |
+| `td-turn-discordance.project` | `GetPartsWithXncTurnDiscordance`: panel-A has two XNC ops with discordant `turn` (0/1), panel-B two ops both `turn="2"` (consistent), panel-C a single op |
+| `td-bores-large.project` | `ConvertBoresAndMills` (Bores->Mills / round-trip): 2 `<bf>` face bores, tools `Bore40` (d=40, blind `dp="12"` vs `dz="19"`) and `Bore8` (d=8, below the 35mm threshold) |
+| `td-bores-displaying.project` | 2 `<bf>` face bores (tool `Bore40`, d=40); dev/manual fixture for part-preview bore display, not wired into automated tests |
+| `td-br-ml-conversion.project` | rich `ConvertBoresAndMills` round-trip fixture: `<bf>`, `<me>` ellipses and `<mac>` arc contours convertible both directions |
+| `td-mill-circle.project` | `ConvertBoresAndMills` (Mills->Bores): one `<ms>`+`<mac>` closed arc contour, plus non-compliant variants (non-closed, straight segment, under-size) |
+| `td-mill-ellipse.project` | `ConvertBoresAndMills` (Mills->Bores): one `<me>` round ellipse (`l == w`) |
+| `td-gr-ml-conversion.project` | `ConvertGroovesAndMills` rich fixture: many `<gr>`/`<bf>`/`<bl>`/`<mac>`/`<ms>`; not wired into automated tests — dev/manual fixture |
+| `td-side-groove.project` | 5 `<gr>` grooves; not wired into automated tests — dev/manual fixture for the grooves table display feature |

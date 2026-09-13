@@ -23,7 +23,9 @@ All `.project` I/O goes through **`GibLabProjectService`** (behind **`IProjectSe
 | `bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)` | face bore (Ø>35) <-> round mill (fixed 6 mm `Mill6`); see §Conversions; saves `*_bm.project` |
 | `bool OptimizeMillTraversal(ref string log, IList<Part> parts)` | greedy nearest-neighbour re-sequence of straight axis-parallel passes; saves `*_mo.project` |
 | `int GetXncProgramsCount(int partId)` | count XNC ops for a part |
+| `IReadOnlyList<string> GetPartsWithXncTurnDiscordance()` | names of parts whose XNC operations disagree on `turn` (orientation vs. machine origin) |
 | `IReadOnlyList<XncProgram> ReadXncPrograms(int partId)` | parse every XNC program for a part (read-only model) |
+| `List<Product> ReadProducts()` | reads `<good typeId="product">` goods into `Product` |
 | `string FullPath { get; }` | current file path (moves after a transform saves a new file) |
 
 Batch transforms return `false` and save nothing when they changed nothing. Output filename
@@ -63,7 +65,7 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
 | `XncProgram` | `Dx, Dy, Dz` (mm), `Side` (bool), `Tools`, `Bores`, `Groovings`, `MillingContours`, `MillingRectangles`, `Variables` (`IReadOnlyDictionary<string,double>`) |
 | `XncTool` | `Name`, `Diameter` |
 | `XncBore` | `Surface` (`BoreSurface`), `ToolName`, `X`, `Y`, `Z`, `Depth`, `Through` |
-| `XncGrooving` | `ToolName`, `Start`, `End` (`XncPoint`), `Depth`, `Width`, `Position` (`ToolPosition`), `Comment` |
+| `XncGrooving` | `ToolName`, `Start`, `End` (`XncPoint`), `Depth`, `Width`, `SideCode`, `Position` (`ToolPosition`), `Comment` |
 | `XncMillingContour` | `ToolName`, `Entry`, `EntryDepth`, `Position`, `LeadIn`, `LeadOut`, `StartOffsetXY`, `Segments` |
 | `XncMillingSegment` (abstract) | `End` (`XncPoint`), `Depth` |
 | `XncLineSegment : XncMillingSegment` | `<ml>` |
@@ -82,8 +84,9 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
 | `Band` | `Id, Name, Code, Width, Thickness, InternalSymbol (elSymbol), ExternalSymbol, Color` |
 | `Sheet` | `Id, Name, Code, Thickness` |
 | `Context` | `Log, FullPath, SearchText, ObservableCollection<Part> Parts` |
+| `Product` | `Id, Name, Code, Count` — wraps `<good typeId="product">` |
 
-There is **no** `Program`/`Groove`/`Product` domain class at the `.project` level — those stay
+There is **no** `Program`/`Groove` domain class at the `.project` level — those stay
 raw `XElement` inside `GibLabProjectService`.
 
 ## Config — `Configuration/AppOptions.cs`, `Services/ConfigService.cs`

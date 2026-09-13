@@ -63,7 +63,7 @@ The attribute value is XML entity-escaped **once** (`&lt; &gt; &quot;`). LINQ-to
 un-escapes it automatically when you read `.Value`, so:
 
 ```csharp
-// mirrors Services/GibLabProjectService.cs:388-390
+// mirrors Services/GibLabProjectService.cs (XDocument.Parse(WebUtility.HtmlDecode(...)) call sites)
 var xnc          = project.GetOperations().First(o => o.GetTypeIdValue() == "XNC");
 var programXml   = xnc.GetProgram()!.Value;             // already real XML text here
 var programInner = XDocument.Parse(programXml);         // 2nd parse
@@ -184,8 +184,8 @@ No length / tool-number / spindle data is present. `d` is always a numeric liter
 | `bl` | **left** edge (`x = 0`), runs along Y | `x = 0` | `y` (along edge), `z` (through thickness) | 595 |
 | `br` | **right** edge (`x = dx`), runs along Y | `x = dx` | `y`, `z` | 570 |
 
-(Set confirmed by `Services/GibLabProjectService.cs:966` `ElementIsBore` and the mirror
-`switch` at `:402-427`, where `bf/bl/br` flip `y` and `bt`↔`bb` swap tag.)
+(Set confirmed by `Services/GibLabProjectService.cs` `ElementIsBore` and its mirror
+`switch`, where `bf/bl/br` flip `y` and `bt`↔`bb` swap tag.)
 
 Attributes:
 
@@ -218,9 +218,9 @@ top/bottom (`bt`/`bb`).
 centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `edgeConst ∈ {0, dx}`,
 `bt`/`bb` → `(x, edgeConst, z)` with `edgeConst ∈ {0, dy}`; depth = `dp`.
 
-> The fixture only contains `bf` and `bl`. `bt` / `bb` / `br` are documented from the
-> `td-2.project` element census and the existing mirror code — verify their exact attribute
-> set and `z` reference against that file when implementing.
+`bt` / `bb` / `br` are implemented in `XncProgramReader.cs` exactly as documented above
+(edge pinned to `0`/`dx`/`dy`, other axis + `z` read from the element) — confirmed against
+`td-2.project`, `td.project`, and `td-bores-displaying.project`.
 
 ### 6.3 Groovings — `<gr>`
 
@@ -466,8 +466,6 @@ The reader described above is implemented:
   a CW arc; `td-br-ml-conversion.project` uses it). `XncProgramReader` still reads it the other
   way round (`Clockwise = !dir`) — its `XncArcSegment.Clockwise` is inverted for this dialect
   and should not be trusted until the reader is fixed.
-- `bt` / `bb` / `br` exact attribute set and the reference for `z` (reader pins the drilled
-  edge coordinate to `0` / `dx` / `dy` and reads the other axis + `z`).
 - `<mr>` — whether `x`/`y` is a corner or the centre; units of `a` (degrees assumed) and `r`.
 - `in` / `out` lead-code enumeration (only `0` and `1` seen).
 - `p` on `<gr>` (only `0` seen; not modelled).
