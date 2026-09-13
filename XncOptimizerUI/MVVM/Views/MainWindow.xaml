@@ -432,8 +432,9 @@
             <TabItem Width="130" Header="Parts">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="0.6*" />
-                        <RowDefinition Height="0.4*" />
+                        <RowDefinition Height="0.6*" MinHeight="120" />
+                        <RowDefinition Height="5" />
+                        <RowDefinition Height="0.4*" MinHeight="120" />
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0">
@@ -692,22 +693,32 @@
                         </DataGrid>
                     </DockPanel>
 
+                    <GridSplitter
+                        Grid.Row="1"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Background="#BCBCBC"
+                        Cursor="SizeNS"
+                        ResizeBehavior="PreviousAndNext"
+                        ResizeDirection="Rows"
+                        ShowsPreview="False" />
+
                     <!--  Selected Part Preview and Programs  -->
                     <Grid
                         x:Name="SelectedPartContainer"
-                        Grid.Row="1"
+                        Grid.Row="2"
                         Margin="5,4,0,0">
 
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="350" />
+                            <ColumnDefinition Width="*" MinWidth="120" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="350" MinWidth="160" />
                         </Grid.ColumnDefinitions>
 
                         <!--  Preview  -->
                         <Border
                             x:Name="PartPreviewBorder"
                             Grid.Column="0"
-                            Margin="0,0,4,0"
                             Background="{StaticResource PartPreviewBackgroundBrush}"
                             BorderBrush="{StaticResource PartOutlineBrush}"
                             BorderThickness="1">
@@ -717,8 +728,18 @@
                                 ClipToBounds="True" />
                         </Border>
 
+                        <GridSplitter
+                            Grid.Column="1"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="#BCBCBC"
+                            Cursor="SizeWE"
+                            ResizeBehavior="PreviousAndNext"
+                            ResizeDirection="Columns"
+                            ShowsPreview="False" />
+
                         <!--  Selected Part Programs  -->
-                        <Grid x:Name="SelectedPartProgramsContainer" Grid.Column="1">
+                        <Grid x:Name="SelectedPartProgramsContainer" Grid.Column="2">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
