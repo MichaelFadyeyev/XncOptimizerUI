@@ -307,8 +307,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
             UpdateSelectedPartDisplay(value, programs);
 
             CheckedBores.Clear();
+            CheckedGrooves.Clear();
             SelectedPartBores = BuildSelectedPartBoreRows(programs);
             HasSelectedPartBores = SelectedPartBores.Count > 0;
+            SelectedPartGrooves = BuildSelectedPartGrooveRows(programs);
+            HasSelectedPartGrooves = SelectedPartGrooves.Count > 0;
         }
 
         /// <summary>
@@ -330,6 +333,15 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// selected part changes. Not consumed by anything yet - reserved for future features.
         /// </summary>
         public ObservableCollection<XncBore> CheckedBores { get; } = [];
+
+        /// <summary>Grooves checked via the grooves table. Reset when the selected part changes.</summary>
+        public ObservableCollection<XncGrooving> CheckedGrooves { get; } = [];
+
+        [ObservableProperty]
+        private ObservableCollection<GrooveRowVM> _selectedPartGrooves = [];
+
+        [ObservableProperty]
+        private bool _hasSelectedPartGrooves;
 
         /// <summary>
         /// Brief, one-line-per-feature summary of the XNC programs attached to
@@ -1159,6 +1171,64 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 CheckedBores.Remove(row.Bore);
             }
         }
+
+        private ObservableCollection<GrooveRowVM> BuildSelectedPartGrooveRows(
+            IReadOnlyList<XncProgram> programs)
+        {
+            var rows = new ObservableCollection<GrooveRowVM>();
+            var number = 0;
+
+            foreach (var program in programs)
+            {
+                foreach (var groove in program.Groovings)
+                {
+                    rows.Add(new GrooveRowVM(
+                        ++number,
+                        GetGrooveSide(program.Side, groove.SideCode),
+                        Num(groove.Start.X),
+                        Num(groove.Start.Y),
+                        Num(groove.End.X),
+                        Num(groove.End.Y),
+                        Num(groove.Depth),
+                        Num(groove.Width),
+                        GetGrooveToolPosition(groove.Position),
+                        groove,
+                        OnGrooveRowSelectionChanged));
+                }
+            }
+
+            return rows;
+        }
+
+        private static string GetGrooveSide(bool programSide, int sideCode) => sideCode switch
+        {
+            0 => programSide ? "Front" : "Back",
+            1 => "Right",
+            2 => "Left",
+            3 => "Top",
+            4 => "Bottom",
+            _ => sideCode.ToString(CultureInfo.InvariantCulture)
+        };
+
+        private void OnGrooveRowSelectionChanged(GrooveRowVM row, bool isSelected)
+        {
+            if (isSelected)
+            {
+                CheckedGrooves.Add(row.Groove);
+            }
+            else
+            {
+                CheckedGrooves.Remove(row.Groove);
+            }
+        }
+
+        private static string GetGrooveToolPosition(ToolPosition position) => position switch
+        {
+            ToolPosition.Left => "L",
+            ToolPosition.Right => "R",
+            ToolPosition.Center => "C",
+            _ => position.ToString()
+        };
 
         /// <summary>
         /// Sets the preview's display dimensions and turn readout from the selected part's XNC

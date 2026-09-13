@@ -181,6 +181,7 @@ namespace XncOptimizerUI.Services.Xnc
                             End = new XncPoint(Eval(element.GetX2Value(), "<gr> @x2"), Eval(element.GetY2Value(), "<gr> @y2")),
                             Depth = Eval(element.GetDpValue(), "<gr> @dp"),
                             Width = Eval(element.GetTValue(), "<gr> @t"),
+                            SideCode = ParseInt(element.GetPValue()),
                             Position = ParsePosition(element.GetCValue()),
                             Comment = element.GetCommentValue() ?? string.Empty
                         });

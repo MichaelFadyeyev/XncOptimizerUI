@@ -18,6 +18,9 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Groove width in millimetres (the <c>t</c> attribute); may exceed the tool diameter.</summary>
         public double Width { get; init; }
 
+        /// <summary>Groove side code (the <c>p</c> attribute), defaulting to face.</summary>
+        public int SideCode { get; init; }
+
         /// <summary>Tool position relative to the groove centre line (the <c>c</c> attribute).</summary>
         public ToolPosition Position { get; init; }
 
