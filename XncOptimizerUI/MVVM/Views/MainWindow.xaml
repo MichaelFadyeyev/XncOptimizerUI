@@ -691,7 +691,13 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>
-                    <Grid Grid.Row="1" Margin="5,4,0,0">
+
+                    <!--  Selected Part Preview and Programs  -->
+                    <Grid
+                        x:Name="SelectedPartContainer"
+                        Grid.Row="1"
+                        Margin="5,4,0,0">
+
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="350" />
@@ -715,7 +721,7 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <!--  Selected Part Bores DataGrid  -->
+                            <!--  Selected Part Bores List  -->
                             <DataGrid
                                 x:Name="SelectedPartBoresGrid"
                                 Grid.Row="0"
@@ -767,7 +773,7 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <!--  Selected Part Programs TextBox  -->
+                            <!--  Selected Part Programs List  -->
                             <TextBox
                                 x:Name="ProgramsTextBox"
                                 Grid.Row="1"
