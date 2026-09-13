@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -16,7 +17,16 @@ namespace XncOptimizerUI.MVVM.Views
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const double MaxPartPreviewZoom = 8;
+        private const double PartPreviewZoomStep = 1.1;
+
         private readonly AppViewModel _viewModel;
+        private double _partPreviewZoom = 1;
+        private bool _isHandlingPreviewSizeChanged;
+        private bool _isPanningPreview;
+        private Point _panStartPoint;
+        private double _panStartHorizontalOffset;
+        private double _panStartVerticalOffset;
 
         public MainWindow(AppViewModel viewModel)
         {
@@ -25,8 +35,12 @@ namespace XncOptimizerUI.MVVM.Views
             InitializeComponent();
 
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            PartCanvas.SizeChanged += (_, _) => RenderPart(_viewModel.SelectedPart);
+            PartPreviewScrollViewer.SizeChanged += PartPreviewScrollViewer_SizeChanged;
             PartCanvas.Loaded += (_, _) => RenderPart(_viewModel.SelectedPart);
+            PartPreviewScrollViewer.PreviewMouseWheel += PartCanvas_MouseWheel;
+            PartPreviewScrollViewer.PreviewMouseDown += PartPreviewScrollViewer_MouseDown;
+            PartPreviewScrollViewer.PreviewMouseMove += PartPreviewScrollViewer_MouseMove;
+            PartPreviewScrollViewer.PreviewMouseUp += PartPreviewScrollViewer_MouseUp;
         }
 
         /// <summary>
@@ -54,13 +68,139 @@ namespace XncOptimizerUI.MVVM.Views
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AppViewModel.SelectedPart)
-                || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
+            if (e.PropertyName == nameof(AppViewModel.SelectedPart))
+            {
+                _partPreviewZoom = 1;
+                RenderPart(_viewModel.SelectedPart);
+                PartPreviewScrollViewer.ScrollToHome();
+            }
+            else if (e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
                 || e.PropertyName == nameof(AppViewModel.SelectedPartTurn)
                 || e.PropertyName == nameof(AppViewModel.SelectedXncPrograms))
             {
                 RenderPart(_viewModel.SelectedPart);
             }
+        }
+
+        private void PartPreviewScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_isHandlingPreviewSizeChanged)
+            {
+                return;
+            }
+
+            var centerX = GetPreviewCenter(PartPreviewScrollViewer.HorizontalOffset,
+                PartPreviewScrollViewer.ViewportWidth,
+                PartPreviewScrollViewer.ExtentWidth);
+            var centerY = GetPreviewCenter(PartPreviewScrollViewer.VerticalOffset,
+                PartPreviewScrollViewer.ViewportHeight,
+                PartPreviewScrollViewer.ExtentHeight);
+
+            _isHandlingPreviewSizeChanged = true;
+            try
+            {
+                RenderPart(_viewModel.SelectedPart);
+                UpdateLayout();
+                ScrollPreviewToCenter(centerX, centerY);
+            }
+            finally
+            {
+                _isHandlingPreviewSizeChanged = false;
+            }
+        }
+
+        private static double GetPreviewCenter(double offset, double viewport, double extent)
+        {
+            return extent > 0
+                ? Math.Clamp((offset + (viewport / 2)) / extent, 0, 1)
+                : 0.5;
+        }
+
+        private void ScrollPreviewToCenter(double centerX, double centerY)
+        {
+            var horizontalOffset = (centerX * PartPreviewScrollViewer.ExtentWidth)
+                - (PartPreviewScrollViewer.ViewportWidth / 2);
+            var verticalOffset = (centerY * PartPreviewScrollViewer.ExtentHeight)
+                - (PartPreviewScrollViewer.ViewportHeight / 2);
+
+            PartPreviewScrollViewer.ScrollToHorizontalOffset(horizontalOffset);
+            PartPreviewScrollViewer.ScrollToVerticalOffset(verticalOffset);
+        }
+
+        private void PartCanvas_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Delta == 0)
+            {
+                return;
+            }
+
+            var oldCanvasWidth = PartCanvas.ActualWidth;
+            var oldCanvasHeight = PartCanvas.ActualHeight;
+            var mousePosition = e.GetPosition(PartPreviewScrollViewer);
+            var contentPositionX = PartPreviewScrollViewer.HorizontalOffset + mousePosition.X;
+            var contentPositionY = PartPreviewScrollViewer.VerticalOffset + mousePosition.Y;
+            var relativeX = oldCanvasWidth > 0 ? contentPositionX / oldCanvasWidth : 0.5;
+            var relativeY = oldCanvasHeight > 0 ? contentPositionY / oldCanvasHeight : 0.5;
+
+            var oldZoom = _partPreviewZoom;
+            var newZoom = oldZoom * (e.Delta > 0 ? PartPreviewZoomStep : 1 / PartPreviewZoomStep);
+            _partPreviewZoom = Math.Clamp(newZoom, 1, MaxPartPreviewZoom);
+            if (Math.Abs(_partPreviewZoom - oldZoom) > double.Epsilon)
+            {
+                RenderPart(_viewModel.SelectedPart);
+                UpdateLayout();
+
+                var newOffsetX = relativeX * PartCanvas.ActualWidth - mousePosition.X;
+                var newOffsetY = relativeY * PartCanvas.ActualHeight - mousePosition.Y;
+                PartPreviewScrollViewer.ScrollToHorizontalOffset(newOffsetX);
+                PartPreviewScrollViewer.ScrollToVerticalOffset(newOffsetY);
+            }
+
+            e.Handled = true;
+        }
+
+        private void PartPreviewScrollViewer_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Middle || _partPreviewZoom <= 1)
+            {
+                return;
+            }
+
+            _isPanningPreview = true;
+            _panStartPoint = e.GetPosition(PartPreviewScrollViewer);
+            _panStartHorizontalOffset = PartPreviewScrollViewer.HorizontalOffset;
+            _panStartVerticalOffset = PartPreviewScrollViewer.VerticalOffset;
+            PartPreviewScrollViewer.Cursor = Cursors.SizeAll;
+            PartPreviewScrollViewer.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private void PartPreviewScrollViewer_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isPanningPreview)
+            {
+                return;
+            }
+
+            var currentPoint = e.GetPosition(PartPreviewScrollViewer);
+            PartPreviewScrollViewer.ScrollToHorizontalOffset(
+                _panStartHorizontalOffset + _panStartPoint.X - currentPoint.X);
+            PartPreviewScrollViewer.ScrollToVerticalOffset(
+                _panStartVerticalOffset + _panStartPoint.Y - currentPoint.Y);
+            e.Handled = true;
+        }
+
+        private void PartPreviewScrollViewer_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isPanningPreview || e.ChangedButton != MouseButton.Middle)
+            {
+                return;
+            }
+
+            _isPanningPreview = false;
+            PartPreviewScrollViewer.ReleaseMouseCapture();
+            PartPreviewScrollViewer.Cursor = Cursors.Arrow;
+            e.Handled = true;
         }
 
         /// <summary>
@@ -76,9 +216,10 @@ namespace XncOptimizerUI.MVVM.Views
         private void RenderPart(PartVM? part)
         {
             PartCanvas.Children.Clear();
+            PreviewOverlayCanvas.Children.Clear();
 
-            var canvasWidth = PartCanvas.ActualWidth;
-            var canvasHeight = PartCanvas.ActualHeight;
+            var canvasWidth = PartPreviewScrollViewer.ViewportWidth;
+            var canvasHeight = PartPreviewScrollViewer.ViewportHeight;
 
             // Display size follows the first applied XNC program's dx/dy (already in the turned
             // machine frame); with no program it falls back to the part's own length/width.
@@ -123,6 +264,15 @@ namespace XncOptimizerUI.MVVM.Views
             var scale = Math.Min(
                 availableWidth / (partLength + (2 * perSideMm)),
                 availableHeight / (partWidth + (2 * perSideMm)));
+            var zoomedScale = scale * _partPreviewZoom;
+            var contentWidth = (partLength + (2 * perSideMm)) * zoomedScale + (2 * margin);
+            var contentHeight = (partWidth + (2 * perSideMm)) * zoomedScale + (2 * margin);
+
+            PartCanvas.Width = Math.Max(canvasWidth, contentWidth);
+            PartCanvas.Height = Math.Max(canvasHeight, contentHeight);
+            canvasWidth = PartCanvas.Width;
+            canvasHeight = PartCanvas.Height;
+            scale = zoomedScale;
 
             if (scale <= 0)
             {
@@ -183,14 +333,14 @@ namespace XncOptimizerUI.MVVM.Views
             BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
 
             DrawAxisGlyph(margin);
-            DrawTurnLabel(_viewModel.SelectedPartTurnText, margin);
+            DrawTurnLabel(_viewModel.SelectedPartTurnText);
         }
 
         /// <summary>
         /// Writes the selected part's XNC turn as degrees (e.g. "90°") in the bottom-right
-        /// corner of <see cref="PartCanvas"/>. Empty text (part has no XNC program) draws nothing.
+        /// corner of the preview viewport. Empty text (part has no XNC program) draws nothing.
         /// </summary>
-        private void DrawTurnLabel(string text, double margin)
+        private void DrawTurnLabel(string text)
         {
             if (string.IsNullOrEmpty(text))
             {
@@ -210,10 +360,13 @@ namespace XncOptimizerUI.MVVM.Views
 
             label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
-            var pad = margin * 0.5;
-            Canvas.SetLeft(label, PartCanvas.ActualWidth - label.DesiredSize.Width - pad);
-            Canvas.SetTop(label, PartCanvas.ActualHeight - label.DesiredSize.Height - pad);
-            PartCanvas.Children.Add(label);
+            var scrollbarSize = Math.Max(
+                SystemParameters.VerticalScrollBarWidth,
+                SystemParameters.HorizontalScrollBarHeight);
+            var pad = scrollbarSize * 1.5;
+            Canvas.SetLeft(label, PreviewOverlayCanvas.ActualWidth - label.DesiredSize.Width - pad);
+            Canvas.SetTop(label, PreviewOverlayCanvas.ActualHeight - label.DesiredSize.Height - pad);
+            PreviewOverlayCanvas.Children.Add(label);
         }
 
         /// <summary>
@@ -234,7 +387,7 @@ namespace XncOptimizerUI.MVVM.Views
             const double head = 5;
 
             void AddLine(double x1, double y1, double x2, double y2, Brush brush) =>
-                PartCanvas.Children.Add(new Line
+                PreviewOverlayCanvas.Children.Add(new Line
                 {
                     X1 = x1,
                     Y1 = y1,
@@ -254,7 +407,7 @@ namespace XncOptimizerUI.MVVM.Views
             };
             Canvas.SetLeft(origin, ox - 3);
             Canvas.SetTop(origin, oy - 3);
-            PartCanvas.Children.Add(origin);
+            PreviewOverlayCanvas.Children.Add(origin);
 
             // X arrow (right)
             AddLine(ox, oy, ox + armLength, oy, axisXBrush);
@@ -266,7 +419,7 @@ namespace XncOptimizerUI.MVVM.Views
             AddLine(ox, oy + armLength, ox - head, oy + armLength - head, axisYBrush);
             AddLine(ox, oy + armLength, ox + head, oy + armLength - head, axisYBrush);
 
-            PartCanvas.Children.Add(new TextBlock
+            PreviewOverlayCanvas.Children.Add(new TextBlock
             {
                 Text = "X",
                 Foreground = axisXBrush,
@@ -274,7 +427,7 @@ namespace XncOptimizerUI.MVVM.Views
                 FontWeight = FontWeights.Bold,
                 RenderTransform = new TranslateTransform(ox + armLength + 2, oy - 8),
             });
-            PartCanvas.Children.Add(new TextBlock
+            PreviewOverlayCanvas.Children.Add(new TextBlock
             {
                 Text = "Y",
                 Foreground = axisYBrush,

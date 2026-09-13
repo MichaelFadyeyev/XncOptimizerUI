@@ -722,10 +722,21 @@
                             Background="{StaticResource PartPreviewBackgroundBrush}"
                             BorderBrush="{StaticResource PartOutlineBrush}"
                             BorderThickness="1">
-                            <Canvas
-                                x:Name="PartCanvas"
-                                Background="Transparent"
-                                ClipToBounds="True" />
+                            <Grid>
+                                <ScrollViewer
+                                    x:Name="PartPreviewScrollViewer"
+                                    HorizontalScrollBarVisibility="Visible"
+                                    VerticalScrollBarVisibility="Visible">
+                                    <Canvas
+                                        x:Name="PartCanvas"
+                                        Background="Transparent"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top" />
+                                </ScrollViewer>
+                                <Canvas
+                                    x:Name="PreviewOverlayCanvas"
+                                    IsHitTestVisible="False" />
+                            </Grid>
                         </Border>
 
                         <GridSplitter
