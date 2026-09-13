@@ -24,6 +24,3 @@ Any agent tool wired per `AGENTS-STANDARD.md` reads skills from here,
 either directly (most tools) or through a symlink at the tool's own fixed
 skills directory (Claude Code: `.claude/skills`). Never author a skill a
 second time inside a tool-specific folder — add it here once.
-
-Delete `example-skill/` once you've added your project's real skills; it
-exists only to show the expected shape.

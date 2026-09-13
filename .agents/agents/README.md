@@ -24,6 +24,3 @@ Any agent tool wired per `AGENTS-STANDARD.md` reads project-level agents
 from here, either directly or through a symlink at the tool's own fixed
 directory (Claude Code: `.claude/agents`). Never author an agent a second
 time inside a tool-specific folder — add it here once.
-
-See `example-agent.md` for the expected shape; delete it once you've added
-your project's real agents.
