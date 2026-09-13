@@ -48,6 +48,12 @@
 
 <!-- Language/framework conventions, naming, formatting rules, anything a
      linter doesn't already enforce. -->
+- Maximize code reusability.
+- Prefer to use functional paradigm when building piplenes, divide long methodes on chain of short methodes/functions with self-descriptive names.
+- Prefer global wpf resources storing in separate file, referenced in App.xaml.
+- Refactoring xaml files try to decompose them on separate components.
+- In xaml code separate containers by empty rows; before container add comment to describe it purpose / content 
+- Add x:Name attribute to xaml containers, tables, textboxes, inputs, etc.
 
 ## Directory map
 
