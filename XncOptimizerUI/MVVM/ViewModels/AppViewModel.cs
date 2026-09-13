@@ -784,6 +784,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [RelayCommand]
         private void CloseFile()
         {
+            SelectedPart = null;
+            SelectedBand = null;
+            SourcePart = null;
+
             _projectService.CloseProject();
 
             Log = string.Empty;
@@ -800,10 +804,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             WidthMax = string.Empty;
             NewLabelToProcess = string.Empty;
             CancelBoundsNormalize();
-
-            SelectedPart = null;
-            SelectedBand = null;
-            SourcePart = null;
 
             RebindCheckedCount(_allParts, []);
             _allParts = [];
