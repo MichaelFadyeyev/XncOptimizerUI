@@ -7,11 +7,16 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
-    /// Draws face-drilled bores (<see cref="BoreSurface.Face"/>) on top of the part preview
-    /// built by <c>MainWindow.RenderPart</c>: a circle with crossed center lines on the Face
-    /// rectangle, plus a rectangle with one center line projected onto each of the four
-    /// Top/Bottom/Left/Right edge bands. Kept separate from <c>MainWindow.xaml.cs</c> so the
-    /// overlay logic and its geometry are independently reusable/testable.
+    /// Draws every bore on top of the part preview built by <c>MainWindow.RenderPart</c>.
+    /// A face-drilled bore (<see cref="BoreSurface.Face"/>) gets a circle with crossed
+    /// center lines on the Face rectangle, plus a rectangle with one center line projected
+    /// onto each of the four Top/Bottom/Left/Right edge bands. An edge-drilled bore
+    /// (<see cref="BoreSurface.Top"/>/<see cref="BoreSurface.Bottom"/>/
+    /// <see cref="BoreSurface.Left"/>/<see cref="BoreSurface.Right"/>) is the mirror image:
+    /// its true cross-section (circle) sits on the one band it was drilled from, and its
+    /// depth reading (rectangle) sits on the Face rectangle, flush to that same edge and
+    /// growing inward toward the panel center. Kept separate from <c>MainWindow.xaml.cs</c>
+    /// so the overlay logic and its geometry are independently reusable/testable.
     /// </summary>
     internal static class BorePreviewRenderer
     {
@@ -39,11 +44,11 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             double CenterLineOvershootMm);
 
         /// <summary>
-        /// Draws every <see cref="BoreSurface.Face"/> bore in <paramref name="programs"/> onto
-        /// <paramref name="canvas"/>. A bore whose tool can't be resolved (or has a non-positive
-        /// diameter) is skipped. Clicking any of a bore's five projections (the circle + its four
-        /// edge-band rectangles) toggles all of them red together, since they represent the same
-        /// physical hole.
+        /// Draws every bore in <paramref name="programs"/> onto <paramref name="canvas"/>. A
+        /// bore whose tool can't be resolved (or has a non-positive diameter) is skipped.
+        /// A face bore's five projections (the circle + its four edge-band rectangles), or an
+        /// edge bore's two (its band circle + Face rectangle), toggle red together on click,
+        /// since they represent the same physical hole.
         /// </summary>
         public static void DrawBores(Canvas canvas, IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes)
         {
@@ -53,11 +58,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
                 foreach (var bore in program.Bores)
                 {
-                    if (bore.Surface != BoreSurface.Face)
-                    {
-                        continue;
-                    }
-
                     var diameter = program.Tools
                         .FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter ?? 0;
 
@@ -66,7 +66,16 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                         continue;
                     }
 
-                    DrawBore(canvas, program, bore, diameter, layout, brushes, normalBrush);
+                    if (bore.Surface == BoreSurface.Face)
+                    {
+                        DrawBore(canvas, program, bore, diameter, layout, brushes, normalBrush);
+                    }
+                    else
+                    {
+                        // Edge bores (bt/bb/bl/br) always share one color, regardless of the
+                        // owning program's Side - unlike a face bore's Side-based coloring.
+                        DrawEdgeBore(canvas, program, bore, diameter, layout, brushes);
+                    }
                 }
             }
         }
@@ -165,6 +174,134 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         }
 
         /// <summary>
+        /// Draws one edge-drilled bore (<see cref="BoreSurface.Top"/>/<see cref="BoreSurface.Bottom"/>/
+        /// <see cref="BoreSurface.Left"/>/<see cref="BoreSurface.Right"/>): a circle with crossed
+        /// center lines on the one band it was drilled from, plus a rectangle with one center
+        /// line on the Face rectangle, flush to that same edge and growing inward. Mirrors
+        /// <see cref="DrawBore"/>'s circle/rectangle roles but swaps which projection carries
+        /// which shape, and always colors with <see cref="BoreBrushes.SideTrue"/> regardless of
+        /// <paramref name="program"/>'s own <c>Side</c> (which still drives the band circle's
+        /// near/far depth anchor, per <see cref="GetBandEdges"/>). Neither shape uses
+        /// <see cref="BoreBrushes.ThroughFill"/> - both stay outline-only.
+        /// </summary>
+        private static void DrawEdgeBore(
+            Canvas canvas,
+            XncProgram program,
+            XncBore bore,
+            double diameter,
+            FaceLayout layout,
+            BoreBrushes brushes)
+        {
+            var normalBrush = brushes.SideTrue;
+            var tag = new BoreTag(program, bore);
+            var diameterPx = diameter * layout.Scale;
+            var radiusPx = diameterPx / 2;
+            var depthPx = bore.Depth * layout.Scale;
+            var overshootPx = brushes.CenterLineOvershootMm * layout.Scale;
+            var horizontal = bore.Surface is BoreSurface.Top or BoreSurface.Bottom;
+            var near = bore.Surface is BoreSurface.Top or BoreSurface.Left;
+
+            var alongAxisPx = horizontal
+                ? layout.OriginX + (bore.X * layout.Scale)
+                : layout.OriginY + (bore.Y * layout.Scale);
+
+            var clickTargets = new List<Shape>(2);
+            var allStroked = new List<Shape>(5);
+
+            void AddShape(Shape shape, bool isClickTarget)
+            {
+                shape.Stroke = normalBrush;
+                shape.Fill = Brushes.Transparent;
+                shape.StrokeThickness = brushes.OutlineThickness;
+                shape.Tag = tag;
+                canvas.Children.Add(shape);
+                allStroked.Add(shape);
+
+                if (isClickTarget)
+                {
+                    clickTargets.Add(shape);
+                }
+            }
+
+            void AddCenterLine(double x1, double y1, double x2, double y2)
+            {
+                var line = new Line
+                {
+                    X1 = x1,
+                    Y1 = y1,
+                    X2 = x2,
+                    Y2 = y2,
+                    Stroke = normalBrush,
+                    StrokeThickness = brushes.CenterLineThickness,
+                };
+                canvas.Children.Add(line);
+                allStroked.Add(line);
+            }
+
+            // Side-band (circle) projection: the bore's true cross-section. Its perpendicular
+            // (into-band) position comes from bore.Z, offset from the band edge nearest the
+            // Face when this program's Side is the working face, else from the band's far/outer
+            // edge - same near/far/side rule AddSideRectangle applies to a rectangle extent.
+            var (nearEdge, farEdge, direction) = GetBandEdges(layout, horizontal, near);
+            var zStart = program.Side ? nearEdge : farEdge;
+            var zDir = program.Side ? direction : -direction;
+            var perpPx = zStart + (zDir * (bore.Z * layout.Scale));
+
+            var cx = horizontal ? alongAxisPx : perpPx;
+            var cy = horizontal ? perpPx : alongAxisPx;
+
+            var circle = new Ellipse { Width = diameterPx, Height = diameterPx };
+            Canvas.SetLeft(circle, cx - radiusPx);
+            Canvas.SetTop(circle, cy - radiusPx);
+            AddShape(circle, isClickTarget: true);
+
+            AddCenterLine(cx - radiusPx - overshootPx, cy, cx + radiusPx + overshootPx, cy);
+            AddCenterLine(cx, cy - radiusPx - overshootPx, cx, cy + radiusPx + overshootPx);
+
+            // Front (rectangle) projection: the depth reading, always flush to the bore's own
+            // physical Face edge and growing inward toward the panel center - no Side
+            // branching, since the edge is fixed regardless of which face the program machines.
+            AddFaceRectangle(AddShape, AddCenterLine, alongAxisPx, depthPx, diameterPx, overshootPx, layout, bore.Surface, horizontal);
+
+            var selected = false;
+
+            void OnClick(object sender, MouseButtonEventArgs e)
+            {
+                selected = !selected;
+                var brush = selected ? brushes.Selected : normalBrush;
+
+                foreach (var shape in allStroked)
+                {
+                    shape.Stroke = brush;
+                }
+
+                e.Handled = true;
+            }
+
+            foreach (var shape in clickTargets)
+            {
+                shape.MouseLeftButtonDown += OnClick;
+            }
+        }
+
+        /// <summary>
+        /// Returns the near/far pixel edges of one Top/Bottom/Left/Right band and the
+        /// near-to-far direction sign (-1 for Top/Left, +1 for Bottom/Right), factored out of
+        /// <see cref="AddSideRectangle"/> so <see cref="DrawEdgeBore"/> can place a point (not
+        /// just a rectangle extent) against the same edges.
+        /// </summary>
+        private static (double NearEdge, double FarEdge, double Direction) GetBandEdges(FaceLayout layout, bool horizontal, bool near)
+        {
+            var direction = near ? -1d : 1d;
+            var nearEdge = horizontal
+                ? (near ? layout.OriginY - layout.Gap : layout.OriginY + layout.FaceHeight + layout.Gap)
+                : (near ? layout.OriginX - layout.Gap : layout.OriginX + layout.FaceWidth + layout.Gap);
+            var farEdge = nearEdge + (direction * layout.BandThickness);
+
+            return (nearEdge, farEdge, direction);
+        }
+
+        /// <summary>
         /// Draws one edge-band rectangle for a face bore, plus its center line.
         /// <paramref name="horizontal"/> selects the Top/Bottom band pair (true, band spans the
         /// part's X axis) vs the Left/Right pair (false, spans Y); <paramref name="near"/>
@@ -186,6 +323,15 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             bool horizontal,
             bool near)
         {
+            var (nearEdge, farEdge, direction) = GetBandEdges(layout, horizontal, near);
+
+            // Rectangle spans depthPx from the reference edge (the band edge nearest the Face
+            // when side is true, else the band's far/outer edge) toward the other edge.
+            var start = side ? nearEdge : farEdge;
+            var dir = side ? direction : -direction;
+            var end = start + (dir * depthPx);
+            var lo = Math.Min(start, end);
+
             double left, top, width, height;
 
             if (horizontal)
@@ -193,45 +339,14 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 width = diameterPx;
                 height = depthPx;
                 left = alongAxisPos - (width / 2);
-
-                // Band's own near/far edges, one `gap` short of the Face rectangle itself.
-                var nearEdge = near ? layout.OriginY - layout.Gap : layout.OriginY + layout.FaceHeight + layout.Gap;
-                var farEdge = near
-                    ? layout.OriginY - layout.Gap - layout.BandThickness
-                    : layout.OriginY + layout.FaceHeight + layout.Gap + layout.BandThickness;
-
-                if (near)
-                {
-                    // Top band: near edge is the bottom of the band (nearest Face).
-                    top = side ? nearEdge - height : farEdge;
-                }
-                else
-                {
-                    // Bottom band: near edge is the top of the band (nearest Face).
-                    top = side ? nearEdge : farEdge - height;
-                }
+                top = lo;
             }
             else
             {
                 height = diameterPx;
                 width = depthPx;
                 top = alongAxisPos - (height / 2);
-
-                var nearEdge = near ? layout.OriginX - layout.Gap : layout.OriginX + layout.FaceWidth + layout.Gap;
-                var farEdge = near
-                    ? layout.OriginX - layout.Gap - layout.BandThickness
-                    : layout.OriginX + layout.FaceWidth + layout.Gap + layout.BandThickness;
-
-                if (near)
-                {
-                    // Left band: near edge is the right of the band (nearest Face).
-                    left = side ? nearEdge - width : farEdge;
-                }
-                else
-                {
-                    // Right band: near edge is the left of the band (nearest Face).
-                    left = side ? nearEdge : farEdge - width;
-                }
+                left = lo;
             }
 
             var rect = new Rectangle { Width = width, Height = height };
@@ -241,6 +356,63 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             // Center line runs along the depth axis (the bore's drilling direction), overshooting
             // the rectangle by overshootPx at each end - not along the diameter axis.
+            if (horizontal)
+            {
+                var midX = left + (width / 2);
+                addCenterLine(midX, top - overshootPx, midX, top + height + overshootPx);
+            }
+            else
+            {
+                var midY = top + (height / 2);
+                addCenterLine(left - overshootPx, midY, left + width + overshootPx, midY);
+            }
+        }
+
+        /// <summary>
+        /// Draws one Face-rectangle depth projection for an edge bore, plus its center line.
+        /// Unlike <see cref="AddSideRectangle"/> (which anchors to a band edge and flips
+        /// direction on <c>side</c>), this always starts flush at the bore's own physical Face
+        /// edge - given by <paramref name="surface"/> - and grows inward toward the panel
+        /// center by <paramref name="depthPx"/>, since that edge is fixed regardless of which
+        /// face the program machines.
+        /// </summary>
+        private static void AddFaceRectangle(
+            Action<Shape, bool> addShape,
+            Action<double, double, double, double> addCenterLine,
+            double alongAxisPos,
+            double depthPx,
+            double diameterPx,
+            double overshootPx,
+            FaceLayout layout,
+            BoreSurface surface,
+            bool horizontal)
+        {
+            double left, top, width, height;
+
+            if (horizontal)
+            {
+                width = diameterPx;
+                height = depthPx;
+                left = alongAxisPos - (width / 2);
+                top = surface == BoreSurface.Top
+                    ? layout.OriginY
+                    : layout.OriginY + layout.FaceHeight - height;
+            }
+            else
+            {
+                height = diameterPx;
+                width = depthPx;
+                top = alongAxisPos - (height / 2);
+                left = surface == BoreSurface.Left
+                    ? layout.OriginX
+                    : layout.OriginX + layout.FaceWidth - width;
+            }
+
+            var rect = new Rectangle { Width = width, Height = height };
+            Canvas.SetLeft(rect, left);
+            Canvas.SetTop(rect, top);
+            addShape(rect, true);
+
             if (horizontal)
             {
                 var midX = left + (width / 2);
