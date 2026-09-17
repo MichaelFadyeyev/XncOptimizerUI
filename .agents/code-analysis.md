@@ -128,6 +128,7 @@ and `<mr>` rectangles remain in place and are counted as ignored. Nothing reorde
 - ✅ `AutoMapper` and `InitializeAutoMapper()` removed (unused).
 - ✅ Test scaffold placeholder replaced with real `AppViewModelTests`, `GibLabProjectServiceTests`, etc.
 - ✅ `DecimalValidationRule` is now active, wired to the Parts grid's `LengthMin`/`LengthMax`/`WidthMin`/`WidthMax` range-filter bindings (see the Parts grid bullet above); the filter model itself changed from exact-length/width to an inclusive min/max range.
+- ✅ `GibLabProjectService.SeedProgramSymbols` (shared by `ConvertBoresAndMills`, `ConvertGroovesAndMills`, `OptimizeMillTraversal`) only seeded `dx`/`dy`/`dz`; any element whose `dp`/`x`/`y` referenced a custom `<var>` (e.g. `dp="throughBoreDepth"`) crashed conversion with an "unknown identifier" error, even though `XncProgramReader` already resolved the same `<var>` correctly for read-only display. Now registers every `<var>` up front (document order, so a var may reference an earlier one), matching the reader's behavior. Covered by `GibLabProjectServiceTests.ConvertBoresAndMills_BoresToMills_CustomVariableAsBoreDepth` / `TestData/td-bore-depth-variable.project`.
 
 **Still present:**
 - **Unused extension + interface method**: `GetOperationMaterialIdIntValue` (extension) and `IConfigService.UpdateSawWidth()` (interface + implementation) are defined but have no callers. There is no UI control to change the saw-width at runtime; it can only be changed by hand-editing the JSON config file. These may be stubs for a future "settings" dialog.
