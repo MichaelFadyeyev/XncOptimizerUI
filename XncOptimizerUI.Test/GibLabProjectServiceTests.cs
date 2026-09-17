@@ -927,6 +927,47 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void ConvertBoresAndMills_BoresToMills_CustomVariableAsBoreDepth()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-bore-depth-variable.project"));
+
+            var log = string.Empty;
+            var result = service.ConvertBoresAndMills(
+                ref log, [new Part { Id = 1, Name = "312.09.02.ПАН-1" }], BoreMillDirection.BoresToMills, useEllipse: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(log, Does.Contain("converted 1"));
+            });
+
+            var program = service.ReadXncPrograms(1).Single();
+            var contour = program.MillingContours.Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(contour.ToolName, Is.EqualTo("Mill6"));
+                // dz=18, dp="throughBoreDepth" (var expr dz+2.00=20) >= dz => through, not a pocket.
+                Assert.That(contour.Position, Is.EqualTo(ToolPosition.Right));
+                Assert.That(contour.EntryDepth, Is.EqualTo(20d));
+                Assert.That(contour.Entry.X, Is.EqualTo(334d)); // cx + r = 300 + 34 (DX/2=300, Bore68 r=34)
+                Assert.That(contour.Entry.Y, Is.EqualTo(150d)); // DY/2 = 150
+                Assert.That(contour.Segments, Has.Count.EqualTo(2));
+                Assert.That(contour.Segments, Is.All.InstanceOf<XncArcSegment>());
+            });
+
+            var arcs = contour.Segments.Cast<XncArcSegment>().ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(arcs, Is.All.Matches<XncArcSegment>(a => a.Center.X == 300d && a.Center.Y == 150d));
+                Assert.That(arcs[0].End.X, Is.EqualTo(266d)); // opposite point
+                Assert.That(arcs[1].End.X, Is.EqualTo(334d)); // closes onto the entry
+            });
+        }
+
+        [Test]
         public void ConvertBoresAndMills_BoresToMills_UseEllipse_BlindBoreBecomesEllipticalPocket()
         {
             var service = CreateService();

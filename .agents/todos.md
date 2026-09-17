@@ -42,15 +42,3 @@ per selected part. Deferred:
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
-
-## XNC program reading (Services/Xnc/XncProgramReader.cs)
-
-- **Custom `<var>` as a bore's `dp`** — `XncProgramReader` resolves every bore's depth with the
-  same `Eval(element.GetDpValue(), ...)` used for every other element
-  (`Services/Xnc/XncProgramReader.cs` bore case), which per `XncExpressionEvaluator`/
-  `XncSymbolTable` already accepts a literal, an expression, or a bare `<var name>` reference —
-  same as `<ms>`/`<gr>`/`<mr>` `dp`. No fixture or test exercises a bore whose `dp` is a bare
-  custom variable name specifically, so this path is unverified: add a fixture (`<var
-  name="..." expr="..."/>` followed by a `<bf>`/`<bt>`/`<bb>`/`<bl>`/`<br>` with `dp="<that
-  var>"`) and a `XncProgramReaderTests` case to confirm it resolves correctly before relying on
-  it against real data.

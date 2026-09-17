@@ -2250,6 +2250,16 @@ namespace XncOptimizerUI.Services
             symbols.Set("dy", RequireProgramDouble(program.GetDyValue(), "dy"));
             symbols.Set("dz", RequireProgramDouble(program.GetDzValue(), "dz"));
 
+            // Register every declared <var> up front (document order, so a var may reference an
+            // earlier one) so elements that reference a custom variable by name in dp/x/y/etc.
+            // resolve the same way XncProgramReader already resolves them for display.
+            foreach (var varElement in program.Elements("var"))
+            {
+                var name = varElement.GetNameValue()
+                    ?? throw new Exception("<var> has no name.");
+                symbols.Set(name, EvalXnc(varElement.GetExprValue(), symbols));
+            }
+
             return symbols;
         }
 
