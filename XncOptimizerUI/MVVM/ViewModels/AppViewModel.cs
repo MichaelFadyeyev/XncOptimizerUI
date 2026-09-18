@@ -21,6 +21,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private const int BoundsNormalizeDelayMs = 400;
 
         private readonly string _assembly;
+        private readonly DispatcherTimer _boundsNormalizeTimer;
+        private readonly IProjectService _projectService;
+        private readonly IConfigService _config;
+        private readonly IDialogService _dialogs;
+
         private string _filterName = string.Empty;
 
         // Each range bound keeps the raw text the user typed AND its parsed value. The text
@@ -38,16 +43,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private enum RangeEdge { None, Min, Max }
 
-        private readonly DispatcherTimer _boundsNormalizeTimer;
         private RangeEdge _lengthPendingEdge = RangeEdge.None;
         private RangeEdge _widthPendingEdge = RangeEdge.None;
 
         private List<PartVM> _allParts = [];
         private int _sourceXncCount;
-
-        private readonly IProjectService _projectService;
-        private readonly IConfigService _config;
-        private readonly IDialogService _dialogs;
 
         public AppViewModel(
             IProjectService projectService,
@@ -76,19 +76,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             };
         }
 
-        #region Props
-        [ObservableProperty]
-        private string _log = string.Empty;
-
-        [ObservableProperty]
-        private string _fullPath = string.Empty;
-
-        partial void OnFullPathChanged(string value)
-        {
-            var fileName = string.IsNullOrEmpty(value) ? "No file selected" : Path.GetFileName(value);
-            WindowTitle = $"{_assembly} - {fileName}";
-        }
-
+        #region Properties
         public string FilterName
         {
             get { return _filterName; }
@@ -127,108 +115,55 @@ namespace XncOptimizerUI.MVVM.ViewModels
             set => SetRangeBound(ref _widthMaxText, ref _widthMax, value, ref _widthPendingEdge, RangeEdge.Max);
         }
 
-        private void SetRangeBound(ref string text, ref decimal? parsed, string? value,
-            ref RangeEdge pendingEdge, RangeEdge edge, [CallerMemberName] string? propertyName = null)
+        /// <summary>
+        /// Number of parts currently checked ("Sel") across the whole project, including
+        /// any hidden by the active filter — this is the set the batch commands act on.
+        /// </summary>
+        public int CheckedCount => _allParts.Count(p => p.IsSelected);
+
+        public string SourcePartInfo
         {
-            // Store the raw text verbatim. "." is the only decimal separator; "," is a
-            // validation error (DecimalValidationRule rejects it, so it never reaches here
-            // through the binding). Trimming and canonicalization happen only on commit
-            // (NormalizeRangeBounds), so they cannot eat a digit still being typed.
-            text = value ?? string.Empty;
-            parsed = TryParseToDecimal(text);
-            OnPropertyChanged(propertyName);
-
-            pendingEdge = edge;
-            RestartBoundsNormalizeTimer();
-
-            if (_applyPartsFilter)
+            get
             {
-                FilterParts();
-                return;
+                var p = SourcePart;
+
+                string Band(int? id) => id == null ? "-" : GetBandingExternalSymbol(id);
+
+                if (p == null)
+                    return "-\n"
+                        + "-\n"
+                        + "- | - | - | -\n"
+                        + "Programs: -";
+
+                return $"{p.Name}\n"
+                    + $"{p.Length} x {p.Width}\n"
+                    + $"{Band(p.TopBandingId)} | {Band(p.BottomBandingId)} "
+                    + $"| {Band(p.LeftBandingId)} | {Band(p.RightBandingId)}\n"
+                    + $"Programs: {_sourceXncCount}";
             }
-
-            _applyPartsFilter = true;
-        }
-
-        private void RestartBoundsNormalizeTimer()
-        {
-            _boundsNormalizeTimer.Stop();
-            _boundsNormalizeTimer.Start();
-        }
-
-        private void CancelBoundsNormalize()
-        {
-            _boundsNormalizeTimer.Stop();
-            _lengthPendingEdge = RangeEdge.None;
-            _widthPendingEdge = RangeEdge.None;
         }
 
         /// <summary>
-        /// Snaps an inverted [min, max] pair together, moving the edge the user did NOT
-        /// just edit. Runs off the debounce timer so it acts on the fully typed value
-        /// rather than each intermediate digit. Public so the Filter button and tests
-        /// can force it without waiting for the timer.
+        /// Bores checked via the bores <c>DataGrid</c>'s checkbox column. Reset whenever the
+        /// selected part changes. Not consumed by anything yet - reserved for future features.
         /// </summary>
-        public void NormalizeRangeBounds()
+        public ObservableCollection<XncBore> CheckedBores { get; } = [];
+
+        /// <summary>Grooves checked via the grooves table. Reset when the selected part changes.</summary>
+        public ObservableCollection<XncGrooving> CheckedGrooves { get; } = [];
+        #endregion
+
+        #region ObservableProperties
+        [ObservableProperty]
+        private string _log = string.Empty;
+
+        [ObservableProperty]
+        private string _fullPath = string.Empty;
+
+        partial void OnFullPathChanged(string value)
         {
-            CanonicalizeBoundText(ref _lengthMinText, nameof(LengthMin));
-            CanonicalizeBoundText(ref _lengthMaxText, nameof(LengthMax));
-            CanonicalizeBoundText(ref _widthMinText, nameof(WidthMin));
-            CanonicalizeBoundText(ref _widthMaxText, nameof(WidthMax));
-
-            var changed = NormalizePair(
-                ref _lengthMin, ref _lengthMinText, nameof(LengthMin),
-                ref _lengthMax, ref _lengthMaxText, nameof(LengthMax), _lengthPendingEdge);
-            changed |= NormalizePair(
-                ref _widthMin, ref _widthMinText, nameof(WidthMin),
-                ref _widthMax, ref _widthMaxText, nameof(WidthMax), _widthPendingEdge);
-
-            _lengthPendingEdge = RangeEdge.None;
-            _widthPendingEdge = RangeEdge.None;
-
-            if (changed)
-            {
-                FilterParts();
-            }
-        }
-
-        // Canonicalization (trim, trailing-separator strip) never changes the parsed value,
-        // so the decimal? fields stay correct and this does not need to re-run the filter.
-        private void CanonicalizeBoundText(ref string text, string propertyName)
-        {
-            var canonical = DecimalInput.Canonicalize(text);
-
-            if (canonical != text)
-            {
-                text = canonical;
-                OnPropertyChanged(propertyName);
-            }
-        }
-
-        private bool NormalizePair(
-            ref decimal? min, ref string minText, string minProp,
-            ref decimal? max, ref string maxText, string maxProp,
-            RangeEdge edited)
-        {
-            if (edited == RangeEdge.None || !min.HasValue || !max.HasValue || min <= max)
-            {
-                return false;
-            }
-
-            if (edited == RangeEdge.Min)
-            {
-                max = min;
-                maxText = DecimalInput.Format(max.Value);
-                OnPropertyChanged(maxProp);
-            }
-            else
-            {
-                min = max;
-                minText = DecimalInput.Format(min.Value);
-                OnPropertyChanged(minProp);
-            }
-
-            return true;
+            var fileName = string.IsNullOrEmpty(value) ? "No file selected" : Path.GetFileName(value);
+            WindowTitle = $"{_assembly} - {fileName}";
         }
 
         [ObservableProperty]
@@ -247,12 +182,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<PartVM> _parts = [];
-
-        /// <summary>
-        /// Number of parts currently checked ("Sel") across the whole project, including
-        /// any hidden by the active filter — this is the set the batch commands act on.
-        /// </summary>
-        public int CheckedCount => _allParts.Count(p => p.IsSelected);
 
         [ObservableProperty]
         private ObservableCollection<BandVM> _bands = [];
@@ -328,15 +257,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [ObservableProperty]
         private bool _hasSelectedPartBores;
 
-        /// <summary>
-        /// Bores checked via the bores <c>DataGrid</c>'s checkbox column. Reset whenever the
-        /// selected part changes. Not consumed by anything yet - reserved for future features.
-        /// </summary>
-        public ObservableCollection<XncBore> CheckedBores { get; } = [];
-
-        /// <summary>Grooves checked via the grooves table. Reset when the selected part changes.</summary>
-        public ObservableCollection<XncGrooving> CheckedGrooves { get; } = [];
-
         [ObservableProperty]
         private ObservableCollection<GrooveRowVM> _selectedPartGrooves = [];
 
@@ -391,29 +311,25 @@ namespace XncOptimizerUI.MVVM.ViewModels
             _sourceXncCount = value == null ? 0 : _projectService.GetXncProgramsCount(value.Id);
         }
 
-        public string SourcePartInfo
-        {
-            get
-            {
-                var p = SourcePart;
+        [ObservableProperty]
+        private GrooveMillDirection _grooveMillDirection = GrooveMillDirection.GroovesToMills;
 
-                string Band(int? id) => id == null ? "-" : GetBandingExternalSymbol(id);
+        /// <summary>
+        /// When set, a Mills → Grooves conversion also turns axis-parallel rectangular pocket
+        /// mills into grooves. Opt-in: off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _processPockets;
 
-                if (p == null)
-                    return "-\n"
-                        + "-\n"
-                        + "- | - | - | -\n"
-                        + "Programs: -";
+        [ObservableProperty]
+        private BoreMillDirection _boreMillDirection = BoreMillDirection.BoresToMills;
 
-                return $"{p.Name}\n"
-                    + $"{p.Length} x {p.Width}\n"
-                    + $"{Band(p.TopBandingId)} | {Band(p.BottomBandingId)} "
-                    + $"| {Band(p.LeftBandingId)} | {Band(p.RightBandingId)}\n"
-                    + $"Programs: {_sourceXncCount}";
-            }
-        }
-
-
+        /// <summary>
+        /// When set, a Bores → Mills conversion emits an elliptical mill (<c>&lt;me&gt;</c>) per
+        /// bore instead of a closed two-arc contour. Opt-in: off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _convertBoresToEllipses;
         #endregion
 
         #region Commands
@@ -448,31 +364,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 WarnOnXncTurnDiscordance();
             }
-        }
-
-        /// <summary>
-        /// After a project is opened, flag every part whose several XNC programs disagree on the
-        /// <c>turn</c> corner (part orientation vs. the machine coordinate origin): pop a warning
-        /// and log each offending part name.
-        /// </summary>
-        private void WarnOnXncTurnDiscordance()
-        {
-            var parts = _projectService.GetPartsWithXncTurnDiscordance();
-
-            if (parts.Count == 0)
-            {
-                return;
-            }
-
-            var list = string.Join(", ", parts);
-
-            Log += $"Discordance in xnc programs turn corner for parts: {list}\n";
-            foreach (var name in parts)
-            {
-                Log += $"  turn discordance: {name}\n";
-            }
-
-            _dialogs.ShowWarning($"Discordance in xnc programs turn corner for parts: {list}");
         }
 
         [RelayCommand]
@@ -647,16 +538,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             ReadItems();
         }
 
-        [ObservableProperty]
-        private GrooveMillDirection _grooveMillDirection = GrooveMillDirection.GroovesToMills;
-
-        /// <summary>
-        /// When set, a Mills → Grooves conversion also turns axis-parallel rectangular pocket
-        /// mills into grooves. Opt-in: off by default.
-        /// </summary>
-        [ObservableProperty]
-        private bool _processPockets;
-
         [RelayCommand]
         private void ConvertGroovesAndMills()
         {
@@ -693,16 +574,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             LoadProject(_projectService.FullPath);
             ReadItems();
         }
-
-        [ObservableProperty]
-        private BoreMillDirection _boreMillDirection = BoreMillDirection.BoresToMills;
-
-        /// <summary>
-        /// When set, a Bores → Mills conversion emits an elliptical mill (<c>&lt;me&gt;</c>) per
-        /// bore instead of a closed two-arc contour. Opt-in: off by default.
-        /// </summary>
-        [ObservableProperty]
-        private bool _convertBoresToEllipses;
 
         [RelayCommand]
         private void ConvertBoresAndMills()
@@ -870,6 +741,112 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         [RelayCommand]
         private void UncheckAll() => SetChecked(false);
+        #endregion
+
+        #region Methods
+        private void SetRangeBound(ref string text, ref decimal? parsed, string? value,
+            ref RangeEdge pendingEdge, RangeEdge edge, [CallerMemberName] string? propertyName = null)
+        {
+            // Store the raw text verbatim. "." is the only decimal separator; "," is a
+            // validation error (DecimalValidationRule rejects it, so it never reaches here
+            // through the binding). Trimming and canonicalization happen only on commit
+            // (NormalizeRangeBounds), so they cannot eat a digit still being typed.
+            text = value ?? string.Empty;
+            parsed = TryParseToDecimal(text);
+            OnPropertyChanged(propertyName);
+
+            pendingEdge = edge;
+            RestartBoundsNormalizeTimer();
+
+            if (_applyPartsFilter)
+            {
+                FilterParts();
+                return;
+            }
+
+            _applyPartsFilter = true;
+        }
+
+        private void RestartBoundsNormalizeTimer()
+        {
+            _boundsNormalizeTimer.Stop();
+            _boundsNormalizeTimer.Start();
+        }
+
+        private void CancelBoundsNormalize()
+        {
+            _boundsNormalizeTimer.Stop();
+            _lengthPendingEdge = RangeEdge.None;
+            _widthPendingEdge = RangeEdge.None;
+        }
+
+        /// <summary>
+        /// Snaps an inverted [min, max] pair together, moving the edge the user did NOT
+        /// just edit. Runs off the debounce timer so it acts on the fully typed value
+        /// rather than each intermediate digit. Public so the Filter button and tests
+        /// can force it without waiting for the timer.
+        /// </summary>
+        public void NormalizeRangeBounds()
+        {
+            CanonicalizeBoundText(ref _lengthMinText, nameof(LengthMin));
+            CanonicalizeBoundText(ref _lengthMaxText, nameof(LengthMax));
+            CanonicalizeBoundText(ref _widthMinText, nameof(WidthMin));
+            CanonicalizeBoundText(ref _widthMaxText, nameof(WidthMax));
+
+            var changed = NormalizePair(
+                ref _lengthMin, ref _lengthMinText, nameof(LengthMin),
+                ref _lengthMax, ref _lengthMaxText, nameof(LengthMax), _lengthPendingEdge);
+            changed |= NormalizePair(
+                ref _widthMin, ref _widthMinText, nameof(WidthMin),
+                ref _widthMax, ref _widthMaxText, nameof(WidthMax), _widthPendingEdge);
+
+            _lengthPendingEdge = RangeEdge.None;
+            _widthPendingEdge = RangeEdge.None;
+
+            if (changed)
+            {
+                FilterParts();
+            }
+        }
+
+        // Canonicalization (trim, trailing-separator strip) never changes the parsed value,
+        // so the decimal? fields stay correct and this does not need to re-run the filter.
+        private void CanonicalizeBoundText(ref string text, string propertyName)
+        {
+            var canonical = DecimalInput.Canonicalize(text);
+
+            if (canonical != text)
+            {
+                text = canonical;
+                OnPropertyChanged(propertyName);
+            }
+        }
+
+        private bool NormalizePair(
+            ref decimal? min, ref string minText, string minProp,
+            ref decimal? max, ref string maxText, string maxProp,
+            RangeEdge edited)
+        {
+            if (edited == RangeEdge.None || !min.HasValue || !max.HasValue || min <= max)
+            {
+                return false;
+            }
+
+            if (edited == RangeEdge.Min)
+            {
+                max = min;
+                maxText = DecimalInput.Format(max.Value);
+                OnPropertyChanged(maxProp);
+            }
+            else
+            {
+                min = max;
+                minText = DecimalInput.Format(min.Value);
+                OnPropertyChanged(minProp);
+            }
+
+            return true;
+        }
 
         // Acts on the currently displayed (filtered) parts only, mirroring the "Filtered no:"
         // label. Each IsSelected write raises PartVM.PropertyChanged, which refreshes CheckedCount.
@@ -881,9 +858,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        #endregion
-
-        #region Methods
         private void LoadProject(string fullPath, bool firstTimeOpen = default)
         {
             _projectService.OpenProject(fullPath);
@@ -988,6 +962,31 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 _dialogs.ShowWarning(message);
             }
+        }
+
+        /// <summary>
+        /// After a project is opened, flag every part whose several XNC programs disagree on the
+        /// <c>turn</c> corner (part orientation vs. the machine coordinate origin): pop a warning
+        /// and log each offending part name.
+        /// </summary>
+        private void WarnOnXncTurnDiscordance()
+        {
+            var parts = _projectService.GetPartsWithXncTurnDiscordance();
+
+            if (parts.Count == 0)
+            {
+                return;
+            }
+
+            var list = string.Join(", ", parts);
+
+            Log += $"Discordance in xnc programs turn corner for parts: {list}\n";
+            foreach (var name in parts)
+            {
+                Log += $"  turn discordance: {name}\n";
+            }
+
+            _dialogs.ShowWarning($"Discordance in xnc programs turn corner for parts: {list}");
         }
 
         private void FilterParts()
