@@ -143,6 +143,28 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void GroupIdenticalElements_DoesNotTouchSourceFileOnDisk()
+        {
+            var path = CopyFixture("td-execute-optimize.project");
+            var bytesBefore = File.ReadAllBytes(path);
+
+            var service = OpenAndRead(CreateService(), path);
+            var log = string.Empty;
+
+            var result = service.GroupIdenticalElements(ref log);
+
+            var bytesAfter = File.ReadAllBytes(path);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(bytesAfter, Is.EqualTo(bytesBefore),
+                    "GroupIdenticalElements must save the grouped result to a new _opt file, never overwrite the source it read");
+                Assert.That(service.FullPath, Does.EndWith("_opt.project"));
+            });
+        }
+
+        [Test]
         public void GetPartsWithXncTurnDiscordance_ReturnsOnlyMultiProgramPartsWithDisagreeingTurn()
         {
             // Fixture: panel-A has two XNC ops with turn 0 and turn 1 (discordant);

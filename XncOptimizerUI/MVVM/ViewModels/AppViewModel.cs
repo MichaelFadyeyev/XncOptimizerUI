@@ -423,6 +423,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var fullPath = _dialogs.ShowOpenProjectDialog();
             var opened = false;
 
+            // Flush any pending auto-save against the file that's still open before
+            // OpenProject switches the service to the newly chosen document; otherwise
+            // ReadItems()'s own SelectedPart = null autosaves the stale selection
+            // against the wrong (just-opened) file.
+            SelectedPart = null;
+
             if (fullPath != null)
             {
                 try

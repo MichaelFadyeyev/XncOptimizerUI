@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.Services;
 using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
@@ -153,6 +155,57 @@ namespace XncOptimizerUI.Test
 
             Assert.That(copied!.Split('\n'), Has.Length.EqualTo(3),
                 "the part on the Сращ.(2) sheet should be followed by a separator row");
+        }
+
+        /// <summary>
+        /// Regression test for the bug where re-opening the file that was open before
+        /// Execute Optimize ran (or any other file reusing the same part ids) got its
+        /// first part silently renamed to match the just-produced "_opt" result.
+        /// Uses the real <see cref="GibLabProjectService"/> (not the fake) because the
+        /// bug lives in the SelectedPart-autosave interaction between AppViewModel and
+        /// the service's shared, mutable document state, which the fake doesn't model.
+        /// </summary>
+        [Test]
+        public void OpenFile_AfterExecuteOptimize_ReopeningSourceLeavesFirstPartNameUnchanged()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var fixture = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "td-execute-optimize.project");
+                var sourcePath = Path.Combine(directory, "td-execute-optimize.project");
+                File.Copy(fixture, sourcePath);
+
+                var config = Substitute.For<IConfigService>();
+                config.SawWidth.Returns(4.0m);
+                config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
+                config.LabelsToProcess.Returns(["поріз.2х40"]);
+                config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
+
+                var realService = new GibLabProjectService(config, TimeProvider.System);
+                var dialogs = Substitute.For<IDialogService>();
+                dialogs.ShowOpenProjectDialog().Returns(sourcePath);
+
+                var vm = new AppViewModel(
+                    realService, config, dialogs, "TestAssembly",
+                    new ObservableCollection<string>(config.LabelsToProcess),
+                    config.GetLastLabelToProcessSelected());
+
+                vm.OpenFileCommand.Execute(null);
+                vm.ExecuteOptimizeCommand.Execute(null);
+
+                // Re-open the same original source file, as a user comparing source vs. result would.
+                vm.OpenFileCommand.Execute(null);
+
+                var firstPartName = XDocument.Load(sourcePath).Descendants("part").First().Attribute("name")!.Value;
+
+                Assert.That(firstPartName, Is.EqualTo("301.07.03.підріз.47=ПАН-ВРХ"),
+                    "re-opening the source file after Execute Optimize must not rename its first part");
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
         }
 
         [Test]
