@@ -225,8 +225,16 @@ namespace XncOptimizerUI.Test
                 "File seems to be already optimized or contains no XNC.",
                 Arg.Any<string>());
 
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.GroupIdenticalElements) }),
-                "a failed optimize should not reload the project");
+            // Releasing the stale SelectedPart before the service call may auto-save it
+            // (UpdatePart/SaveProject) — that's expected. What must NOT happen is a
+            // reload of the project after a failed GroupIdenticalElements call.
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls[^1], Is.EqualTo(nameof(FakeProjectService.GroupIdenticalElements)),
+                    "nothing should run after the failed GroupIdenticalElements call");
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a failed optimize should not reload the project");
+            });
         }
 
         [Test]
