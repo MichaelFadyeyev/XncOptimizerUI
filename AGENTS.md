@@ -55,11 +55,14 @@
 - Refactoring xaml files try to decompose them on separate components.
 - In xaml code separate containers by empty rows; before container add comment to describe it purpose / content 
 - Add x:Name attribute to xaml containers, tables, textboxes, inputs, etc.
-- For complex ViewModels (C#), keep member order: 1) private const fields,
-  2) private readonly fields, 3) private fields, 4) constructor,
-  5) `#region Properties` (public properties), 6) `#region ObservableProperties`
-  (`[ObservableProperty]` fields, with their `On*Changing`/`On*Changed` partials
-  kept right after each), 7) `#region Commands` (`[RelayCommand]` methods),
+- For complex ViewModels (WPF), keep member order: 
+  1) private const fields,
+  2) private readonly fields, 
+  3) private fields, 
+  4) constructor,
+  5) `#region Properties` (public properties), 
+  6) `#region ObservableProperties` (`[ObservableProperty]` fields, with their `OnChanging`/`OnChanged` partials kept right after each), 
+  7) `#region Commands` (`[RelayCommand]` methods),
   8) `#region Methods` (private helper methods).
 
 ## Directory map
