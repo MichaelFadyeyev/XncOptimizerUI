@@ -503,6 +503,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var log = Log;
             var logStart = log.Length;
 
+            SelectedPart = null;
+
             var success = _projectService.GroupIdenticalElements(ref log);
 
             Log = log;

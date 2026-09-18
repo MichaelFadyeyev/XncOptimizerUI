@@ -1165,7 +1165,7 @@ namespace XncOptimizerUI.Services
         // (radii), so a round mill has l == w and diameter 2*l (see TestData/td-br-ml-conversion).
 
         /// <summary>A bore only converts to a mill when its diameter exceeds this (mm).</summary>
-        private const double BoreMillMinDiameter = 35.0;
+        private const double BoreMillMinDiameter = 34.0;
 
         /// <summary>Diameter of the cutter a bore is milled out with, and its tool name.</summary>
         private const double BoreMillCutterDiameter = 6.0;
