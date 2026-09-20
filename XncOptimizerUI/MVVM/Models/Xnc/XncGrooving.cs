@@ -21,6 +21,13 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Groove side code (the <c>p</c> attribute), defaulting to face.</summary>
         public int SideCode { get; init; }
 
+        /// <summary>
+        /// Through-thickness position into the edge band (the <c>z</c> attribute), only present
+        /// for edge-plane grooves (<see cref="SideCode"/> 1-4); 0 for front-plane grooves
+        /// (<see cref="SideCode"/> 0), which don't carry it.
+        /// </summary>
+        public double Z { get; init; }
+
         /// <summary>Tool position relative to the groove centre line (the <c>c</c> attribute).</summary>
         public ToolPosition Position { get; init; }
 

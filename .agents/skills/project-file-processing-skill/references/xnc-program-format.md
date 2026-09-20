@@ -236,7 +236,8 @@ centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `
 | `dp` | groove **depth**, mm |
 | `t` | groove **width**, mm (may exceed the tool `d` → machine makes multiple passes) |
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left (all three occur in the fixture) |
-| `p` | part plane, `0` = front, `1` = right, `2` = left, `3` = top, `4` = bottom (seen `0`) |
+| `p` | part plane, `0` = front, `1` = left, `2` = right, `3` = top, `4` = bottom |
+| `z` | **through-thickness position** into the edge band, mm - only present when `p` is `1`-`4` (edge-plane); absent for `p="0"` |
 | `comment` | free-text label, e.g. `Паз15 ()` |
 
 **side** comes from the operation's `side` (no attribute on `<gr>`).

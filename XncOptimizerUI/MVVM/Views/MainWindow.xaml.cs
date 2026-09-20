@@ -208,8 +208,10 @@ namespace XncOptimizerUI.MVVM.Views
         /// (length x width) plus the four side views of the part. Each side view is a
         /// band whose thickness is the owning sheet's <c>t</c> value and whose length
         /// is the part's size in that direction, all drawn at the same uniform scale
-        /// so the drawing fits the canvas and rescales per part. First iteration only:
-        /// no bores, mills, groovings or pockets. Every shape carries a
+        /// so the drawing fits the canvas and rescales per part. Bores and groovings are
+        /// overlaid on top by <see cref="BorePreviewRenderer.DrawBores"/> and
+        /// <see cref="GroovePreviewRenderer.DrawGrooves"/>; milling contours/rectangles and
+        /// pockets are still not rendered. Every shape carries a
         /// <see cref="FrameworkElement.Tag"/> ("Face"/"Top"/"Bottom"/"Left"/"Right")
         /// so a future click handler can tell which surface was hit.
         /// </summary>
@@ -331,6 +333,7 @@ namespace XncOptimizerUI.MVVM.Views
                 (double)FindResource("BoreCenterLineThickness"),
                 (double)FindResource("BoreCenterLineOvershootMm"));
             BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
+            GroovePreviewRenderer.DrawGrooves(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
 
             DrawAxisGlyph(margin);
             DrawTurnLabel(_viewModel.SelectedPartTurnText);

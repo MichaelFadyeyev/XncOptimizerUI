@@ -182,6 +182,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Depth = Eval(element.GetDpValue(), "<gr> @dp"),
                             Width = Eval(element.GetTValue(), "<gr> @t"),
                             SideCode = ParseInt(element.GetPValue()),
+                            Z = EvalOr(element.GetZValue(), 0d),
                             Position = ParsePosition(element.GetCValue()),
                             Comment = element.GetCommentValue() ?? string.Empty
                         });

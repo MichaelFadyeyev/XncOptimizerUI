@@ -182,6 +182,24 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void Reads_grooveZ_forEdgePlane_andDefaultsMissingZToZero()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"100\" dy=\"80\" dz=\"18\">"
+                    + "<tool name=\"Cut\" d=\"3\" />"
+                    + "<gr name=\"Cut\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"80\" dp=\"2\" t=\"3\" p=\"1\" z=\"6\" />"
+                    + "<gr name=\"Cut\" x1=\"0\" y1=\"10\" x2=\"100\" y2=\"10\" dp=\"2\" t=\"3\" p=\"0\" />"
+                    + "</program>"));
+
+            var groovings = XncProgramReader.Read(operation).Groovings;
+
+            Assert.That(groovings.Select(g => g.Z), Is.EqualTo(new[] { 6d, 0d }));
+        }
+
+        [Test]
         public void Reads_millingLineContours_withExpressionEntryPointsAndPositions()
         {
             var contours = ReadFixture()[0].MillingContours;

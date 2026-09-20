@@ -1210,8 +1210,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private static string GetGrooveSide(bool programSide, int sideCode) => sideCode switch
         {
             0 => programSide ? "Front" : "Back",
-            1 => "Right",
-            2 => "Left",
+            1 => "Left",
+            2 => "Right",
             3 => "Top",
             4 => "Bottom",
             _ => sideCode.ToString(CultureInfo.InvariantCulture)

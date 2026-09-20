@@ -453,7 +453,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.SelectedPartGrooves.Select(g => g.Number),
                     Is.EqualTo(Enumerable.Range(1, 6)));
                 Assert.That(vm.SelectedPartGrooves.Select(g => g.Side),
-                    Is.EqualTo(new[] { "Front", "Right", "Left", "Top", "Bottom", "Back" }));
+                    Is.EqualTo(new[] { "Front", "Left", "Right", "Top", "Bottom", "Back" }));
                 Assert.That(vm.SelectedPartGrooves[0].StartX, Is.EqualTo("1"));
                 Assert.That(vm.SelectedPartGrooves[0].EndY, Is.EqualTo("4"));
                 Assert.That(vm.SelectedPartGrooves[0].Depth, Is.EqualTo("5"));
