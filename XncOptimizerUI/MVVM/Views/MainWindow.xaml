@@ -630,7 +630,7 @@
                             ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
                             SelectedItem="{Binding SelectedPart}">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Width="Auto" Header="Sel">
+                                <DataGridTemplateColumn Width="Auto" Header="Check">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -785,14 +785,14 @@
                                     SelectionUnit="FullRow"
                                     Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTemplateColumn Width="Auto" Header="Sel">
+                                        <DataGridTemplateColumn Width="Auto" Header="Check">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
                                         <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
                                         <DataGridTextColumn Width="*" Binding="{Binding X}" Header="X" IsReadOnly="True" />
                                         <DataGridTextColumn Width="*" Binding="{Binding Y}" Header="Y" IsReadOnly="True" />
@@ -821,14 +821,14 @@
                                     SelectionUnit="FullRow"
                                     Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTemplateColumn Width="Auto" Header="Sel">
+                                        <DataGridTemplateColumn Width="Auto" Header="Check">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
                                         <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
                                         <DataGridTextColumn Width="*" Binding="{Binding StartX}" Header="Start X" IsReadOnly="True" />
                                         <DataGridTextColumn Width="*" Binding="{Binding StartY}" Header="Start Y" IsReadOnly="True" />
@@ -855,7 +855,7 @@
                                     SelectionUnit="FullRow"
                                     Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}">
                                     <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Checked">
+                                        <DataGridTemplateColumn Width="Auto" Header="Check">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -881,33 +881,49 @@
                                     ItemsSource="{Binding SelectedPartMillingEllipses}"
                                     Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Binding="{Binding Number}" Header="#" />
-                                        <DataGridTextColumn Binding="{Binding Side}" Header="Side" />
-                                        <DataGridTextColumn Binding="{Binding ToolName}" Header="Tool" />
-                                        <DataGridTextColumn Binding="{Binding CenterX}" Header="X" />
-                                        <DataGridTextColumn Binding="{Binding CenterY}" Header="Y" />
-                                        <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
-                                        <DataGridTextColumn Binding="{Binding Width}" Header="Width" />
-                                        <DataGridTextColumn Binding="{Binding Depth}" Header="Depth" />
+                                        <DataGridTemplateColumn Width="Auto" Header="Check">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding CenterX}" Header="Center X" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding CenterY}" Header="Center Y" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Length}" Header="Length R" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Width}" Header="Width R" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Angle}" Header="Angle°" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding ToolToCenterLine}" Header="TCL" IsReadOnly="True" />
                                     </DataGrid.Columns>
                                 </DataGrid>
 
-                                <Label Content="Milling rectangles / pockets" Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                                <Label Content="Milling rectangles" Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}" />
                                 <DataGrid
                                     AutoGenerateColumns="False"
                                     CanUserAddRows="False"
                                     ItemsSource="{Binding SelectedPartMillingRectangles}"
                                     Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Binding="{Binding Number}" Header="#" />
-                                        <DataGridTextColumn Binding="{Binding Side}" Header="Side" />
-                                        <DataGridTextColumn Binding="{Binding ToolName}" Header="Tool" />
-                                        <DataGridTextColumn Binding="{Binding OriginX}" Header="X" />
-                                        <DataGridTextColumn Binding="{Binding OriginY}" Header="Y" />
-                                        <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
-                                        <DataGridTextColumn Binding="{Binding Width}" Header="Width" />
-                                        <DataGridTextColumn Binding="{Binding Depth}" Header="Depth" />
-                                        <DataGridTextColumn Binding="{Binding Position}" Header="Position" />
+                                        <DataGridTemplateColumn Width="Auto" Header="Check">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding CenterX}" Header="Center X" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding CenterY}" Header="Center Y" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Length}" Header="Length" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Width}" Header="Width" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding Angle}" Header="Angle°" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding ToolToCenterLine}" Header="TCL" IsReadOnly="True" />
+                                        <DataGridTextColumn Width="*" Binding="{Binding CornerRadius}" Header="Corn.R" IsReadOnly="True" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                                         </StackPanel>

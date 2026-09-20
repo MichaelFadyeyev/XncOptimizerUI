@@ -60,7 +60,10 @@ Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` whic
 
 The selected-part panel uses three equal-width tabs: "Operations" exposes read-only
 `DataGrid`s for bores, grooves, milling contours, elliptical mills, and rectangular
-mills/pockets; "Tools" exposes the tools table; and "XNC list" exposes the text summary.
+mills/pockets; the ellipse and rectangle grids have checked-row support and display the
+requested center, size, angle, TCL, and corner-radius fields; contours contain only
+segment-based milling (`<ms>` plus `<ml>`/arc elements), while `<me>` and `<mr>` are shown
+in their dedicated grids. "Tools" exposes the tools table; and "XNC list" exposes the text summary.
 `SelectedPartGrooves` is flattened and numbered in XNC program/document order through
 `GrooveRowVM`. Groove rows display start/end coordinates, depth, width, and the
 `ToolPosition` center-line relation. Their side is derived from groove `p`: `0` maps to
@@ -129,7 +132,7 @@ and `<mr>` rectangles remain in place and are counted as ignored. Nothing reorde
 
 The selected-part Programs panel uses three equal-width tabs: "Operations" contains
 read-only tables for bores, grooves, milling contours, elliptical mills, and rectangular
-mills/pockets; "Tools" contains the tools table; and "XNC list" contains the human-readable
+mills/pockets; ellipse and rectangle rows expose checked state; "Tools" contains the tools table; and "XNC list" contains the human-readable
 `SelectedPartPrograms` summary. `XncProgram` and
 `XncProgramReader` expose elliptical milling (`<me>`) alongside the other parsed machining
 primitives, and `AppViewModel` rebuilds all table rows whenever the selected part changes.

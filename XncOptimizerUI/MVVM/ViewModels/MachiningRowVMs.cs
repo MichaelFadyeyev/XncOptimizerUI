@@ -54,6 +54,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             ToolPosition.Center => "C",
             ToolPosition.Left => "L",
             ToolPosition.Right => "R",
+            ToolPosition.Pocket => "P",
             _ => Contour.Position.ToString()
         };
         public int Segments => Contour.Segments.Count;
@@ -67,13 +68,20 @@ namespace XncOptimizerUI.MVVM.ViewModels
             value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    public sealed class MillingEllipseRowVM
+    public sealed partial class MillingEllipseRowVM : ObservableObject
     {
-        public MillingEllipseRowVM(int number, string side, XncMillingEllipse ellipse)
+        private readonly Action<MillingEllipseRowVM, bool> _onSelectionChanged;
+
+        public MillingEllipseRowVM(
+            int number,
+            string side,
+            XncMillingEllipse ellipse,
+            Action<MillingEllipseRowVM, bool> onSelectionChanged)
         {
             Number = number;
             Side = side;
             Ellipse = ellipse;
+            _onSelectionChanged = onSelectionChanged;
         }
 
         public int Number { get; }
@@ -86,33 +94,58 @@ namespace XncOptimizerUI.MVVM.ViewModels
         public string Width => Format(Ellipse.Width);
         public string Angle => Format(Ellipse.Angle);
         public string Depth => Format(Ellipse.Depth);
-        public string Position => Ellipse.Position.ToString();
+        public string ToolToCenterLine => FormatToolToCenterLine(Ellipse.Position);
+
+        [ObservableProperty]
+        private bool _isSelected;
+
+        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
 
         private static string Format(double value) =>
             value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+
+        internal static string FormatToolToCenterLine(ToolPosition position) => position switch
+        {
+            ToolPosition.Center => "C",
+            ToolPosition.Left => "L",
+            ToolPosition.Right => "R",
+            ToolPosition.Pocket => "P",
+            _ => position.ToString()
+        };
     }
 
-    public sealed class MillingRectangleRowVM
+    public sealed partial class MillingRectangleRowVM : ObservableObject
     {
-        public MillingRectangleRowVM(int number, string side, XncMillingRectangle rectangle)
+        private readonly Action<MillingRectangleRowVM, bool> _onSelectionChanged;
+
+        public MillingRectangleRowVM(
+            int number,
+            string side,
+            XncMillingRectangle rectangle,
+            Action<MillingRectangleRowVM, bool> onSelectionChanged)
         {
             Number = number;
             Side = side;
             Rectangle = rectangle;
+            _onSelectionChanged = onSelectionChanged;
         }
 
         public int Number { get; }
         public string Side { get; }
         public XncMillingRectangle Rectangle { get; }
-        public string ToolName => Rectangle.ToolName;
-        public string OriginX => Format(Rectangle.Origin.X);
-        public string OriginY => Format(Rectangle.Origin.Y);
+        public string CenterX => Format(Rectangle.Origin.X);
+        public string CenterY => Format(Rectangle.Origin.Y);
         public string Length => Format(Rectangle.Length);
         public string Width => Format(Rectangle.Width);
         public string Angle => Format(Rectangle.Angle);
         public string CornerRadius => Format(Rectangle.CornerRadius);
         public string Depth => Format(Rectangle.Depth);
-        public string Position => Rectangle.Position.ToString();
+        public string ToolToCenterLine => MillingEllipseRowVM.FormatToolToCenterLine(Rectangle.Position);
+
+        [ObservableProperty]
+        private bool _isSelected;
+
+        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
 
         private static string Format(double value) =>
             value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);

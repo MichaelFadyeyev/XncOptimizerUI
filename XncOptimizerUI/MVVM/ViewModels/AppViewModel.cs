@@ -154,6 +154,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         /// <summary>Contours checked via the milling contours table.</summary>
         public ObservableCollection<XncMillingContour> CheckedMillingContours { get; } = [];
+
+        /// <summary>Ellipses checked via the milling ellipses table.</summary>
+        public ObservableCollection<XncMillingEllipse> CheckedMillingEllipses { get; } = [];
+
+        /// <summary>Rectangles checked via the milling rectangles table.</summary>
+        public ObservableCollection<XncMillingRectangle> CheckedMillingRectangles { get; } = [];
         #endregion
 
         #region ObservableProperties
@@ -241,6 +247,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
             CheckedBores.Clear();
             CheckedGrooves.Clear();
             CheckedMillingContours.Clear();
+            CheckedMillingEllipses.Clear();
+            CheckedMillingRectangles.Clear();
             SelectedPartBores = BuildSelectedPartBoreRows(programs);
             HasSelectedPartBores = SelectedPartBores.Count > 0;
             SelectedPartGrooves = BuildSelectedPartGrooveRows(programs);
@@ -1257,7 +1265,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
         }
 
-        private static ObservableCollection<MillingEllipseRowVM> BuildSelectedPartMillingEllipseRows(
+        private ObservableCollection<MillingEllipseRowVM> BuildSelectedPartMillingEllipseRows(
             IReadOnlyList<XncProgram> programs)
         {
             var rows = new ObservableCollection<MillingEllipseRowVM>();
@@ -1267,14 +1275,14 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 var side = program.Side ? "Front" : "Back";
                 foreach (var ellipse in program.MillingEllipses)
                 {
-                    rows.Add(new MillingEllipseRowVM(++number, side, ellipse));
+                    rows.Add(new MillingEllipseRowVM(++number, side, ellipse, OnMillingEllipseRowSelectionChanged));
                 }
             }
 
             return rows;
         }
 
-        private static ObservableCollection<MillingRectangleRowVM> BuildSelectedPartMillingRectangleRows(
+        private ObservableCollection<MillingRectangleRowVM> BuildSelectedPartMillingRectangleRows(
             IReadOnlyList<XncProgram> programs)
         {
             var rows = new ObservableCollection<MillingRectangleRowVM>();
@@ -1284,11 +1292,27 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 var side = program.Side ? "Front" : "Back";
                 foreach (var rectangle in program.MillingRectangles)
                 {
-                    rows.Add(new MillingRectangleRowVM(++number, side, rectangle));
+                    rows.Add(new MillingRectangleRowVM(++number, side, rectangle, OnMillingRectangleRowSelectionChanged));
                 }
             }
 
             return rows;
+        }
+
+        private void OnMillingEllipseRowSelectionChanged(MillingEllipseRowVM row, bool isSelected)
+        {
+            if (isSelected)
+                CheckedMillingEllipses.Add(row.Ellipse);
+            else
+                CheckedMillingEllipses.Remove(row.Ellipse);
+        }
+
+        private void OnMillingRectangleRowSelectionChanged(MillingRectangleRowVM row, bool isSelected)
+        {
+            if (isSelected)
+                CheckedMillingRectangles.Add(row.Rectangle);
+            else
+                CheckedMillingRectangles.Remove(row.Rectangle);
         }
 
         private void OnBoreRowSelectionChanged(BoreRowVM row, bool isSelected)
