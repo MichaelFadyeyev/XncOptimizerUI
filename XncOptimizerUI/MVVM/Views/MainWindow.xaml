@@ -729,13 +729,11 @@
                                     VerticalScrollBarVisibility="Visible">
                                     <Canvas
                                         x:Name="PartCanvas"
-                                        Background="Transparent"
                                         HorizontalAlignment="Left"
-                                        VerticalAlignment="Top" />
+                                        VerticalAlignment="Top"
+                                        Background="Transparent" />
                                 </ScrollViewer>
-                                <Canvas
-                                    x:Name="PreviewOverlayCanvas"
-                                    IsHitTestVisible="False" />
+                                <Canvas x:Name="PreviewOverlayCanvas" IsHitTestVisible="False" />
                             </Grid>
                         </Border>
 
@@ -756,184 +754,314 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TabControl
-                                x:Name="SelectedPartProgramsTabs"
-                                Grid.RowSpan="2">
+                            <TabControl x:Name="SelectedPartProgramsTabs" Grid.RowSpan="2">
                                 <TabItem Width="100" Header="Operations">
-                                    <ScrollViewer
-                                        HorizontalScrollBarVisibility="Disabled"
-                                        VerticalScrollBarVisibility="Auto">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                         <!--  Selected Part Machining Lists  -->
                                         <StackPanel x:Name="SelectedPartMachiningGrids">
-                                <!--  Selected Part Bores List  -->
-                                <Label
-                                    x:Name="SelectedPartBoresLabel"
-                                    Margin="5,2,0,5"
-                                    Padding="0"
-                                    HorizontalAlignment="Left"
-                                    Content="Bores"
-                                    FontSize="12"
-                                    Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
-                                <DataGrid
-                                    x:Name="SelectedPartBoresGrid"
-                                    MaxHeight="250"
-                                    Margin="0,0,0,4"
-                                    AutoGenerateColumns="False"
-                                    CanUserAddRows="False"
-                                    ItemsSource="{Binding SelectedPartBores}"
-                                    SelectionMode="Extended"
-                                    SelectionUnit="FullRow"
-                                    Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Check">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding X}" Header="X" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Y}" Header="Y" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Diameter}" Header="Ø" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                            <!--  Selected Part Bores List  -->
+                                            <Label
+                                                x:Name="SelectedPartBoresLabel"
+                                                Margin="5,2,0,5"
+                                                Padding="0"
+                                                HorizontalAlignment="Left"
+                                                Content="Bores"
+                                                FontSize="12"
+                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
+                                            <DataGrid
+                                                x:Name="SelectedPartBoresGrid"
+                                                MaxHeight="250"
+                                                Margin="0,0,0,4"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                ItemsSource="{Binding SelectedPartBores}"
+                                                SelectionMode="Extended"
+                                                SelectionUnit="FullRow"
+                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Number}"
+                                                        Header="#"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Side}"
+                                                        Header="Side"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding X}"
+                                                        Header="X"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Y}"
+                                                        Header="Y"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Diameter}"
+                                                        Header="Ø"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Depth}"
+                                                        Header="Depth"
+                                                        IsReadOnly="True" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
 
-                                <!--  Selected Part Grooves List  -->
-                                <Label
-                                    x:Name="SelectedPartGroovesLabel"
-                                    Margin="5,2,0,5"
-                                    Padding="0"
-                                    HorizontalAlignment="Left"
-                                    Content="Grooves"
-                                    FontSize="12"
-                                    Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
-                                <DataGrid
-                                    x:Name="SelectedPartGroovesGrid"
-                                    MaxHeight="250"
-                                    Margin="0,0,0,4"
-                                    AutoGenerateColumns="False"
-                                    CanUserAddRows="False"
-                                    ItemsSource="{Binding SelectedPartGrooves}"
-                                    SelectionMode="Extended"
-                                    SelectionUnit="FullRow"
-                                    Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Check">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding StartX}" Header="Start X" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding StartY}" Header="Start Y" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding EndX}" Header="End X" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding EndY}" Header="End Y" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Width}" Header="Width" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding ToolToCenterLine}" Header="TCL" IsReadOnly="True" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                                <TextBlock
-                                    x:Name="SelectedPartGroovesTclExplanation"
-                                    Margin="5,0,0,4"
-                                    Foreground="Gray"
-                                    Text="TCL is grooving tool to center line position"
-                                    Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
+                                            <!--  Selected Part Grooves List  -->
+                                            <Label
+                                                x:Name="SelectedPartGroovesLabel"
+                                                Margin="5,2,0,5"
+                                                Padding="0"
+                                                HorizontalAlignment="Left"
+                                                Content="Grooves"
+                                                FontSize="12"
+                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
+                                            <DataGrid
+                                                x:Name="SelectedPartGroovesGrid"
+                                                MaxHeight="250"
+                                                Margin="0,0,0,4"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                ItemsSource="{Binding SelectedPartGrooves}"
+                                                SelectionMode="Extended"
+                                                SelectionUnit="FullRow"
+                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Number}"
+                                                        Header="#"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Side}"
+                                                        Header="Side"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding StartX}"
+                                                        Header="Start X"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding StartY}"
+                                                        Header="Start Y"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding EndX}"
+                                                        Header="End X"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding EndY}"
+                                                        Header="End Y"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Depth}"
+                                                        Header="Depth"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Width}"
+                                                        Header="Width"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding ToolToCenterLine}"
+                                                        Header="TCL"
+                                                        IsReadOnly="True" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <TextBlock
+                                                x:Name="SelectedPartGroovesTclExplanation"
+                                                Margin="5,0,0,4"
+                                                Foreground="Gray"
+                                                Text="TCL is grooving tool to center line position"
+                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
 
-                                <Label Content="Milling contours" Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}" />
-                                <DataGrid
-                                    AutoGenerateColumns="False"
-                                    CanUserAddRows="False"
-                                    ItemsSource="{Binding SelectedPartMillingContours}"
-                                    SelectionMode="Extended"
-                                    SelectionUnit="FullRow"
-                                    Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Check">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Binding="{Binding Number}" Header="#" />
-                                        <DataGridTextColumn Binding="{Binding Side}" Header="Side" />
-                                        <DataGridTextColumn Binding="{Binding EntryX}" Header="Entry X" />
-                                        <DataGridTextColumn Binding="{Binding EntryY}" Header="Entry Y" />
-                                        <DataGridTextColumn Binding="{Binding ExitX}" Header="Exit X" />
-                                        <DataGridTextColumn Binding="{Binding ExitY}" Header="Exit Y" />
-                                        <DataGridTextColumn Binding="{Binding Depth}" Header="Depth" />
-                                        <DataGridTextColumn Binding="{Binding ToolToCenterLine}" Header="TCL" />
-                                        <DataGridTextColumn Binding="{Binding Segments}" Header="Segments" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                            <Label Content="Milling contours" Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}" />
+                                            <DataGrid
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                ItemsSource="{Binding SelectedPartMillingContours}"
+                                                SelectionMode="Extended"
+                                                SelectionUnit="FullRow"
+                                                Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn Binding="{Binding Number}" Header="#" />
+                                                    <DataGridTextColumn Binding="{Binding Side}" Header="Side" />
+                                                    <DataGridTextColumn Binding="{Binding EntryX}" Header="Entry X" />
+                                                    <DataGridTextColumn Binding="{Binding EntryY}" Header="Entry Y" />
+                                                    <DataGridTextColumn Binding="{Binding ExitX}" Header="Exit X" />
+                                                    <DataGridTextColumn Binding="{Binding ExitY}" Header="Exit Y" />
+                                                    <DataGridTextColumn Binding="{Binding Depth}" Header="Depth" />
+                                                    <DataGridTextColumn Binding="{Binding ToolToCenterLine}" Header="TCL" />
+                                                    <DataGridTextColumn Binding="{Binding Segments}" Header="Segments" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
 
-                                <Label Content="Milling ellipses" Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}" />
-                                <DataGrid
-                                    AutoGenerateColumns="False"
-                                    CanUserAddRows="False"
-                                    ItemsSource="{Binding SelectedPartMillingEllipses}"
-                                    Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Check">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding CenterX}" Header="Center X" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding CenterY}" Header="Center Y" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Length}" Header="Length R" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Width}" Header="Width R" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Angle}" Header="Angle°" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding ToolToCenterLine}" Header="TCL" IsReadOnly="True" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                            <Label Content="Milling ellipses" Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}" />
+                                            <DataGrid
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                ItemsSource="{Binding SelectedPartMillingEllipses}"
+                                                Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Number}"
+                                                        Header="#"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Side}"
+                                                        Header="Side"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding CenterX}"
+                                                        Header="Center X"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding CenterY}"
+                                                        Header="Center Y"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Depth}"
+                                                        Header="Depth"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Length}"
+                                                        Header="Length R"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Width}"
+                                                        Header="Width R"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Angle}"
+                                                        Header="Angle°"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding ToolToCenterLine}"
+                                                        Header="TCL"
+                                                        IsReadOnly="True" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
 
-                                <Label Content="Milling rectangles" Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}" />
-                                <DataGrid
-                                    AutoGenerateColumns="False"
-                                    CanUserAddRows="False"
-                                    ItemsSource="{Binding SelectedPartMillingRectangles}"
-                                    Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Width="Auto" Header="Check">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Number}" Header="#" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="Auto" Binding="{Binding Side}" Header="Side" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding CenterX}" Header="Center X" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding CenterY}" Header="Center Y" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Depth}" Header="Depth" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Length}" Header="Length" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Width}" Header="Width" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding Angle}" Header="Angle°" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding ToolToCenterLine}" Header="TCL" IsReadOnly="True" />
-                                        <DataGridTextColumn Width="*" Binding="{Binding CornerRadius}" Header="Corn.R" IsReadOnly="True" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                            <Label Content="Milling rectangles" Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                                            <DataGrid
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                ItemsSource="{Binding SelectedPartMillingRectangles}"
+                                                Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Number}"
+                                                        Header="#"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        Binding="{Binding Side}"
+                                                        Header="Side"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding CenterX}"
+                                                        Header="Center X"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding CenterY}"
+                                                        Header="Center Y"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Depth}"
+                                                        Header="Depth"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Length}"
+                                                        Header="Length"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Width}"
+                                                        Header="Width"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding Angle}"
+                                                        Header="Angle°"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding ToolToCenterLine}"
+                                                        Header="TCL"
+                                                        IsReadOnly="True" />
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        Binding="{Binding CornerRadius}"
+                                                        Header="Corn.R"
+                                                        IsReadOnly="True" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
                                         </StackPanel>
                                     </ScrollViewer>
                                 </TabItem>
 
                                 <TabItem Width="100" Header="Tools">
-                                    <ScrollViewer
-                                        HorizontalScrollBarVisibility="Disabled"
-                                        VerticalScrollBarVisibility="Auto">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                         <StackPanel>
                                             <Label Content="Tools" Visibility="{Binding HasSelectedPartTools, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
@@ -953,7 +1081,7 @@
                                 </TabItem>
 
                                 <!--  Selected Part Programs List  -->
-                                <TabItem Width="100" Header="XNC list">
+                                <TabItem Width="100" Header="XNC List">
                                     <TextBox
                                         x:Name="ProgramsTextBox"
                                         HorizontalScrollBarVisibility="Auto"
