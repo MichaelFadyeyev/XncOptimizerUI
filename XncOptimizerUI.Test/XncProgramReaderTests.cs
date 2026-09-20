@@ -102,6 +102,34 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void Reads_ellipticalMilling_withResolvedGeometryAndOptions()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"100\" dy=\"80\" dz=\"18\">"
+                    + "<tool name=\"Mill6\" d=\"6\" />"
+                    + "<me name=\"Mill6\" x=\"dx/2\" y=\"40\" l=\"20\" w=\"10\" "
+                    + "a=\"15\" dp=\"4\" c=\"3\" in=\"0\" out=\"1\" sxy=\"tool.dia/2\" />"
+                    + "</program>"));
+
+            var ellipse = XncProgramReader.Read(operation).MillingEllipses.Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ellipse.ToolName, Is.EqualTo("Mill6"));
+                Assert.That(ellipse.Center, Is.EqualTo(new XncPoint(50, 40)));
+                Assert.That(ellipse.Length, Is.EqualTo(20));
+                Assert.That(ellipse.Width, Is.EqualTo(10));
+                Assert.That(ellipse.Angle, Is.EqualTo(15));
+                Assert.That(ellipse.Depth, Is.EqualTo(4));
+                Assert.That(ellipse.Position, Is.EqualTo(ToolPosition.Pocket));
+                Assert.That(ellipse.StartOffsetXY, Is.EqualTo(3));
+            });
+        }
+
+        [Test]
         public void Reads_edgeBores_withPinnedEdgeAndResolvedDepth()
         {
             var bores = ReadFixture()[0].Bores;

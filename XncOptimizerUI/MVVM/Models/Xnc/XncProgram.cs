@@ -42,6 +42,9 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>All milling contours (<c>&lt;ms&gt;</c> + its segments), in document order.</summary>
         public IReadOnlyList<XncMillingContour> MillingContours { get; init; } = [];
 
+        /// <summary>All elliptical milling primitives (<c>&lt;me&gt;</c>), in document order.</summary>
+        public IReadOnlyList<XncMillingEllipse> MillingEllipses { get; init; } = [];
+
         /// <summary>All rectangular milling primitives (<c>&lt;mr&gt;</c>), in document order.</summary>
         public IReadOnlyList<XncMillingRectangle> MillingRectangles { get; init; } = [];
 

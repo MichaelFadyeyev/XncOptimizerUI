@@ -58,7 +58,9 @@ Programs: 1
 ```
 Implemented via `ReadXncPrograms(int partId)` → `XncProgramReader.Read()` which parses the escaped XML `program` sub-document. Format documented in [[project-file-processing-skill]].
 
-The selected-part panel also exposes separate read-only `DataGrid`s for bores and grooves.
+The selected-part panel uses three equal-width tabs: "Operations" exposes read-only
+`DataGrid`s for bores, grooves, milling contours, elliptical mills, and rectangular
+mills/pockets; "Tools" exposes the tools table; and "XNC list" exposes the text summary.
 `SelectedPartGrooves` is flattened and numbered in XNC program/document order through
 `GrooveRowVM`. Groove rows display start/end coordinates, depth, width, and the
 `ToolPosition` center-line relation. Their side is derived from groove `p`: `0` maps to
@@ -122,6 +124,15 @@ and `<mr>` rectangles remain in place and are counted as ignored. Nothing reorde
 **Products & Materials tab** — a second top-level tab, separate from the Parts/preview tab, showing three read-only reference grids populated on open by `AppViewModel.ReadItems()`: Products (`<good typeId="product">` goods, via `ReadProducts()`/`ProductVM`: Name/Code/Count), Sheets (Code/Name), and Bands (Code/Name/internal+external symbol). Nothing here is editable or exported from directly — it exists to let the user inspect what goods a file declares alongside the Parts grid.
 
 # Known gaps, dead code, and risks
+
+## Selected-part machining tabs
+
+The selected-part Programs panel uses three equal-width tabs: "Operations" contains
+read-only tables for bores, grooves, milling contours, elliptical mills, and rectangular
+mills/pockets; "Tools" contains the tools table; and "XNC list" contains the human-readable
+`SelectedPartPrograms` summary. `XncProgram` and
+`XncProgramReader` expose elliptical milling (`<me>`) alongside the other parsed machining
+primitives, and `AppViewModel` rebuilds all table rows whenever the selected part changes.
 
 **Fixed since last update:**
 - ✅ Orphaned `XmlOperator` project removed.

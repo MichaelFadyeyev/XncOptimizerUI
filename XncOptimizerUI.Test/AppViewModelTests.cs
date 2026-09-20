@@ -412,6 +412,73 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SelectingPart_BuildsRowsForAllMachiningTablesAndListEntries()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms =
+            [
+                new XncProgram
+                {
+                    Side = true,
+                    Tools = [new XncTool { Name = "Mill6", Diameter = 6 }],
+                    MillingContours =
+                    [
+                        new XncMillingContour
+                        {
+                            ToolName = "Mill6",
+                            Entry = new XncPoint(10, 20),
+                            EntryDepth = 3,
+                            Position = ToolPosition.Center,
+                            Segments = [new XncLineSegment { End = new XncPoint(70, 80) }]
+                        }
+                    ],
+                    MillingEllipses =
+                    [
+                        new XncMillingEllipse
+                        {
+                            ToolName = "Mill6",
+                            Center = new XncPoint(30, 40),
+                            Length = 20,
+                            Width = 10,
+                            Depth = 2
+                        }
+                    ],
+                    MillingRectangles =
+                    [
+                        new XncMillingRectangle
+                        {
+                            ToolName = "Mill6",
+                            Origin = new XncPoint(50, 60),
+                            Length = 30,
+                            Width = 15,
+                            Depth = 4
+                        }
+                    ]
+                }
+            ];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartTools, Has.Count.EqualTo(1));
+                Assert.That(vm.SelectedPartMillingContours, Has.Count.EqualTo(1));
+                Assert.That(vm.SelectedPartMillingContours[0].ExitX, Is.EqualTo("70"));
+                Assert.That(vm.SelectedPartMillingContours[0].ExitY, Is.EqualTo("80"));
+                Assert.That(vm.SelectedPartMillingContours[0].ToolToCenterLine, Is.EqualTo("C"));
+                Assert.That(vm.SelectedPartMillingEllipses, Has.Count.EqualTo(1));
+                Assert.That(vm.SelectedPartMillingRectangles, Has.Count.EqualTo(1));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/ellipse/front/Mill6 (30,40) 20x10 a0 dp2 Center"));
+            });
+
+            vm.SelectedPartMillingContours[0].IsSelected = true;
+            Assert.That(vm.CheckedMillingContours, Has.Count.EqualTo(1));
+            vm.SelectedPartMillingContours[0].IsSelected = false;
+            Assert.That(vm.CheckedMillingContours, Is.Empty);
+        }
+
+        [Test]
         public void SelectingPart_BuildsNumberedGrooveRowsWithMappedSides()
         {
             SeedTwoParts();

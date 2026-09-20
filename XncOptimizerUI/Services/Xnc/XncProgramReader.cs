@@ -58,6 +58,7 @@ namespace XncOptimizerUI.Services.Xnc
             var bores = new List<XncBore>();
             var groovings = new List<XncGrooving>();
             var contours = new List<XncMillingContour>();
+            var ellipses = new List<XncMillingEllipse>();
             var rectangles = new List<XncMillingRectangle>();
 
             ContourBuilder? contour = null;
@@ -188,6 +189,30 @@ namespace XncOptimizerUI.Services.Xnc
                         break;
                     }
 
+                    case "me":
+                    {
+                        CloseContour();
+                        SetToolDia(element.GetNameValue(), "<me>");
+                        ellipses.Add(new XncMillingEllipse
+                        {
+                            ToolName = element.GetNameValue() ?? string.Empty,
+                            Center = new XncPoint(
+                                Eval(element.GetXValue(), "<me> @x"),
+                                Eval(element.GetYValue(), "<me> @y")),
+                            Length = Eval(element.GetLengthValue(), "<me> @l"),
+                            Width = Eval(element.GetWidthValue(), "<me> @w"),
+                            Angle = Eval(element.GetAValue(), "<me> @a"),
+                            Depth = Eval(element.GetDpValue(), "<me> @dp"),
+                            Position = ParsePosition(element.GetCValue()),
+                            LeadIn = ParseInt(element.GetInValue()),
+                            LeadOut = ParseInt(element.GetOutValue()),
+                            StartOffsetXY = element.GetSxyValue() is { } sxy
+                                ? Eval(sxy, "<me> @sxy")
+                                : null
+                        });
+                        break;
+                    }
+
                     case "mr":
                     {
                         CloseContour();
@@ -274,6 +299,7 @@ namespace XncOptimizerUI.Services.Xnc
                 Bores = bores,
                 Groovings = groovings,
                 MillingContours = contours,
+                MillingEllipses = ellipses,
                 MillingRectangles = rectangles,
                 Variables = variables
             };
