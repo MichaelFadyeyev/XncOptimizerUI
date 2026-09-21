@@ -329,9 +329,11 @@ namespace XncOptimizerUI.MVVM.Views
                 (Brush)FindResource("BoreSideFalseBrush"),
                 (Brush)FindResource("BoreSelectedBrush"),
                 (Brush)FindResource("PartPreviewBackgroundBrush"),
-                (double)FindResource("BoreOutlineThickness"),
-                (double)FindResource("BoreCenterLineThickness"),
-                (double)FindResource("BoreCenterLineOvershootMm"));
+                (double)FindResource("LineThickness2Px"),
+                (double)FindResource("LineThickness1Px"),
+                (double)FindResource("BoreCenterLineOvershootMm"),
+                (double)FindResource("DashLengthPx"),
+                (double)FindResource("CenterLineDashMm"));
             BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
             GroovePreviewRenderer.DrawGrooves(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
 

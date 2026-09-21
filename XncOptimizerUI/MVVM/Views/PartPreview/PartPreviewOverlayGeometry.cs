@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
@@ -13,6 +14,20 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// </summary>
     internal static class PartPreviewOverlayGeometry
     {
+        /// <summary>
+        /// Sets <paramref name="shape"/>'s stroke thickness and, when <paramref name="dashLengthPx"/>
+        /// is given, a dash/gap pattern of that length. WPF expresses <c>StrokeDashArray</c> as
+        /// multiples of <c>StrokeThickness</c>, so the dash length is divided by
+        /// <paramref name="thickness"/> to keep call sites in plain px/mm.
+        /// </summary>
+        internal static void SetStroke(Shape shape, double thickness, double? dashLengthPx = null)
+        {
+            shape.StrokeThickness = thickness;
+            shape.StrokeDashArray = dashLengthPx is double d
+                ? new DoubleCollection { d / thickness, d / thickness }
+                : null;
+        }
+
         /// <summary>
         /// Returns the near/far pixel edges of one Top/Bottom/Left/Right band and the
         /// near-to-far direction sign (-1 for Top/Left, +1 for Bottom/Right).
