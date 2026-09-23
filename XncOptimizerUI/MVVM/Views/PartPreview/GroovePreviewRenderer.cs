@@ -140,20 +140,30 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, side, horizontal: true, near: true);
                 PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, side, horizontal: true, near: false);
 
-                // Perpendicular bands (Left/Right): a point-anchored rectangle (width t, depth dp)
-                // at the groove's constant Y, with its own center line - like a face bore's band rectangle.
-                var yPx = layout.OriginY + (groove.Start.Y * layout.Scale);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: false, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: false, near: false);
+                // Perpendicular bands (Left/Right): a rectangle (depth dp) spanning the groove's
+                // true Y extent - trueBounds already accounts for width and c (tool-to-center-line
+                // position), not just the center line. The center line itself stays at the
+                // groove's actual travel-line Y (startPx.Y), same as on the Face - not recentered
+                // on the c-offset rectangle - since c only offsets the tool's cut, not the
+                // programmed center line.
+                var yLoPx = layout.OriginY + (trueBounds.YLo * layout.Scale);
+                var yHiPx = layout.OriginY + (trueBounds.YHi * layout.Scale);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, NoCenterLine, yLoPx, yHiPx, depthPx, overshootPx, layout, side, horizontal: false, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, NoCenterLine, yLoPx, yHiPx, depthPx, overshootPx, layout, side, horizontal: false, near: false);
+                AddPerpendicularBandCenterLine(addCenterLine, startPx.Y, depthPx, overshootPx, layout, side, horizontal: false, near: true);
+                AddPerpendicularBandCenterLine(addCenterLine, startPx.Y, depthPx, overshootPx, layout, side, horizontal: false, near: false);
             }
             else if (isYOriented)
             {
                 PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, side, horizontal: false, near: true);
                 PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, side, horizontal: false, near: false);
 
-                var xPx = layout.OriginX + (groove.Start.X * layout.Scale);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: true, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: true, near: false);
+                var xLoPx = layout.OriginX + (trueBounds.XLo * layout.Scale);
+                var xHiPx = layout.OriginX + (trueBounds.XHi * layout.Scale);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, NoCenterLine, xLoPx, xHiPx, depthPx, overshootPx, layout, side, horizontal: true, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, NoCenterLine, xLoPx, xHiPx, depthPx, overshootPx, layout, side, horizontal: true, near: false);
+                AddPerpendicularBandCenterLine(addCenterLine, startPx.X, depthPx, overshootPx, layout, side, horizontal: true, near: true);
+                AddPerpendicularBandCenterLine(addCenterLine, startPx.X, depthPx, overshootPx, layout, side, horizontal: true, near: false);
             }
             else
             {
@@ -300,6 +310,15 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             {
             }
 
+            // c is defined relative to the tool's real traversal direction, which for an
+            // edge-plane groove isn't always Start->End - it's max(y1,y2)->min(y1,y2) for a
+            // Left/Right-plane groove (p=1|2), or min(x1,x2)->max(x1,x2) for a Top/Bottom-plane
+            // groove (p=3|4). axisLo/axisHi below are already the order-normalized min/max, so
+            // bandStart/bandEnd (axisLo->axisHi, i.e. increasing) match that real direction as-is
+            // for p=3|4 but run exactly opposite to it for p=1|2 - ResolveTravelPosition mirrors
+            // groove.Position once, up front, to compensate.
+            var travelPosition = ResolveTravelPosition(groove);
+
             // Band (true) rectangle: this is the groove's home plane - always solid. Offset from
             // the band's inner (Face-adjacent) edge by zMm - always the inner edge, regardless of
             // program.Side, unlike an edge bore's circle (which flips near/far on Side).
@@ -310,18 +329,22 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             var bandStart = horizontal ? (X: axisLoPx, Y: perpPx) : (X: perpPx, Y: axisLoPx);
             var bandEnd = horizontal ? (X: axisHiPx, Y: perpPx) : (X: perpPx, Y: axisHiPx);
-            AddOffsetRectangle(addSolidShape, addCenterLine, bandStart, bandEnd, widthPx, groove.Position, overshootPx);
+            AddOffsetRectangle(addSolidShape, addCenterLine, bandStart, bandEnd, widthPx, travelPosition, overshootPx);
 
             // Opposite-band mirror: the same band rectangle, dashed, on the band directly across
             // from this groove's own (Right for a Left-plane groove, Left for Right, Bottom for
             // Top, Top for Bottom) - same axis extent and Z offset, just evaluated against that
             // band's own inner edge via GetBandEdges(near: !near). Always dashed and without a
             // center line, since it's a reference mirror rather than the groove's true plane.
+            // c's Right/Left offset is mirrored too: AddOffsetRectangle derives its offset
+            // direction from this call's own (unchanged) start/end points, so it can't see that
+            // GetBandEdges just flipped the target band's near/far sense - MirrorPosition
+            // compensates so the offset lands on the physically correct side of the center line.
             var (oppNearEdge, _, oppDirection) = PartPreviewOverlayGeometry.GetBandEdges(layout, horizontal, near: !near);
             var oppPerpPx = oppNearEdge + (oppDirection * (zMm * layout.Scale));
             var oppStart = horizontal ? (X: axisLoPx, Y: oppPerpPx) : (X: oppPerpPx, Y: axisLoPx);
             var oppEnd = horizontal ? (X: axisHiPx, Y: oppPerpPx) : (X: oppPerpPx, Y: axisHiPx);
-            AddOffsetRectangle(addDashedShape, NoCenterLine, oppStart, oppEnd, widthPx, groove.Position, overshootPx);
+            AddOffsetRectangle(addDashedShape, NoCenterLine, oppStart, oppEnd, widthPx, MirrorPosition(travelPosition), overshootPx);
 
             // Face depth projection: flush to the groove's own physical Face edge, growing inward -
             // no center line, always dashed (the "front plane" symbol for a p=1|2|3|4 groove).
@@ -352,17 +375,28 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                     : (layout.OriginY + layout.FaceHeight - depthPx, layout.OriginY + layout.FaceHeight);
             }
 
+            // Unlike the own-band/opposite-band pair above (which are self-relative to this
+            // groove's own near), marker A always targets a near:true band (Top/Left) and marker
+            // B always targets a near:false band (Bottom/Right), regardless of which side this
+            // groove's own plane is on. So which one gets travelPosition vs. its mirror depends
+            // on whether this groove's own plane (near) matches marker A's near:true target: when
+            // it does (own plane is Left/Top, near true), marker A is a same-near cross section
+            // and needs the mirror instead, and marker B needs travelPosition instead - the
+            // opposite pairing from when this groove's own plane is Right/Bottom (near false).
+            var markerAPosition = near ? MirrorPosition(travelPosition) : travelPosition;
+            var markerBPosition = near ? travelPosition : MirrorPosition(travelPosition);
+
             var (nearEdgeA, _, directionA) = PartPreviewOverlayGeometry.GetBandEdges(layout, otherHorizontal, near: true);
             var anchorA = nearEdgeA + (directionA * (zMm * layout.Scale));
             var markerStartA = otherHorizontal ? (X: markerLoPx, Y: anchorA) : (X: anchorA, Y: markerLoPx);
             var markerEndA = otherHorizontal ? (X: markerHiPx, Y: anchorA) : (X: anchorA, Y: markerHiPx);
-            AddOffsetRectangle(ReachesNearEdge(axisLo) ? addSolidShape : addDashedShape, addCenterLine, markerStartA, markerEndA, widthPx, groove.Position, overshootPx);
+            AddOffsetRectangle(ReachesNearEdge(axisLo) ? addSolidShape : addDashedShape, addCenterLine, markerStartA, markerEndA, widthPx, markerAPosition, overshootPx);
 
             var (nearEdgeB, _, directionB) = PartPreviewOverlayGeometry.GetBandEdges(layout, otherHorizontal, near: false);
             var anchorB = nearEdgeB + (directionB * (zMm * layout.Scale));
             var markerStartB = otherHorizontal ? (X: markerLoPx, Y: anchorB) : (X: anchorB, Y: markerLoPx);
             var markerEndB = otherHorizontal ? (X: markerHiPx, Y: anchorB) : (X: anchorB, Y: markerHiPx);
-            AddOffsetRectangle(ReachesFarEdge(axisHi, faceExtentMm) ? addSolidShape : addDashedShape, addCenterLine, markerStartB, markerEndB, widthPx, groove.Position, overshootPx);
+            AddOffsetRectangle(ReachesFarEdge(axisHi, faceExtentMm) ? addSolidShape : addDashedShape, addCenterLine, markerStartB, markerEndB, widthPx, markerBPosition, overshootPx);
 
             AttachClickToggle(clickTargets, allStroked, normalBrush, brushes.Selected);
         }
@@ -537,6 +571,72 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 startPx.X - (dirX * overshootPx), startPx.Y - (dirY * overshootPx),
                 endPx.X + (dirX * overshootPx), endPx.Y + (dirY * overshootPx));
         }
+
+        /// <summary>
+        /// Draws a perpendicular-band center line at the groove's true travel-line coordinate
+        /// (<paramref name="fixedAxisPx"/> - e.g. <c>startPx.Y</c> for an X-oriented groove's
+        /// Left/Right band), spanning that band's own depth (perpendicular) extent, the same way
+        /// <see cref="PartPreviewOverlayGeometry.AddSideRectangleRange"/> computes it internally -
+        /// but anchored at the fixed coordinate rather than the rectangle's own midpoint, since a
+        /// non-<see cref="ToolPosition.Center"/> <c>c</c> offsets the band rectangle away from
+        /// the true center line without moving the center line itself (mirroring how the Face
+        /// rectangle's own center line always runs along the unoffset Start-End line).
+        /// </summary>
+        private static void AddPerpendicularBandCenterLine(
+            Action<double, double, double, double> addCenterLine,
+            double fixedAxisPx,
+            double depthPx,
+            double overshootPx,
+            BorePreviewRenderer.FaceLayout layout,
+            bool side,
+            bool horizontal,
+            bool near)
+        {
+            var (nearEdge, farEdge, direction) = PartPreviewOverlayGeometry.GetBandEdges(layout, horizontal, near);
+            var start = side ? nearEdge : farEdge;
+            var dir = side ? direction : -direction;
+            var end = start + (dir * depthPx);
+            var lo = Math.Min(start, end);
+            var hi = Math.Max(start, end);
+
+            if (horizontal)
+            {
+                addCenterLine(fixedAxisPx, lo - overshootPx, fixedAxisPx, hi + overshootPx);
+            }
+            else
+            {
+                addCenterLine(lo - overshootPx, fixedAxisPx, hi + overshootPx, fixedAxisPx);
+            }
+        }
+
+        /// <summary>
+        /// Swaps <see cref="ToolPosition.Right"/>/<see cref="ToolPosition.Left"/> (leaving
+        /// <see cref="ToolPosition.Center"/>/<see cref="ToolPosition.Pocket"/> unchanged) - used
+        /// wherever a groove's <c>c</c> offset is drawn against a band on the opposite side of
+        /// <see cref="PartPreviewOverlayGeometry.GetBandEdges"/>'s near/far flip from the
+        /// groove's own band, since
+        /// <see cref="AddOffsetRectangle"/> otherwise has no way to know that flip happened.
+        /// </summary>
+        private static ToolPosition MirrorPosition(ToolPosition position) => position switch
+        {
+            ToolPosition.Right => ToolPosition.Left,
+            ToolPosition.Left => ToolPosition.Right,
+            _ => position,
+        };
+
+        /// <summary>
+        /// Resolves an edge-plane groove's <c>c</c> to the <see cref="ToolPosition"/> that
+        /// matches the drawing code's own min-to-max along-band convention (<c>axisLo</c> -&gt;
+        /// <c>axisHi</c>), given the tool's real traversal direction: max(y1,y2)-&gt;min(y1,y2)
+        /// for a Left/Right-plane groove (<c>p</c> 1|2), or min(x1,x2)-&gt;max(x1,x2) for a
+        /// Top/Bottom-plane groove (<c>p</c> 3|4) - both expressed via already order-normalized
+        /// min/max, so (unlike a front-plane groove's literal Start-&gt;End) this doesn't depend
+        /// on which endpoint the file happens to label Start vs. End. That real direction runs
+        /// opposite to the drawing convention for p=1|2 (needs <see cref="MirrorPosition"/>) and
+        /// matches it for p=3|4 (needs no change).
+        /// </summary>
+        private static ToolPosition ResolveTravelPosition(XncGrooving groove) =>
+            groove.SideCode is 1 or 2 ? MirrorPosition(groove.Position) : groove.Position;
 
         private static void AttachClickToggle(List<Shape> clickTargets, List<Shape> allStroked, Brush normalBrush, Brush selectedBrush)
         {
