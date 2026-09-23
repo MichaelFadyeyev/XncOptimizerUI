@@ -17,8 +17,11 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// the band's inner edge by its own <c>Z</c>), a <c>dp</c> rectangle sits on the Face
     /// rectangle flush to that same edge and growing inward, and a small <c>t</c>-wide/<c>dp</c>-
     /// long marker sits on each of the two bands perpendicular to its own plane, flush at its
-    /// fixed edge coordinate. Unlike a bore, a groove's perpendicular offset always measures from
-    /// a band's inner (Face-adjacent) edge, regardless of the owning program's <c>Side</c>.
+    /// fixed edge coordinate, plus a dashed mirror of its band rectangle on the band directly
+    /// opposite its own. A front-plane groove's band projections start flush at each band's
+    /// inner (Face-adjacent) edge when the owning program's <c>Side</c> is true, or the outer
+    /// edge when false - like a bore. An edge-plane groove's own-band rectangle and perpendicular
+    /// markers always measure from a band's inner edge, regardless of <c>Side</c>.
     /// </summary>
     internal static class GroovePreviewRenderer
     {
@@ -28,9 +31,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <summary>
         /// Draws every groove in <paramref name="programs"/> onto <paramref name="canvas"/>. A
         /// front-plane groove's five projections (its Face rectangle + its four edge-band
-        /// rectangles), or an edge-plane groove's four (its band rectangle + Face rectangle +
-        /// two cross-band markers), toggle red together on click, since they represent the same
-        /// physical groove.
+        /// rectangles), or an edge-plane groove's five (its band rectangle + opposite-band mirror
+        /// + Face rectangle + two cross-band markers), toggle red together on click, since they
+        /// represent the same physical groove.
         /// </summary>
         public static void DrawGrooves(
             Canvas canvas,
@@ -82,6 +85,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             BorePreviewRenderer.BoreBrushes brushes)
         {
             var normalBrush = program.Side ? brushes.SideTrue : brushes.SideFalse;
+            var side = program.Side;
             var tag = new GrooveTag(program, groove);
             var widthPx = groove.Width * layout.Scale;
             var depthPx = groove.Depth * layout.Scale;
@@ -126,30 +130,30 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var isXOriented = Math.Abs(groove.Start.Y - groove.End.Y) < OrientationEpsilon;
             var isYOriented = Math.Abs(groove.Start.X - groove.End.X) < OrientationEpsilon;
 
-            // A groove's perpendicular offset always measures from the band's inner
-            // (Face-adjacent) edge, regardless of program.Side - unlike a bore, which flips
-            // near/far on Side. AddSideRectangleRange's side parameter is therefore always true here.
+            // A front-plane groove's band projections start flush at each band's inner
+            // (Face-adjacent) edge when program.Side is true, or the outer edge when false -
+            // like a bore. AddSideRectangleRange's side parameter carries that through.
             if (isXOriented)
             {
                 // Parallel bands (Top/Bottom, same run direction as the groove): a plain extent
                 // projection, no center line - the groove's own center line is already on the Face.
-                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, true, horizontal: true, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, true, horizontal: true, near: false);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, side, horizontal: true, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, NoCenterLine, xLo, xHi, depthPx, overshootPx, layout, side, horizontal: true, near: false);
 
                 // Perpendicular bands (Left/Right): a point-anchored rectangle (width t, depth dp)
                 // at the groove's constant Y, with its own center line - like a face bore's band rectangle.
                 var yPx = layout.OriginY + (groove.Start.Y * layout.Scale);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, true, horizontal: false, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, true, horizontal: false, near: false);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: false, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, addCenterLine, yPx - (widthPx / 2), yPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: false, near: false);
             }
             else if (isYOriented)
             {
-                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, true, horizontal: false, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, true, horizontal: false, near: false);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(leftShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, side, horizontal: false, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(rightShape, NoCenterLine, yLo, yHi, depthPx, overshootPx, layout, side, horizontal: false, near: false);
 
                 var xPx = layout.OriginX + (groove.Start.X * layout.Scale);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, true, horizontal: true, near: true);
-                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, true, horizontal: true, near: false);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(topShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: true, near: true);
+                PartPreviewOverlayGeometry.AddSideRectangleRange(bottomShape, addCenterLine, xPx - (widthPx / 2), xPx + (widthPx / 2), depthPx, overshootPx, layout, side, horizontal: true, near: false);
             }
             else
             {
@@ -190,13 +194,15 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
                 // Projects one XY footprint corner, at Z level zMm, onto a given edge band's
                 // screen space - the along-band coordinate maps directly (X for a horizontal
-                // band, Y otherwise), the Z coordinate maps through GetBandEdges exactly as
-                // every other edge-band Z offset in this file already does (side: true, i.e.
-                // starting flush at the band's Face-adjacent edge and growing outward).
+                // band, Y otherwise), the Z coordinate maps through GetBandEdges the same way
+                // AddSideRectangleRange does: starting flush at the band's inner edge and
+                // growing outward when side is true, or at the outer edge growing inward when false.
                 (double X, double Y) ProjectCorner((double X, double Y) cornerMm, bool bandHorizontal, bool near, double zMm)
                 {
-                    var (nearEdge, _, direction) = PartPreviewOverlayGeometry.GetBandEdges(layout, bandHorizontal, near);
-                    var perpPx = nearEdge + (direction * (zMm * layout.Scale));
+                    var (nearEdge, farEdge, direction) = PartPreviewOverlayGeometry.GetBandEdges(layout, bandHorizontal, near);
+                    var start = side ? nearEdge : farEdge;
+                    var dir = side ? direction : -direction;
+                    var perpPx = start + (dir * (zMm * layout.Scale));
                     var alongMm = bandHorizontal ? cornerMm.X : cornerMm.Y;
                     var alongPx = (bandHorizontal ? layout.OriginX : layout.OriginY) + (alongMm * layout.Scale);
                     return bandHorizontal ? (X: alongPx, Y: perpPx) : (X: perpPx, Y: alongPx);
@@ -236,7 +242,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                     var crossB = CrossAt(bandHorizontal, edgeMm, offsetB);
                     var crossLoPx = (bandHorizontal ? layout.OriginX : layout.OriginY) + (Math.Min(crossA, crossB) * layout.Scale);
                     var crossHiPx = (bandHorizontal ? layout.OriginX : layout.OriginY) + (Math.Max(crossA, crossB) * layout.Scale);
-                    PartPreviewOverlayGeometry.AddSideRectangleRange(addSolidShape, NoCenterLine, crossLoPx, crossHiPx, depthPx, overshootPx, layout, true, bandHorizontal, near);
+                    PartPreviewOverlayGeometry.AddSideRectangleRange(addSolidShape, NoCenterLine, crossLoPx, crossHiPx, depthPx, overshootPx, layout, side, bandHorizontal, near);
                 }
 
                 DrawRibs(bandHorizontal: true, near: true);
@@ -305,6 +311,17 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var bandStart = horizontal ? (X: axisLoPx, Y: perpPx) : (X: perpPx, Y: axisLoPx);
             var bandEnd = horizontal ? (X: axisHiPx, Y: perpPx) : (X: perpPx, Y: axisHiPx);
             AddOffsetRectangle(addSolidShape, addCenterLine, bandStart, bandEnd, widthPx, groove.Position, overshootPx);
+
+            // Opposite-band mirror: the same band rectangle, dashed, on the band directly across
+            // from this groove's own (Right for a Left-plane groove, Left for Right, Bottom for
+            // Top, Top for Bottom) - same axis extent and Z offset, just evaluated against that
+            // band's own inner edge via GetBandEdges(near: !near). Always dashed and without a
+            // center line, since it's a reference mirror rather than the groove's true plane.
+            var (oppNearEdge, _, oppDirection) = PartPreviewOverlayGeometry.GetBandEdges(layout, horizontal, near: !near);
+            var oppPerpPx = oppNearEdge + (oppDirection * (zMm * layout.Scale));
+            var oppStart = horizontal ? (X: axisLoPx, Y: oppPerpPx) : (X: oppPerpPx, Y: axisLoPx);
+            var oppEnd = horizontal ? (X: axisHiPx, Y: oppPerpPx) : (X: oppPerpPx, Y: axisHiPx);
+            AddOffsetRectangle(addDashedShape, NoCenterLine, oppStart, oppEnd, widthPx, groove.Position, overshootPx);
 
             // Face depth projection: flush to the groove's own physical Face edge, growing inward -
             // no center line, always dashed (the "front plane" symbol for a p=1|2|3|4 groove).
