@@ -150,6 +150,7 @@ namespace XncOptimizerUI.Extensions
         public static string? GetOutValue(this XElement element) => element.Attribute("out")?.Value;
         public static string? GetSxyValue(this XElement element) => element.Attribute("sxy")?.Value;
         public static string? GetDirValue(this XElement element) => element.Attribute("dir")?.Value;
+        public static string? GetFwdValue(this XElement element) => element.Attribute("fwd")?.Value;
         public static string? GetAvValue(this XElement element) => element.Attribute("av")?.Value;
         public static string? GetAValue(this XElement element) => element.Attribute("a")?.Value;
         public static string? GetRValue(this XElement element) => element.Attribute("r")?.Value;

@@ -374,6 +374,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         [ObservableProperty]
         private bool _convertBoresToEllipses;
+
+        /// <summary>Raw text of the mill path offset distance (mm); parsed when the command runs.</summary>
+        [ObservableProperty]
+        private string _millOffset = string.Empty;
+
+        [ObservableProperty]
+        private MillOffsetSide _millOffsetSide = MillOffsetSide.Right;
+
+        /// <summary>Mill path offset processes open <c>&lt;ms&gt;</c> contours.</summary>
+        [ObservableProperty]
+        private bool _offsetOpenMillPaths = true;
+
+        /// <summary>Mill path offset processes closed contours, rectangles and ellipses.</summary>
+        [ObservableProperty]
+        private bool _offsetClosedMillPaths = true;
         #endregion
 
         #region Commands
@@ -680,6 +695,58 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var logStart = log.Length;
 
             var success = _projectService.OptimizeMillTraversal(ref log, parts);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        [RelayCommand]
+        private void OffsetMillPaths()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            if (TryParseToDecimal(MillOffset) is not { } offset || offset <= 0m)
+            {
+                Log += "Enter a mill path offset greater than 0!\n";
+                return;
+            }
+
+            var kinds = (OffsetOpenMillPaths ? MillPathKinds.Open : MillPathKinds.None)
+                | (OffsetClosedMillPaths ? MillPathKinds.Closed : MillPathKinds.None);
+
+            if (kinds == MillPathKinds.None)
+            {
+                Log += "Select open and/or closed mill paths to offset!\n";
+                return;
+            }
+
+            var parts = _allParts
+                .Where(p => p.IsSelected)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += "No parts checked for mill path offset!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.OffsetMillPaths(ref log, parts, (double)offset, MillOffsetSide, kinds);
 
             Log = log;
 

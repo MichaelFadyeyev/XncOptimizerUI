@@ -409,6 +409,112 @@
             </Border>
 
 
+            <!--  Offset mill path panel: offset distance (mm) and side of the traversal direction  -->
+            <Border x:Name="OffsetMillPathsPanel" Style="{StaticResource MenuGroupBorder}">
+                <StackPanel>
+                    <Button
+                        x:Name="OffsetMillPathsButton"
+                        Command="{Binding OffsetMillPathsCommand}"
+                        Content="Offset mill path"
+                        Style="{StaticResource CommandButtonStyle}" />
+
+                    <Grid x:Name="OffsetMillPathsOptionsGrid" Margin="0,7,0,0">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox
+                            x:Name="MillOffsetTextBox"
+                            Grid.Column="0"
+                            Margin="0"
+                            FontSize="10"
+                            Style="{StaticResource FilterInputStyle}"
+                            ToolTip="Offset distance, mm (greater than 0)">
+                            <TextBox.Text>
+                                <Binding
+                                    Mode="TwoWay"
+                                    NotifyOnValidationError="True"
+                                    Path="MillOffset"
+                                    UpdateSourceTrigger="PropertyChanged"
+                                    ValidatesOnDataErrors="True">
+                                    <Binding.ValidationRules>
+                                        <validators:DecimalValidationRule />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+                        </TextBox>
+
+                        <TextBlock
+                            x:Name="MillOffsetUnitText"
+                            Grid.Column="1"
+                            Margin="2,0,8,0"
+                            VerticalAlignment="Center"
+                            FontSize="10"
+                            Text="mm" />
+
+                        <RadioButton
+                            x:Name="MillOffsetRightRadio"
+                            Grid.Column="2"
+                            Height="20"
+                            VerticalContentAlignment="Center"
+                            Content="R"
+                            FontSize="10"
+                            GroupName="MillOffsetSide"
+                            IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Right}, Converter={StaticResource EnumToBool}}"
+                            ToolTip="Offset to the right of the traversal direction" />
+
+                        <RadioButton
+                            x:Name="MillOffsetLeftRadio"
+                            Grid.Column="3"
+                            Height="20"
+                            Margin="8,0,0,0"
+                            VerticalContentAlignment="Center"
+                            Content="L"
+                            FontSize="10"
+                            GroupName="MillOffsetSide"
+                            IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Left}, Converter={StaticResource EnumToBool}}"
+                            ToolTip="Offset to the left of the traversal direction" />
+
+                        <!--  Mill path types to process  -->
+                        <CheckBox
+                            x:Name="OffsetOpenMillPathsCheckBox"
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            Height="20"
+                            Margin="0,4,0,0"
+                            VerticalContentAlignment="Center"
+                            Content="open paths"
+                            FontSize="10"
+                            IsChecked="{Binding OffsetOpenMillPaths}"
+                            ToolTip="Offset open milling contours (&lt;ms&gt; paths that do not return to the entry point)" />
+
+                        <CheckBox
+                            x:Name="OffsetClosedMillPathsCheckBox"
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            Height="20"
+                            VerticalContentAlignment="Center"
+                            Content="closed paths / rect. / ellipses"
+                            FontSize="10"
+                            IsChecked="{Binding OffsetClosedMillPaths}"
+                            ToolTip="Offset closed milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
+
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+
             <!--  Optimize Mill Traversal panel  -->
             <StackPanel Margin="2,2,2,2">
                 <Button

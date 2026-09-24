@@ -29,6 +29,7 @@ namespace XncOptimizerUI.Test.Fakes
         public bool ConvertGroovesAndMillsResult { get; set; } = true;
         public bool ConvertBoresAndMillsResult { get; set; } = true;
         public bool OptimizeMillTraversalResult { get; set; } = true;
+        public bool OffsetMillPathsResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
 
         public List<string> Calls { get; } = [];
@@ -43,6 +44,10 @@ namespace XncOptimizerUI.Test.Fakes
         public BoreMillDirection? LastBoreMillDirection { get; private set; }
         public bool? LastBoreMillUseEllipse { get; private set; }
         public IList<Part>? LastMillTraversalParts { get; private set; }
+        public IList<Part>? LastMillOffsetParts { get; private set; }
+        public double? LastMillOffset { get; private set; }
+        public MillOffsetSide? LastMillOffsetSide { get; private set; }
+        public MillPathKinds? LastMillOffsetKinds { get; private set; }
 
         public void OpenProject(string path)
         {
@@ -104,6 +109,18 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return OptimizeMillTraversalResult;
+        }
+
+        public bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)
+        {
+            Calls.Add(nameof(OffsetMillPaths));
+            LastMillOffsetParts = parts;
+            LastMillOffset = offset;
+            LastMillOffsetSide = side;
+            LastMillOffsetKinds = kinds;
+            log += LogToAppend;
+
+            return OffsetMillPathsResult;
         }
 
         public int GetXncProgramsCount(int partId)

@@ -80,3 +80,16 @@ per selected part. Deferred:
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
+
+## Milling direction conventions
+
+Confirmed with the user while building "Offset mill path" (card 030): arc `dir="true"` is a
+clockwise sweep (geometry only), and `fwd="true"` on a closed mill / `<mr>` / `<me>` means
+counter-clockwise traversal (open paths: authored order). Clockwise is the operator's view,
+i.e. the raw XNC frame mirrored in Y. Still inconsistent with that:
+
+- `XncProgramReader` reads `XncArcSegment.Clockwise = !dir` - inverted; fix and update the
+  reader tests.
+- The bore/groove -> mill converters emit `fwd="true"` described as "clockwise" (and the
+  generated-defaults sections of `xnc-program-format.md` say so). Decide with the user whether
+  generated mills should keep `fwd="true"` (now counter-clockwise) or switch to `fwd="false"`.

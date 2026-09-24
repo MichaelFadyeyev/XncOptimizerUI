@@ -885,6 +885,164 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void OffsetMillPaths_PassesCheckedPartsOffsetAndSideToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[1].IsSelected = true;
+            vm.MillOffset = "2.5";
+            vm.MillOffsetSide = MillOffsetSide.Left;
+            _projectService.Calls.Clear();
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OffsetMillPaths)));
+                Assert.That(_projectService.LastMillOffsetParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.Parts[1].Id }));
+                Assert.That(_projectService.LastMillOffset, Is.EqualTo(2.5d));
+                Assert.That(_projectService.LastMillOffsetSide, Is.EqualTo(MillOffsetSide.Left));
+                Assert.That(_projectService.LastMillOffsetKinds, Is.EqualTo(MillPathKinds.All));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful offset reloads the project");
+            });
+        }
+
+        [Test]
+        public void OffsetMillPaths_DefaultsToEmptyOffsetOnTheRightForAllKinds()
+        {
+            var vm = CreateViewModel();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.MillOffset, Is.Empty);
+                Assert.That(vm.MillOffsetSide, Is.EqualTo(MillOffsetSide.Right));
+                Assert.That(vm.OffsetOpenMillPaths, Is.True);
+                Assert.That(vm.OffsetClosedMillPaths, Is.True);
+            });
+        }
+
+        [TestCase(true, false, MillPathKinds.Open)]
+        [TestCase(false, true, MillPathKinds.Closed)]
+        public void OffsetMillPaths_PassesSelectedKindsToService(bool open, bool closed, MillPathKinds expected)
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.MillOffset = "3";
+            vm.OffsetOpenMillPaths = open;
+            vm.OffsetClosedMillPaths = closed;
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.That(_projectService.LastMillOffsetKinds, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void OffsetMillPaths_WithNoKindSelected_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.MillOffset = "3";
+            vm.OffsetOpenMillPaths = false;
+            vm.OffsetClosedMillPaths = false;
+            _projectService.Calls.Clear();
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("Select open and/or closed mill paths to offset!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [TestCase("")]
+        [TestCase("abc")]
+        [TestCase("0")]
+        [TestCase("-3")]
+        [TestCase("2,5")]
+        public void OffsetMillPaths_WithInvalidOffset_LogsAndDoesNotCallService(string offset)
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.MillOffset = offset;
+            _projectService.Calls.Clear();
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("Enter a mill path offset greater than 0!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void OffsetMillPaths_WithNoPartsChecked_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.MillOffset = "3";
+            _projectService.Calls.Clear();
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No parts checked for mill path offset!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void OffsetMillPaths_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
+        {
+            SeedTwoParts();
+            _projectService.OffsetMillPathsResult = false;
+            _projectService.LogToAppend = "***\nNo mill paths offset (ignored 2).";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            vm.MillOffset = "3";
+            _projectService.Calls.Clear();
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning("No mill paths offset (ignored 2).", Arg.Any<string>());
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OffsetMillPaths) }),
+                "a failed offset should not reload the project");
+        }
+
+        [Test]
+        public void OffsetMillPaths_WithNoFileOpen_LogsAndDoesNothing()
+        {
+            var vm = CreateViewModel();
+            vm.MillOffset = "3";
+
+            vm.OffsetMillPathsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
         public void OptimizeMillTraversal_WithNoFileOpen_LogsAndDoesNothing()
         {
             var vm = CreateViewModel();

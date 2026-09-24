@@ -264,7 +264,7 @@ bore / groove / tool / var / end of program) belongs to it.
 | `in` | entry movement code; `0` means no special lead-in |
 | `out` | exit movement code; `1` means lead-out movement is enabled |
 | `sxy` | optional start offset in the XY plane, expression, e.g. `tool.dia/2` |
-| `fwd` | machining direction flag for closed paths; `true` means clockwise |
+| `fwd` | traversal direction of the whole mill (absent = `true`); see "Traversal direction" below |
 
 **side** comes from the operation's `side`. A program may contain several `<ms>` contours in a
 row (the fixture has three straight ones followed by the circle); each `<ms>` closes the
@@ -277,7 +277,21 @@ traversal:
   (`<mr>`) carry `fwd="true"`;
 - a **curved** contour's arc segments (`<mac>` / `<ma>`) carry `dir="true"`.
 
-Do not generalize the meaning of `fwd` to open contours beyond the source dialect's semantics.
+#### Traversal direction (confirmed with the user)
+
+- The traversal direction belongs to the mill's head element (`<ms>`, `<me>`, `<mr>`) through
+  `fwd` (absent = `true`) and is the same for every `<ml>` / `<mac>` / `<ma>` of that `<ms>`.
+  An arc's `dir` only defines the arc's geometry (which arc is drawn), never the traversal.
+- **Closed** paths, pockets, ellipses and rectangles: `fwd="true"` ⇒ counter-clockwise,
+  `fwd="false"` ⇒ clockwise.
+- **Open** paths: `fwd="true"` ⇒ from the `<ms>` entry through each segment end to the last
+  one; `fwd="false"` ⇒ the reverse (last segment end back to the entry).
+- Clockwise is meant in the operator's view, which is the raw XNC frame mirrored in Y: the
+  GibLab-authored circles in `TestData/td.project` use `dir="false"` (counter-clockwise) while
+  their raw math angle decreases. `Services/Xnc/MillPathOffsetter.cs` relies on this.
+
+> The generated-mill defaults above (`fwd="true"` described as clockwise) predate this rule and
+> are left as they are; see `.agents/todos.md`.
 
 ### 6.5 Milling segments
 
@@ -327,7 +341,7 @@ with `<mac>`, but its radius is explicit:
 |---|---|
 | `x`, `y` | arc end point |
 | `r` | arc radius |
-| `dir` | arc sweep direction flag (bool) |
+| `dir` | arc sweep direction (bool): `dir="true"` = **clockwise** sweep, `false` = counter-clockwise |
 | `dp` | optional depth at the endpoint; absent means keep the current contour depth |
 
 The centre is reconstructed from the implicit start point, endpoint, radius, and `dir`. Do not
@@ -357,7 +371,7 @@ followed by `<ml>`, `<mac>`, or `<ma>` segments.
 | `c` | tool-to-path or pocket positioning mode |
 | `in`, `out` | entry and exit movement codes |
 | `sxy` | XY start/path offset |
-| `fwd` | for a closed ellipse, `true` means clockwise machining |
+| `fwd` | traversal direction: `true` = counter-clockwise, `false` = clockwise (see §6.4 "Traversal direction") |
 
 Newly created ellipse mills must set `in="0"`, `out="1"`, and `fwd="true"` (CW). A mill created
 over a **blind** feature is a pocket (`c="3"`); one over a **through** feature keeps its
@@ -385,7 +399,7 @@ segments — it has no following `<ml>`/`<mac>`/`<ma>`.
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left, `3` = pocket (the fixture uses `3`) |
 | `in`, `out` | entry and exit movement codes; newly created mills use `0` and `1` |
 | `sxy` | XY start/path offset; pocket-type mills must use `tool.dia/2` |
-| `fwd` | for a closed rectangle or pocket, `true` means clockwise machining |
+| `fwd` | traversal direction: `true` = counter-clockwise, `false` = clockwise (see §6.4 "Traversal direction") |
 
 **side** comes from the operation's `side`. Attribute meanings are inferred from the single
 fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.project`.
@@ -431,7 +445,7 @@ The `c` attribute selects centre-line/tool-position or pocket mode; it is distin
 | 17 | `<tool>` | `Mill6` d=6 |
 | 18 | `<var>` | `contMillDepth = dz + 2.00 = 21` |
 | 19 | `<ms>` | contour 4 entry, tool `Mill6` (`tool.dia`=6): `(250, 382.5)`, `dp = contMillDepth = 21`, `c=2` (left), `out=1` |
-| 20–23 | `<mac>` ×4 | arcs, all centre `(250, 400)`, `dir=false` (CW): end `(232.5,400)`, `(250,417.5)`, `(267.5,400)`, `(250,382.5)` — closes an `r = 17.5` circle at `(250, 400)` |
+| 20–23 | `<mac>` ×4 | arcs, all centre `(250, 400)`, `dir=false` (counter-clockwise sweep): end `(232.5,400)`, `(250,417.5)`, `(267.5,400)`, `(250,382.5)` — closes an `r = 17.5` circle at `(250, 400)` |
 | 24 | `<mr>` | rectangle pocket, `Mill6`: origin `(100, 100)`, `l=100`, `w=20`, `a=0`, `r=0`, `dp=8`, `sxy = tool.dia/2 = 3`, `c=3` (pocket) |
 
 ### Operation `id=4`, `side="false"` → `<program dx="1380" dy="600" dz="19">`
@@ -463,8 +477,8 @@ The reader described above is implemented:
 
 ## 9. Open items — verify against `TestData/td-2.project`
 
-- `<mac>`/`<ma>` `dir`: **`dir="true"` = clockwise** (the value `ConvertBoresAndMills` emits for
-  a CW arc; `td-br-ml-conversion.project` uses it). `XncProgramReader` still reads it the other
+- `<mac>`/`<ma>` `dir`: **`dir="true"` = clockwise sweep** — now confirmed by the user (geometry
+  only; see §6.4 "Traversal direction"). `XncProgramReader` still reads it the other
   way round (`Clockwise = !dir`) — its `XncArcSegment.Clockwise` is inverted for this dialect
   and should not be trusted until the reader is fixed.
 - `<mr>` — whether `x`/`y` is a corner or the centre; units of `a` (degrees assumed) and `r`.

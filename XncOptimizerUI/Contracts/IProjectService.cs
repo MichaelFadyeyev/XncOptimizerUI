@@ -50,6 +50,24 @@ namespace XncOptimizerUI.Contracts
         /// </summary>
         bool OptimizeMillTraversal(ref string log, IList<Part> parts);
 
+        /// <summary>
+        /// For every supplied part, shifts the tool traversal path of every mill (open and closed
+        /// <c>&lt;ms&gt;</c> contours, pockets, <c>&lt;mr&gt;</c> rectangles, <c>&lt;me&gt;</c>
+        /// ellipses) in each XNC machining program by <paramref name="offset"/> mm to the
+        /// <paramref name="side"/> of its traversal direction. The direction comes from the mill's
+        /// <c>fwd</c>: closed mills travel counter-clockwise for <c>fwd="true"</c> (clockwise for
+        /// <c>false</c>); open paths travel in authored order for <c>fwd="true"</c> (reversed for
+        /// <c>false</c>). Contour entry/segment end points are recalculated; open-path ends that sit
+        /// on or beyond the part outline keep their perpendicular distance from the crossed edge.
+        /// Rectangles change <c>l</c>/<c>w</c> by twice the offset and <c>r</c> by the offset;
+        /// ellipses change their semi-axes by the offset. Mills that cannot be resolved or would
+        /// collapse are left untouched and counted as ignored. Only mills whose kind is in
+        /// <paramref name="kinds"/> are processed (open contours vs. closed contours, rectangles and
+        /// ellipses); the rest are counted as skipped. Returns <c>false</c> (and saves nothing)
+        /// when nothing was offset.
+        /// </summary>
+        bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds);
+
         int GetXncProgramsCount(int partId);
 
         /// <summary>

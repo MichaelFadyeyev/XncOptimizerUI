@@ -10,6 +10,7 @@ using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Helpers.Enums;
 using XncOptimizerUI.Services.Xnc;
+using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services
 {
@@ -867,6 +868,120 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
+        /// <summary>
+        /// Shifts every mill path of the selected <paramref name="kinds"/> in the XNC programs of
+        /// the supplied parts by <paramref name="offset"/> to the <paramref name="side"/> of its
+        /// traversal direction (geometry in <see cref="MillPathOffsetter"/>). Saves nothing and
+        /// returns <c>false</c> when nothing was offset.
+        /// </summary>
+        public bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for mill path offset.";
+                return false;
+            }
+
+            if (!(offset > 0d))
+            {
+                log += $"***\nMill path offset must be greater than 0 (was {XmlConvert.ToString(offset)}).";
+                return false;
+            }
+
+            if ((kinds & MillPathKinds.All) == MillPathKinds.None)
+            {
+                log += "***\nNo mill path types selected for offset.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+            var sideName = side == MillOffsetSide.Right ? "R" : "L";
+            var kindsName = DescribeMillPathKinds(kinds);
+
+            var totalOffset = 0;
+            var totalIgnored = 0;
+            var totalSkipped = 0;
+            var touchedParts = 0;
+
+            try
+            {
+                foreach (var part in parts)
+                {
+                    var partOps = xncOperations.Where(o => o.GetPart()?.GetIdIntValue() == part.Id).ToList();
+
+                    var partOffset = 0;
+                    var partIgnored = 0;
+                    var partSkipped = 0;
+
+                    foreach (var op in partOps)
+                    {
+                        var programAttribute = op.GetProgram();
+
+                        if (programAttribute == null)
+                        {
+                            continue;
+                        }
+
+                        var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+                        var program = programXml.Element("program")
+                            ?? throw new Exception($"""Part "{part.Name}" (id={part.Id}): XNC program has no <program> root element.""");
+
+                        var (offsetCount, ignored, skipped) = MillPathOffsetter.OffsetInProgram(program, offset, side, kinds);
+
+                        if (offsetCount > 0)
+                        {
+                            programAttribute.Value = programXml.Declaration is { } declaration
+                                ? declaration + program.ToString()
+                                : program.ToString();
+                        }
+
+                        partOffset += offsetCount;
+                        partIgnored += ignored;
+                        partSkipped += skipped;
+                    }
+
+                    if (partOffset > 0 || partIgnored > 0 || partSkipped > 0)
+                    {
+                        touchedParts++;
+                        log += $"Mill offset: \"{part.Name}\" (id={part.Id}): {partOffset} mill(s) offset, {partIgnored} ignored, {partSkipped} skipped\n";
+                    }
+
+                    totalOffset += partOffset;
+                    totalIgnored += partIgnored;
+                    totalSkipped += partSkipped;
+                }
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{e.Message}";
+                return false;
+            }
+
+            if (totalOffset == 0)
+            {
+                log += $"***\nNo mill paths offset (ignored {totalIgnored}, skipped {totalSkipped}).";
+                return false;
+            }
+
+            AppendDescription($"offset {kindsName} mill paths {XmlConvert.ToString(offset)} mm {sideName}");
+
+            var result = GetMillOffsetFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nMill path offset complete: offset {totalOffset} {kindsName} mill(s) by {XmlConvert.ToString(offset)} mm {sideName}, ignored {totalIgnored}, skipped {totalSkipped}, across {touchedParts} part(s). Stored to: {_fullPath}";
+
+            return true;
+        }
+
+        private static string DescribeMillPathKinds(MillPathKinds kinds) => (kinds & MillPathKinds.All) switch
+        {
+            MillPathKinds.Open => "open",
+            MillPathKinds.Closed => "closed",
+            _ => "open and closed",
+        };
+
         // --- Parallel-mill traversal ordering ------------------------------------------------
         // A milling "pass" here is an <ms> entry followed by exactly one straight <ml> segment
         // that runs parallel to X or Y and is not a pocket (c="3"). Passes that share a tool
@@ -1129,14 +1244,6 @@ namespace XncOptimizerUI.Services
             ml.SetAttributeValue("x", exitX);
             ml.SetAttributeValue("y", exitY);
             ml.SetAttributeValue("dp", exitDp);
-        }
-
-        private static double SquaredDistance(double x1, double y1, double x2, double y2)
-        {
-            var dx = x1 - x2;
-            var dy = y1 - y2;
-
-            return dx * dx + dy * dy;
         }
 
         // --- Groove <-> mill program rewriting -------------------------------------------------
@@ -1500,42 +1607,6 @@ namespace XncOptimizerUI.Services
             return true;
         }
 
-        /// <summary>
-        /// Reconstructs the centre of a radius-defined arc (<c>&lt;ma&gt;</c>) from its chord.
-        /// For the closed-circle-in-two-half-arcs case the chord equals the diameter and the
-        /// centre is the chord midpoint regardless of <paramref name="dirSign"/>.
-        /// </summary>
-        private static bool TryReconstructArcCentre(
-            double startX, double startY, double endX, double endY, double radius, int dirSign,
-            out double centreX, out double centreY)
-        {
-            centreX = 0d;
-            centreY = 0d;
-
-            var chord = Hypot(startX, startY, endX, endY);
-
-            if (chord <= BoreMillGeomTolerance || chord > (2d * radius) + BoreMillGeomTolerance)
-            {
-                return false;
-            }
-
-            var midX = (startX + endX) / 2d;
-            var midY = (startY + endY) / 2d;
-            var halfChord = chord / 2d;
-            var offset = Math.Sqrt(Math.Max(0d, (radius * radius) - (halfChord * halfChord)));
-
-            // Unit vector perpendicular to the chord.
-            var perpX = -(endY - startY) / chord;
-            var perpY = (endX - startX) / chord;
-
-            centreX = midX + (dirSign * offset * perpX);
-            centreY = midY + (dirSign * offset * perpY);
-
-            return true;
-        }
-
-        private static int ParseDirSign(string? raw) => bool.TryParse(raw, out var value) && value ? 1 : -1;
-
         private static XElement MakeFaceBore(double x, double y, double depth, string toolName)
         {
             return new XElement("bf",
@@ -1545,11 +1616,6 @@ namespace XncOptimizerUI.Services
                 new XAttribute("ac", "1"),
                 new XAttribute("av", "false"),
                 new XAttribute("name", toolName));
-        }
-
-        private static double Hypot(double x1, double y1, double x2, double y2)
-        {
-            return Math.Sqrt(SquaredDistance(x1, y1, x2, y2));
         }
 
         /// <summary>
@@ -2243,43 +2309,6 @@ namespace XncOptimizerUI.Services
             return removed;
         }
 
-        private static XncSymbolTable SeedProgramSymbols(XElement program)
-        {
-            var symbols = new XncSymbolTable();
-            symbols.Set("dx", RequireProgramDouble(program.GetDxValue(), "dx"));
-            symbols.Set("dy", RequireProgramDouble(program.GetDyValue(), "dy"));
-            symbols.Set("dz", RequireProgramDouble(program.GetDzValue(), "dz"));
-
-            // Register every declared <var> up front (document order, so a var may reference an
-            // earlier one) so elements that reference a custom variable by name in dp/x/y/etc.
-            // resolve the same way XncProgramReader already resolves them for display.
-            foreach (var varElement in program.Elements("var"))
-            {
-                var name = varElement.GetNameValue()
-                    ?? throw new Exception("<var> has no name.");
-                symbols.Set(name, EvalXnc(varElement.GetExprValue(), symbols));
-            }
-
-            return symbols;
-        }
-
-        private static double RequireProgramDouble(string? raw, string name)
-        {
-            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-            {
-                return value;
-            }
-
-            throw new Exception($"<program> @{name} is missing or not a number (was '{raw}').");
-        }
-
-        private static double EvalXnc(string? expression, XncSymbolTable symbols)
-        {
-            return XncExpressionEvaluator.Evaluate(
-                expression ?? throw new Exception("Missing XNC coordinate/value."),
-                symbols);
-        }
-
         private static Dictionary<string, double> ReadToolDiameters(XElement program)
         {
             var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
@@ -2341,14 +2370,6 @@ namespace XncOptimizerUI.Services
                     return candidate;
                 }
             }
-        }
-
-        private static ToolPosition ParsePositionCode(string? raw)
-        {
-            return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
-                && Enum.IsDefined(typeof(ToolPosition), code)
-                    ? (ToolPosition)code
-                    : ToolPosition.Center;
         }
 
         public int GetXncProgramsCount(int partId)
@@ -2483,110 +2504,45 @@ namespace XncOptimizerUI.Services
             _doc.Save(_fullPath);
         }
 
-        private string GetNewFileName()
+        private string GetNewFileName() => GetSuffixedFileName("_opt");
+
+        private string GetRenamedFileName() => GetSuffixedFileName("_ren");
+
+        private string GetGrooveMillFileName() => GetSuffixedFileName("_gm");
+
+        private string GetBoreMillFileName() => GetSuffixedFileName("_bm");
+
+        private string GetMillOrderFileName() => GetSuffixedFileName("_mo");
+
+        private string GetMillOffsetFileName() => GetSuffixedFileName("_off");
+
+        /// <summary>
+        /// Output file name for an operation: <c>name.project</c> becomes <c>name{suffix}.project</c>;
+        /// re-running on <c>name{suffix}.project</c> gives <c>name{suffix}(1).project</c>, then
+        /// <c>(2)</c>, and so on.
+        /// </summary>
+        private string GetSuffixedFileName(string suffix)
         {
             // TODO Implement check if file exists
-            var regex1 = new Regex(@"_opt\.project$");
-            var regex2 = new Regex(@"_opt\((\d*)\)\.project$");
+            var escaped = Regex.Escape(suffix);
+            var plain = new Regex($@"{escaped}\.project$");
+            var numbered = new Regex($@"{escaped}\((\d*)\)\.project$");
 
-            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
+            if (plain.IsMatch(_source))
             {
-                return _source.Replace(".project", "_opt.project");
+                return plain.Replace(_source, $"{suffix}(1).project");
             }
 
-            if (regex1.IsMatch(_source))
+            var match = numbered.Match(_source);
+
+            if (!match.Success)
             {
-                return regex1.Replace(_source, "_opt(1).project");
+                return _source.Replace(".project", $"{suffix}.project");
             }
 
-            var collection = regex2.Matches(_source);
-            var version = int.Parse(collection[0].Groups[1].Value);
+            var version = int.Parse(match.Groups[1].Value);
 
-            return regex2.Replace(_source, $"_opt({version + 1}).project");
-        }
-
-        private string GetRenamedFileName()
-        {
-            var regex1 = new Regex(@"_ren\.project$");
-            var regex2 = new Regex(@"_ren\((\d*)\)\.project$");
-
-            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
-            {
-                return _source.Replace(".project", "_ren.project");
-            }
-
-            if (regex1.IsMatch(_source))
-            {
-                return regex1.Replace(_source, "_ren(1).project");
-            }
-
-            var collection = regex2.Matches(_source);
-            var version = int.Parse(collection[0].Groups[1].Value);
-
-            return regex2.Replace(_source, $"_ren({version + 1}).project");
-        }
-
-        private string GetGrooveMillFileName()
-        {
-            var regex1 = new Regex(@"_gm\.project$");
-            var regex2 = new Regex(@"_gm\((\d*)\)\.project$");
-
-            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
-            {
-                return _source.Replace(".project", "_gm.project");
-            }
-
-            if (regex1.IsMatch(_source))
-            {
-                return regex1.Replace(_source, "_gm(1).project");
-            }
-
-            var collection = regex2.Matches(_source);
-            var version = int.Parse(collection[0].Groups[1].Value);
-
-            return regex2.Replace(_source, $"_gm({version + 1}).project");
-        }
-
-        private string GetBoreMillFileName()
-        {
-            var regex1 = new Regex(@"_bm\.project$");
-            var regex2 = new Regex(@"_bm\((\d*)\)\.project$");
-
-            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
-            {
-                return _source.Replace(".project", "_bm.project");
-            }
-
-            if (regex1.IsMatch(_source))
-            {
-                return regex1.Replace(_source, "_bm(1).project");
-            }
-
-            var collection = regex2.Matches(_source);
-            var version = int.Parse(collection[0].Groups[1].Value);
-
-            return regex2.Replace(_source, $"_bm({version + 1}).project");
-        }
-
-        private string GetMillOrderFileName()
-        {
-            var regex1 = new Regex(@"_mo\.project$");
-            var regex2 = new Regex(@"_mo\((\d*)\)\.project$");
-
-            if (!regex1.IsMatch(_source) && !regex2.IsMatch(_source))
-            {
-                return _source.Replace(".project", "_mo.project");
-            }
-
-            if (regex1.IsMatch(_source))
-            {
-                return regex1.Replace(_source, "_mo(1).project");
-            }
-
-            var collection = regex2.Matches(_source);
-            var version = int.Parse(collection[0].Groups[1].Value);
-
-            return regex2.Replace(_source, $"_mo({version + 1}).project");
+            return numbered.Replace(_source, $"{suffix}({version + 1}).project");
         }
 
         private static Part CreatePart(XElement element)

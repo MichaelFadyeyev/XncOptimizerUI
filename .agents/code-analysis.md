@@ -15,8 +15,8 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 
 ## Core abstractions & services
 
-- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `GetPartsWithXncTurnDiscordance`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `ConvertBoresAndMills`, `OptimizeMillTraversal`, `FullPath`), implemented by `GibLabProjectService`.
-- **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), and mill traversal optimization (`OptimizeMillTraversal`). Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
+- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `GetPartsWithXncTurnDiscordance`, `ReplaceXncPrograms`, `ConvertGroovesAndMills`, `ConvertBoresAndMills`, `OptimizeMillTraversal`, `OffsetMillPaths`, `FullPath`), implemented by `GibLabProjectService`.
+- **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), mill traversal optimization (`OptimizeMillTraversal`), and mill path offset (`OffsetMillPaths`, geometry in `Services/Xnc/MillPathOffsetter.cs` + `PlanarGeometry.cs`). Helpers shared by the rewriters (symbol seeding, expression evaluation, arc-centre reconstruction) live in `Services/Xnc/XncProgramMath.cs`; output file names come from `GetSuffixedFileName`. Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
 - **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `@operation#<id>` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
 
@@ -118,6 +118,26 @@ reversing passes as needed to form a serpentine path. Arcs, multi-segment contou
 and `<mr>` rectangles remain in place and are counted as ignored. Nothing reordered ⇒ returns
 `false`, saves nothing. Output is `_mo.project` with collision numbering and an audit description.
 
+**Offset mill path** — for checked parts, shifts every mill in every XNC program by the
+distance typed next to the "Offset mill path" button (mm, > 0) to the right (`R`) or left (`L`)
+of its traversal direction. Two checkboxes under the input ("open paths", "closed paths / rect. /
+ellipses", both on by default) choose which mills are processed; unselected ones are left
+untouched and logged as skipped (none selected ⇒ nothing runs). Direction comes from the mill head's `fwd` (absent = `true`): closed
+contours, pockets, `<mr>` and `<me>` travel counter-clockwise for `true`, clockwise for `false`;
+open contours travel in authored order for `true`, reversed for `false`. Arc `dir` is geometry
+only (`true` = clockwise sweep); clockwise/right are the operator's view, i.e. the raw XNC frame
+mirrored in Y. `<ms>` contours get every entry/segment end recalculated: lines shift along
+their normal, arcs keep their centre and change radius (`<ma>` `r` updated), corners meet at the
+offset pieces' intersection, and a convex corner whose mitre would reach beyond 4× the offset is
+bridged by an inserted `<mac>` round-join. Open-path ends on or beyond the outline keep their
+perpendicular distance from the crossed edge (e.g. `x="-10"` stays); ends inside the part move
+perpendicularly. `<mr>`: `l`/`w` ± 2×offset, `r` ± offset (never below 0); `<me>`: semi-axes
+± offset. Unchanged values keep their authored text (`dx+10`); changed ones are written as
+numbers rounded to 4 decimals. Mills that don't resolve, reverse, or collapse are left untouched
+and counted as ignored. Nothing offset ⇒ returns `false`, saves nothing. Output is
+`_off.project` with collision numbering and an audit description.
+`GibLabProjectService.OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)`.
+
 **Prep for split along X** — two variants (same core algorithm): (1) hardcoded text label `"_поріз.2х40мм"` (button 1), (2) user-selected label from config (button 2). Algorithm: double width by `2× + SawWidth`, halve count rounding up, double/mirror the drill program's bores. Saw-kerf width is now configurable via `ConfigService.SawWidth` (injected; can be changed at runtime, default 4.0).
 
 **Export parts list** — builds tab- or semicolon-separated list (length, width, count, banding external symbols, name) with blank separator row after parts on sheets named `"Сращ.(2)"` (spliced/joined marker). Outputs to CSV file or clipboard.
@@ -142,7 +162,7 @@ primitives, and `AppViewModel` rebuilds all table rows whenever the selected par
 - ✅ `AutoMapper` and `InitializeAutoMapper()` removed (unused).
 - ✅ Test scaffold placeholder replaced with real `AppViewModelTests`, `GibLabProjectServiceTests`, etc.
 - ✅ `DecimalValidationRule` is now active, wired to the Parts grid's `LengthMin`/`LengthMax`/`WidthMin`/`WidthMax` range-filter bindings (see the Parts grid bullet above); the filter model itself changed from exact-length/width to an inclusive min/max range.
-- ✅ `GibLabProjectService.SeedProgramSymbols` (shared by `ConvertBoresAndMills`, `ConvertGroovesAndMills`, `OptimizeMillTraversal`) only seeded `dx`/`dy`/`dz`; any element whose `dp`/`x`/`y` referenced a custom `<var>` (e.g. `dp="throughBoreDepth"`) crashed conversion with an "unknown identifier" error, even though `XncProgramReader` already resolved the same `<var>` correctly for read-only display. Now registers every `<var>` up front (document order, so a var may reference an earlier one), matching the reader's behavior. Covered by `GibLabProjectServiceTests.ConvertBoresAndMills_BoresToMills_CustomVariableAsBoreDepth` / `TestData/td-bore-depth-variable.project`.
+- ✅ `XncProgramMath.SeedProgramSymbols` (shared by `ConvertBoresAndMills`, `ConvertGroovesAndMills`, `OptimizeMillTraversal`, `OffsetMillPaths`) only seeded `dx`/`dy`/`dz`; any element whose `dp`/`x`/`y` referenced a custom `<var>` (e.g. `dp="throughBoreDepth"`) crashed conversion with an "unknown identifier" error, even though `XncProgramReader` already resolved the same `<var>` correctly for read-only display. Now registers every `<var>` up front (document order, so a var may reference an earlier one), matching the reader's behavior. Covered by `GibLabProjectServiceTests.ConvertBoresAndMills_BoresToMills_CustomVariableAsBoreDepth` / `TestData/td-bore-depth-variable.project`.
 - ✅ **Re-opening a file after `ExecuteOptimizeCommand` silently renamed its first part.** `AppViewModel.OnSelectedPartChanging` auto-saves the *previously* selected part whenever `SelectedPart` changes, by looking it up in whatever document `IProjectService` currently has open. `OpenFile()` called `LoadProject(fullPath, true)` — which switches `IProjectService` to the newly chosen file via `OpenProject` — *before* releasing the old selection; the eventual `SelectedPart = null` inside `ReadItems()` then fired the auto-save against the *new* document using the *stale* `PartVM` from the previous one. After running "Execute Optimize" (which renames grouped parts with a `[groupCode]` prefix in the new `_opt.project` result and re-selects that renamed part), re-opening the original source file replayed that stale renamed name into the freshly-opened document and saved it — corrupting the source on disk, even though `GroupIdenticalElements` itself never writes to the original path. Fixed by releasing `SelectedPart` in `OpenFile()` *before* `LoadProject` switches documents (mirroring the pattern `CloseFile()` already used). Covered by `AppViewModelTests.OpenFile_AfterExecuteOptimize_ReopeningSourceLeavesFirstPartNameUnchanged` and `GibLabProjectServiceTests.GroupIdenticalElements_DoesNotTouchSourceFileOnDisk` / `TestData/td-execute-optimize.project`.
 
 **Still present:**
