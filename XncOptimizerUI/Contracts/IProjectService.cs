@@ -68,6 +68,20 @@ namespace XncOptimizerUI.Contracts
         /// </summary>
         bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds);
 
+        /// <summary>
+        /// Turns the part with the given id to the absolute <paramref name="targetTurn"/>
+        /// (<c>0..3</c> = 0°/90°/180°/270° clockwise): every XNC operation of the part gets
+        /// <c>turn = targetTurn</c>, and its program is rotated from its own current turn - bores,
+        /// grooves and mills recalculated, <c>dx</c>/<c>dy</c> swapped on odd quarter turns, the
+        /// origin kept at the part's top-left corner. When <paramref name="flipEdgeGrooveTcl"/> is
+        /// <c>true</c> an edge groove's <c>c</c> Right/Left flips where its plane's travel
+        /// convention reverses, keeping the groove on its physical side; <c>false</c> keeps
+        /// <c>c</c> as GibLab does. Saves nothing; the caller saves. Returns <c>false</c> (with a
+        /// log entry) when the part has no XNC program, the turn is out of range, or a program
+        /// cannot be rotated; the document is then left unchanged.
+        /// </summary>
+        bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl);
+
         int GetXncProgramsCount(int partId);
 
         /// <summary>

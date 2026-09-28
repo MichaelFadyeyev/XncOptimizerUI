@@ -68,14 +68,16 @@ namespace XncOptimizerUI.MVVM.Views
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AppViewModel.SelectedPart))
+            // A new part or a new turn changes the drawing's aspect: back to fit-to-view.
+            if (e.PropertyName == nameof(AppViewModel.SelectedPart)
+                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn))
             {
                 _partPreviewZoom = 1;
                 RenderPart(_viewModel.SelectedPart);
                 PartPreviewScrollViewer.ScrollToHome();
             }
             else if (e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
-                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn)
+                || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayWidth)
                 || e.PropertyName == nameof(AppViewModel.SelectedXncPrograms))
             {
                 RenderPart(_viewModel.SelectedPart);

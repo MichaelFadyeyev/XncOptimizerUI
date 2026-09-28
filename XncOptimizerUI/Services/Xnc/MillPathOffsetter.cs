@@ -1,4 +1,3 @@
-using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -32,8 +31,6 @@ namespace XncOptimizerUI.Services.Xnc
 
         /// <summary>A convex corner whose sharp (mitred) offset reaches farther than this many offset distances from the original vertex is rounded instead.</summary>
         private const double MiterLimit = 4d;
-
-        private const int OutputDecimals = 4;
 
         /// <summary>
         /// Offsets every mill of <paramref name="program"/> whose kind is in <paramref name="kinds"/>;
@@ -590,32 +587,16 @@ namespace XncOptimizerUI.Services.Xnc
         }
 
         private static XElement MakeCentreArc(Primitive arc) => new("mac",
-            new XAttribute("x", Format(arc.End.X)),
-            new XAttribute("y", Format(arc.End.Y)),
-            new XAttribute("cx", Format(arc.Centre!.Value.X)),
-            new XAttribute("cy", Format(arc.Centre!.Value.Y)),
+            new XAttribute("x", FormatNumber(arc.End.X)),
+            new XAttribute("y", FormatNumber(arc.End.Y)),
+            new XAttribute("cx", FormatNumber(arc.Centre!.Value.X)),
+            new XAttribute("cy", FormatNumber(arc.Centre!.Value.Y)),
             new XAttribute("dir", arc.Clockwise ? "true" : "false"));
 
         private static void SetPoint(XElement element, Vec2 value, Vec2 original)
         {
             SetNumber(element, "x", value.X, original.X);
             SetNumber(element, "y", value.Y, original.Y);
-        }
-
-        /// <summary>Writes a changed value; an unchanged one keeps its authored text (e.g. an expression such as <c>dx+10</c>).</summary>
-        private static void SetNumber(XElement element, string attribute, double value, double original)
-        {
-            if (Format(value) != Format(original))
-            {
-                element.SetAttributeValue(attribute, Format(value));
-            }
-        }
-
-        private static string Format(double value)
-        {
-            var rounded = Math.Round(value, OutputDecimals);
-
-            return XmlConvert.ToString(rounded == 0d ? 0d : rounded);
         }
 
         #endregion

@@ -244,13 +244,21 @@ namespace XncOptimizerUI.Services.Xnc
                         CloseContour();
                         SetToolDia(element.GetNameValue(), $"<{tag}>");
 
+                        // Edge bore through-thickness position: m="true" ("middle") pins it to
+                        // dz/2 and no z attribute is needed; otherwise z is required.
+                        double EdgeZ() => ParseBool(element.GetMValue(), false)
+                            ? dz / 2d
+                            : Eval(element.GetZValue(), $"<{tag}> @z");
+
                         var (surface, bx, by, bz) = tag switch
                         {
                             "bf" => (BoreSurface.Face,   Eval(element.GetXValue(), "<bf> @x"), Eval(element.GetYValue(), "<bf> @y"), 0d),
-                            "bl" => (BoreSurface.Left,   0d,                                   Eval(element.GetYValue(), "<bl> @y"), Eval(element.GetZValue(), "<bl> @z")),
-                            "br" => (BoreSurface.Right,  Sym("dx"),                            Eval(element.GetYValue(), "<br> @y"), Eval(element.GetZValue(), "<br> @z")),
-                            "bb" => (BoreSurface.Bottom, Eval(element.GetXValue(), "<bb> @x"), 0d,                                   Eval(element.GetZValue(), "<bb> @z")),
-                            "bt" => (BoreSurface.Top,    Eval(element.GetXValue(), "<bt> @x"), Sym("dy"),                            Eval(element.GetZValue(), "<bt> @z")),
+                            "bl" => (BoreSurface.Left,   0d,                                   Eval(element.GetYValue(), "<bl> @y"), EdgeZ()),
+                            "br" => (BoreSurface.Right,  Sym("dx"),                            Eval(element.GetYValue(), "<br> @y"), EdgeZ()),
+                            // Plane names are visual: <bt> is the screen-top edge (y = 0 in the
+                            // Y-down frame), <bb> the screen-bottom edge (y = dy).
+                            "bb" => (BoreSurface.Bottom, Eval(element.GetXValue(), "<bb> @x"), Sym("dy"),                            EdgeZ()),
+                            "bt" => (BoreSurface.Top,    Eval(element.GetXValue(), "<bt> @x"), 0d,                                   EdgeZ()),
                             _ => throw new XncProgramFormatException($"<{tag}> is not a bore element.")
                         };
 

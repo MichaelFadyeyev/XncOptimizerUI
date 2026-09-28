@@ -49,6 +49,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private List<PartVM> _allParts = [];
         private int _sourceXncCount;
 
+        // Set while SelectedPartRotation is updated from the model (part selection, rollback),
+        // so the change is not mistaken for an operator request to rotate the part.
+        private bool _isSyncingRotation;
+
         public AppViewModel(
             IProjectService projectService,
             IConfigService config,
@@ -64,6 +68,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             _windowTitle = _assembly + " - No file selected";
             _labelsToProcess = labelsToProcess;
             _selectedLabel = selectedLabel;
+            _neverFlipTclOnTurn = config.NeverFlipTclOnTurn;
 
             _boundsNormalizeTimer = new DispatcherTimer
             {
@@ -225,42 +230,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         partial void OnSelectedPartChanged(PartVM? value)
         {
-            string? readError = null;
-            IReadOnlyList<XncProgram> programs = [];
-
-            if (value is not null && !string.IsNullOrEmpty(FullPath))
-            {
-                try
-                {
-                    programs = _projectService.ReadXncPrograms(value.Id);
-                }
-                catch (Exception e)
-                {
-                    readError = e.Message;
-                }
-            }
-
-            SelectedPartPrograms = BuildSelectedPartPrograms(value, programs, readError);
-            SelectedXncPrograms = programs;
-            UpdateSelectedPartDisplay(value, programs);
-
-            CheckedBores.Clear();
-            CheckedGrooves.Clear();
-            CheckedMillingContours.Clear();
-            CheckedMillingEllipses.Clear();
-            CheckedMillingRectangles.Clear();
-            SelectedPartBores = BuildSelectedPartBoreRows(programs);
-            HasSelectedPartBores = SelectedPartBores.Count > 0;
-            SelectedPartGrooves = BuildSelectedPartGrooveRows(programs);
-            HasSelectedPartGrooves = SelectedPartGrooves.Count > 0;
-            SelectedPartTools = BuildSelectedPartToolRows(programs);
-            HasSelectedPartTools = SelectedPartTools.Count > 0;
-            SelectedPartMillingContours = BuildSelectedPartMillingContourRows(programs);
-            HasSelectedPartMillingContours = SelectedPartMillingContours.Count > 0;
-            SelectedPartMillingEllipses = BuildSelectedPartMillingEllipseRows(programs);
-            HasSelectedPartMillingEllipses = SelectedPartMillingEllipses.Count > 0;
-            SelectedPartMillingRectangles = BuildSelectedPartMillingRectangleRows(programs);
-            HasSelectedPartMillingRectangles = SelectedPartMillingRectangles.Count > 0;
+            RefreshSelectedPartMachining(value);
         }
 
         /// <summary>
@@ -342,6 +312,43 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         [ObservableProperty]
         private string _selectedPartTurnText = string.Empty;
+
+        /// <summary>
+        /// Orientation the rotation buttons show. Follows the selected part's first program turn;
+        /// an operator change rotates every XNC program of the part to it and saves the file.
+        /// </summary>
+        [ObservableProperty]
+        private PartTurn _selectedPartRotation;
+
+        partial void OnSelectedPartRotationChanged(PartTurn oldValue, PartTurn newValue)
+        {
+            if (_isSyncingRotation)
+            {
+                return;
+            }
+
+            if (!RotateSelectedPart(newValue))
+            {
+                SyncSelectedPartRotation(oldValue);
+            }
+        }
+
+        /// <summary>Whether the rotation buttons are enabled: a part with at least one XNC program is selected.</summary>
+        [ObservableProperty]
+        private bool _canRotateSelectedPart;
+
+        /// <summary>
+        /// Compatibility switch, persisted in the application options: part rotation keeps every
+        /// edge groove's TCL (<c>c</c>) as authored, like GibLab, instead of flipping Right/Left
+        /// to keep the groove on its physical side. Off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _neverFlipTclOnTurn;
+
+        partial void OnNeverFlipTclOnTurnChanged(bool value)
+        {
+            _config.UpdateNeverFlipTclOnTurn(value);
+        }
 
         [ObservableProperty]
         private BandVM? _selectedBand;
@@ -1465,6 +1472,8 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 SelectedPartDisplayWidth = 0;
                 SelectedPartTurn = null;
                 SelectedPartTurnText = string.Empty;
+                CanRotateSelectedPart = false;
+                SyncSelectedPartRotation(PartTurn.Deg0);
                 return;
             }
 
@@ -1494,7 +1503,115 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SelectedPartDisplayLength = length;
             SelectedPartDisplayWidth = width;
             SelectedPartTurn = turn;
+            CanRotateSelectedPart = programs.Count > 0;
+            SyncSelectedPartRotation(ToPartTurn(turn ?? 0));
         }
+
+        /// <summary>
+        /// Re-reads the XNC programs of <paramref name="part"/> and rebuilds everything derived
+        /// from them: programs summary, preview inputs, rotation state and the machining tables.
+        /// </summary>
+        private void RefreshSelectedPartMachining(PartVM? part)
+        {
+            string? readError = null;
+            IReadOnlyList<XncProgram> programs = [];
+
+            if (part is not null && !string.IsNullOrEmpty(FullPath))
+            {
+                try
+                {
+                    programs = _projectService.ReadXncPrograms(part.Id);
+                }
+                catch (Exception e)
+                {
+                    readError = e.Message;
+                }
+            }
+
+            SelectedPartPrograms = BuildSelectedPartPrograms(part, programs, readError);
+            SelectedXncPrograms = programs;
+            UpdateSelectedPartDisplay(part, programs);
+
+            CheckedBores.Clear();
+            CheckedGrooves.Clear();
+            CheckedMillingContours.Clear();
+            CheckedMillingEllipses.Clear();
+            CheckedMillingRectangles.Clear();
+            SelectedPartBores = BuildSelectedPartBoreRows(programs);
+            HasSelectedPartBores = SelectedPartBores.Count > 0;
+            SelectedPartGrooves = BuildSelectedPartGrooveRows(programs);
+            HasSelectedPartGrooves = SelectedPartGrooves.Count > 0;
+            SelectedPartTools = BuildSelectedPartToolRows(programs);
+            HasSelectedPartTools = SelectedPartTools.Count > 0;
+            SelectedPartMillingContours = BuildSelectedPartMillingContourRows(programs);
+            HasSelectedPartMillingContours = SelectedPartMillingContours.Count > 0;
+            SelectedPartMillingEllipses = BuildSelectedPartMillingEllipseRows(programs);
+            HasSelectedPartMillingEllipses = SelectedPartMillingEllipses.Count > 0;
+            SelectedPartMillingRectangles = BuildSelectedPartMillingRectangleRows(programs);
+            HasSelectedPartMillingRectangles = SelectedPartMillingRectangles.Count > 0;
+        }
+
+        /// <summary>
+        /// Turns the selected part's XNC programs to <paramref name="target"/>, saves the file in
+        /// place (together with any pending grid edit of the part) and refreshes the preview and
+        /// tables. Returns <c>false</c> when nothing was rotated, so the caller restores the buttons.
+        /// </summary>
+        private bool RotateSelectedPart(PartTurn target)
+        {
+            var part = SelectedPart;
+
+            if (part is null || string.IsNullOrEmpty(FullPath))
+            {
+                return false;
+            }
+
+            var log = Log;
+            _projectService.UpdatePart(ref log, part.Part);
+
+            if (!_projectService.RotatePart(ref log, part.Id, (int)target, flipEdgeGrooveTcl: !NeverFlipTclOnTurn))
+            {
+                Log = log;
+                return false;
+            }
+
+            log += SaveRotatedPart(part, target);
+            Log = log;
+            RefreshSelectedPartMachining(part);
+
+            return true;
+        }
+
+        /// <summary>Saves the rotated document; returns the log line describing the outcome.</summary>
+        private string SaveRotatedPart(PartVM part, PartTurn target)
+        {
+            var degrees = (int)target * 90;
+
+            try
+            {
+                _projectService.SaveProject();
+                return $"Part \"{part.Name}\" rotated to {degrees}°, saved: {DateTime.Now.ToLocalTime()}\n";
+            }
+            catch (Exception e)
+            {
+                return $"***\nPart \"{part.Name}\" rotated to {degrees}°, but saving failed: {e.Message}\n";
+            }
+        }
+
+        private void SyncSelectedPartRotation(PartTurn value)
+        {
+            _isSyncingRotation = true;
+
+            try
+            {
+                SelectedPartRotation = value;
+            }
+            finally
+            {
+                _isSyncingRotation = false;
+            }
+        }
+
+        private static PartTurn ToPartTurn(int turn) => (PartTurn)(((turn % 4) + 4) % 4);
 
         private static string DescribeSegments(IReadOnlyList<XncMillingSegment> segments)
         {

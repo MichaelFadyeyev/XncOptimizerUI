@@ -92,6 +92,17 @@ namespace XncOptimizerUI.Services
             get { return _options.LabelsToProcess; }
         }
 
+        public bool NeverFlipTclOnTurn
+        {
+            get { return _options.NeverFlipTclOnTurn; }
+        }
+
+        public void UpdateNeverFlipTclOnTurn(bool value)
+        {
+            _options.NeverFlipTclOnTurn = value;
+            SaveOptions();
+        }
+
         public void AddLabelToProcess(string newLabel)
         {
             _options.LabelsToProcess.Add(newLabel);

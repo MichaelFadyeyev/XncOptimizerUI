@@ -982,6 +982,85 @@ namespace XncOptimizerUI.Services
             _ => "open and closed",
         };
 
+        /// <summary>
+        /// Turns every XNC program of the part to the absolute <paramref name="targetTurn"/>
+        /// (geometry in <see cref="XncProgramRotator"/>). All programs are rotated first and only
+        /// then written back, so a failing program leaves the document untouched. Saves nothing.
+        /// </summary>
+        public bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl)
+        {
+            if (_project == null)
+            {
+                log += "***\nNo project is opened.\n";
+                return false;
+            }
+
+            if (targetTurn is < 0 or > 3)
+            {
+                log += $"***\nTurn must be 0..3 (was {targetTurn}).\n";
+                return false;
+            }
+
+            var partOps = GetXncOperations().Where(o => o.GetPart()?.GetIdIntValue() == partId).ToList();
+
+            if (partOps.Count == 0)
+            {
+                log += $"***\nPart id={partId} has no XNC program to rotate.\n";
+                return false;
+            }
+
+            try
+            {
+                partOps
+                    .Select(op => (Operation: op, Program: RotateOperationProgram(op, targetTurn, flipEdgeGrooveTcl)))
+                    .ToList()
+                    .ForEach(r => ApplyRotatedProgram(r.Operation, r.Program, targetTurn));
+            }
+            catch (Exception e)
+            {
+                log += $"***\nPart id={partId} rotation failed: {e.Message}\n";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>Rotated program text of one operation, or <c>null</c> when it already has the target turn.</summary>
+        private static string? RotateOperationProgram(XElement operation, int targetTurn, bool flipEdgeGrooveTcl)
+        {
+            var quarterTurns = XncProgramRotator.NormalizeQuarterTurns(targetTurn - ParseTurn(operation.GetTurnValue()));
+
+            if (quarterTurns == 0)
+            {
+                return null;
+            }
+
+            var programAttribute = operation.GetProgram()
+                ?? throw new Exception("XNC operation has no 'program' attribute.");
+            var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+            var program = programXml.Element("program")
+                ?? throw new Exception("XNC program has no <program> root element.");
+
+            XncProgramRotator.RotateProgram(program, quarterTurns, flipEdgeGrooveTcl);
+
+            return programXml.Declaration is { } declaration
+                ? declaration + program.ToString()
+                : program.ToString();
+        }
+
+        private static void ApplyRotatedProgram(XElement operation, string? program, int targetTurn)
+        {
+            if (program != null)
+            {
+                operation.GetProgram()!.Value = program;
+            }
+
+            operation.SetTurnValue(targetTurn);
+        }
+
+        private static int ParseTurn(string? raw) =>
+            int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var turn) ? turn : 0;
+
         // --- Parallel-mill traversal ordering ------------------------------------------------
         // A milling "pass" here is an <ms> entry followed by exactly one straight <ml> segment
         // that runs parallel to X or Y and is not a pocket (c="3"). Passes that share a tool

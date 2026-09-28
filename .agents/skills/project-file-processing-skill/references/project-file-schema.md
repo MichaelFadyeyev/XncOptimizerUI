@@ -145,7 +145,7 @@ second op can have `elLength="0"`, `count="0"` and **no `<part>` child**. Parts 
 |---|---|
 | `program` | the whole CNC program as an **XML-entity-escaped XML sub-document** (`&lt; &gt; &quot;`), single-level escaping. Only place machining geometry lives. See `xnc-program-format.md`. |
 | `side` | `true` / `false` — which panel face; every bore/groove/mill inside inherits it |
-| `turn` | face rotation code (`0`; `1` seen with a rotated program `dx`/`dy`) |
+| `turn` | face rotation code `0..3` (×90° clockwise; `1` seen with a rotated program `dx`/`dy`); rewritten by `RotatePart`, see `xnc-program-format.md` §6.9 |
 | `mirHor`, `mirVert` | mirror flags |
 | `code`, `typeName` | program / part identifiers |
 | `count` | copies |
@@ -184,6 +184,8 @@ second op can have `elLength="0"`, `count="0"` and **no `<part>` child**. Parts 
 | `td-programs.project` | coverage: `<tool>`, `<ms>/<ml>`, `<bl>`, `<gr>` (c=0/1/2), `<var>`, `<mac>` circle, `<mr>`; 2nd op = `<bf>` face bores |
 | `td.project` | default base fixture for most `GibLabProjectServiceTests` — large multi-part real-world export, thousands of `<bf>/<bt>/<bb>/<bl>/<br>` bores and `<mac>`/`<ms>` mills, `turn` 0/1/2 across parts |
 | `td-2.project` | variant of `td.project` (same shape/scale); not wired into automated tests — dev/manual fixture |
+| `td-rotation.project` | `RotatePart`: part 2 = op 10 (`side="true"`, every element kind incl. bore arrays, all four edge bores, `gr` p=0/3/2, `ms+ml`, `ms+mac+ma`, `mr` at a `<var>` x, `me`, `dp="dx"`) + op 11 back-side `bf`; part 3 = discordant ops (`turn` 0 and 1, same bore); no CS op (so `ReadParts` cannot resolve sheets) |
+| `td-bl-65-bore.project` | one `<bl y="65" m="true">` middle bore on `500×200×18` (no `z` ⇒ `z = dz/2 = 9`); user reference for the Y-down / visual-plane-name duality and `RotatePart` (→ `bt x=135`) |
 | `td-turn-discordance.project` | `GetPartsWithXncTurnDiscordance`: panel-A has two XNC ops with discordant `turn` (0/1), panel-B two ops both `turn="2"` (consistent), panel-C a single op |
 | `td-bores-large.project` | `ConvertBoresAndMills` (Bores->Mills / round-trip): 2 `<bf>` face bores, tools `Bore40` (d=40, blind `dp="12"` vs `dz="19"`) and `Bore8` (d=8, below the 35mm threshold) |
 | `td-bores-displaying.project` | 2 `<bf>` face bores (tool `Bore40`, d=40); dev/manual fixture for part-preview bore display, not wired into automated tests |

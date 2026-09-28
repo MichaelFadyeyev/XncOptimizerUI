@@ -8,6 +8,11 @@ namespace XncOptimizerUI.Contracts
 
         IReadOnlyList<string> LabelsToProcess { get; }
 
+        /// <summary>Part rotation never flips an edge groove's TCL (<c>c</c>) - GibLab's behavior.</summary>
+        bool NeverFlipTclOnTurn { get; }
+
+        void UpdateNeverFlipTclOnTurn(bool value);
+
         string GetLastLabelToProcessSelected();
 
         void AddLabelToProcess(string newLabel);

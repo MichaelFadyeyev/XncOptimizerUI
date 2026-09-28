@@ -610,6 +610,114 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SelectingPart_SyncsRotationButtonsWithoutRotating()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg180));
+                Assert.That(vm.CanRotateSelectedPart, Is.True);
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.RotatePart)));
+            });
+        }
+
+        [Test]
+        public void SelectingPart_WithNoPrograms_DisablesRotation()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.CanRotateSelectedPart, Is.False);
+                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg0));
+            });
+        }
+
+        [Test]
+        public void ChangingRotation_RotatesSavesAndRefreshesPreview()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            _projectService.XncProgramsAfterRotate = [new XncProgram { Side = true, Dx = 800, Dy = 400, Dz = 19, Turn = 1 }];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var savesBefore = _projectService.SaveProjectCount;
+
+            vm.SelectedPartRotation = PartTurn.Deg90;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.LastRotatePartId, Is.EqualTo(vm.SelectedPart!.Id));
+                Assert.That(_projectService.LastRotateTargetTurn, Is.EqualTo(1));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(800));
+                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(400));
+                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("90°"));
+                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg90));
+                Assert.That(vm.Log, Does.Contain("rotated to 90°, saved"));
+            });
+        }
+
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        public void ChangingRotation_PassesTclFlipFromOption(bool neverFlip, bool expectedFlip)
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            _config.NeverFlipTclOnTurn.Returns(neverFlip);
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.SelectedPartRotation = PartTurn.Deg90;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.NeverFlipTclOnTurn, Is.EqualTo(neverFlip));
+                Assert.That(_projectService.LastRotateFlipEdgeGrooveTcl, Is.EqualTo(expectedFlip));
+            });
+        }
+
+        [Test]
+        public void ChangingNeverFlipTclOnTurn_PersistsToOptions()
+        {
+            var vm = CreateViewModel();
+
+            vm.NeverFlipTclOnTurn = true;
+
+            _config.Received(1).UpdateNeverFlipTclOnTurn(true);
+        }
+
+        [Test]
+        public void ChangingRotation_WhenRotationFails_RestoresButtonsAndSavesNothing()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            _projectService.RotatePartResult = false;
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var savesBefore = _projectService.SaveProjectCount;
+
+            vm.SelectedPartRotation = PartTurn.Deg270;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg0));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+            });
+        }
+
+        [Test]
         public void SelectingPart_ToNull_ClearsDisplayDimsAndTurn()
         {
             SeedTwoParts();

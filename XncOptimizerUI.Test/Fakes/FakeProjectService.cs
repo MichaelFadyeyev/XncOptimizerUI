@@ -31,6 +31,10 @@ namespace XncOptimizerUI.Test.Fakes
         public bool OptimizeMillTraversalResult { get; set; } = true;
         public bool OffsetMillPathsResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
+        public bool RotatePartResult { get; set; } = true;
+
+        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="RotatePart"/>; <c>null</c> keeps them.</summary>
+        public IReadOnlyList<XncProgram>? XncProgramsAfterRotate { get; set; }
 
         public List<string> Calls { get; } = [];
 
@@ -121,6 +125,27 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return OffsetMillPathsResult;
+        }
+
+        public int? LastRotatePartId { get; private set; }
+        public int? LastRotateTargetTurn { get; private set; }
+
+        public bool? LastRotateFlipEdgeGrooveTcl { get; private set; }
+
+        public bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl)
+        {
+            Calls.Add(nameof(RotatePart));
+            LastRotatePartId = partId;
+            LastRotateTargetTurn = targetTurn;
+            LastRotateFlipEdgeGrooveTcl = flipEdgeGrooveTcl;
+            log += LogToAppend;
+
+            if (RotatePartResult && XncProgramsAfterRotate is { } rotated)
+            {
+                XncPrograms = rotated;
+            }
+
+            return RotatePartResult;
         }
 
         public int GetXncProgramsCount(int partId)

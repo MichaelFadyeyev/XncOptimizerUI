@@ -22,6 +22,7 @@ All `.project` I/O goes through **`GibLabProjectService`** (behind **`IProjectSe
 | `bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)` | see §Conversions; saves `*_gm.project` |
 | `bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)` | face bore (Ø>35) <-> round mill (fixed 6 mm `Mill6`); see §Conversions; saves `*_bm.project` |
 | `bool OptimizeMillTraversal(ref string log, IList<Part> parts)` | greedy nearest-neighbour re-sequence of straight axis-parallel passes; saves `*_mo.project` |
+| `bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl)` | set every XNC op of the part to absolute `turn` 0..3 and rotate its program from its own turn (`Services/Xnc/XncProgramRotator.cs`); `flipEdgeGrooveTcl=false` keeps edge-groove `c` as GibLab does; **saves nothing** — the caller `SaveProject()`s in place |
 | `int GetXncProgramsCount(int partId)` | count XNC ops for a part |
 | `IReadOnlyList<string> GetPartsWithXncTurnDiscordance()` | names of parts whose XNC operations disagree on `turn` (orientation vs. machine origin) |
 | `IReadOnlyList<XncProgram> ReadXncPrograms(int partId)` | parse every XNC program for a part (read-only model) |

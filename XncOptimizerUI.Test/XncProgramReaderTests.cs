@@ -147,6 +147,55 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void Reads_middleEdgeBore_withZAtHalfThickness()
+        {
+            // td-bl-65-bore.project: <bl y="65" m="true"> on dz=18, no z attribute.
+            var bore = ReadPrograms("td-bl-65-bore.project").Single().Bores.Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bore.Surface, Is.EqualTo(BoreSurface.Left));
+                Assert.That(bore.Y, Is.EqualTo(65));
+                Assert.That(bore.Z, Is.EqualTo(9));
+            });
+        }
+
+        [TestCase("true", "4", 9d)]   // m wins over an explicit z
+        [TestCase("false", "4", 4d)]
+        [TestCase(null, "4", 4d)]
+        public void Reads_edgeBoreZ_fromMiddleFlagOrZAttribute(string? middle, string z, double expectedZ)
+        {
+            var bore = new XElement("bt",
+                new XAttribute("x", "100"), new XAttribute("z", z), new XAttribute("dp", "30"), new XAttribute("name", "Bore8"));
+
+            if (middle != null)
+            {
+                bore.SetAttributeValue("m", middle);
+            }
+
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    $"<program dx=\"500\" dy=\"200\" dz=\"18\"><tool name=\"Bore8\" d=\"8\"/>{bore}</program>"));
+
+            Assert.That(XncProgramReader.Read(operation).Bores.Single().Z, Is.EqualTo(expectedZ));
+        }
+
+        [Test]
+        public void Reads_edgeBoreWithoutMiddleFlagOrZ_Throws()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"500\" dy=\"200\" dz=\"18\"><tool name=\"Bore8\" d=\"8\"/>"
+                    + "<bl y=\"65\" dp=\"30\" m=\"false\" name=\"Bore8\"/></program>"));
+
+            Assert.That(() => XncProgramReader.Read(operation), Throws.InstanceOf<XncProgramFormatException>());
+        }
+
+        [Test]
         public void Reads_faceBores_fromTheSecondProgram()
         {
             var bores = ReadFixture()[1].Bores;

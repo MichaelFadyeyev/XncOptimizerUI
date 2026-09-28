@@ -6,6 +6,7 @@
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:local="clr-namespace:XncOptimizerUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:partPreview="clr-namespace:XncOptimizerUI.MVVM.Views.PartPreview"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:validators="clr-namespace:XncOptimizerUI.MVVM.Validators"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
@@ -124,8 +125,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="60" />
-
                 </Grid.RowDefinitions>
 
                 <Button
@@ -157,16 +156,26 @@
                     IsEnabled="False"
                     Style="{StaticResource FileOpsButtonStyle}" />
 
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="2"
-                    Margin="2,0,2,0"
-                    Content="Options"
-                    IsEnabled="False"
-                    Style="{StaticResource FileOpsButtonStyle}" />
-
             </Grid>
+
+            <!--  Options panel: options dialog button (inactive for now) and persisted app options  -->
+            <Border x:Name="OptionsBorder" Style="{StaticResource MenuGroupBorder}">
+                <StackPanel x:Name="OptionsPanel">
+                    <Button
+                        x:Name="OptionsButton"
+                        Content="Options"
+                        IsEnabled="False"
+                        Style="{StaticResource FileOpsButtonStyle}" />
+
+                    <!--  Rotation option: keep edge groove TCL as GibLab does  -->
+                    <CheckBox
+                        x:Name="NeverFlipTclOnTurnCheckBox"
+                        Margin="2,4,2,0"
+                        IsChecked="{Binding NeverFlipTclOnTurn}">
+                        <TextBlock Style="{StaticResource TextWrappingStyle}" Text="Never flips TCL on program turning (keep GibLab behavior)" />
+                    </CheckBox>
+                </StackPanel>
+            </Border>
 
             <!--  Group by XNC panel  -->
             <StackPanel Margin="2,2,2,2">
@@ -826,27 +835,40 @@
                             <ColumnDefinition Width="350" MinWidth="160" />
                         </Grid.ColumnDefinitions>
 
-                        <!--  Preview  -->
-                        <Border
-                            x:Name="PartPreviewBorder"
-                            Grid.Column="0"
-                            Background="{StaticResource PartPreviewBackgroundBrush}"
-                            BorderBrush="{StaticResource PartOutlineBrush}"
-                            BorderThickness="1">
-                            <Grid>
-                                <ScrollViewer
-                                    x:Name="PartPreviewScrollViewer"
-                                    HorizontalScrollBarVisibility="Visible"
-                                    VerticalScrollBarVisibility="Visible">
-                                    <Canvas
-                                        x:Name="PartCanvas"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Top"
-                                        Background="Transparent" />
-                                </ScrollViewer>
-                                <Canvas x:Name="PreviewOverlayCanvas" IsHitTestVisible="False" />
-                            </Grid>
-                        </Border>
+                        <!--  Preview area: part preview and fixed-width rotation buttons column  -->
+                        <Grid x:Name="PartPreviewArea" Grid.Column="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="{StaticResource PartRotationColumnWidth}" />
+                            </Grid.ColumnDefinitions>
+                            <!--  Preview  -->
+                            <Border
+                                x:Name="PartPreviewBorder"
+                                Grid.Column="0"
+                                Background="{StaticResource PartPreviewBackgroundBrush}"
+                                BorderBrush="{StaticResource PartOutlineBrush}"
+                                BorderThickness="1">
+                                <Grid>
+                                    <ScrollViewer
+                                        x:Name="PartPreviewScrollViewer"
+                                        HorizontalScrollBarVisibility="Visible"
+                                        VerticalScrollBarVisibility="Visible">
+                                        <Canvas
+                                            x:Name="PartCanvas"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Background="Transparent" />
+                                    </ScrollViewer>
+                                    <Canvas x:Name="PreviewOverlayCanvas" IsHitTestVisible="False" />
+                                </Grid>
+                            </Border>
+
+                            <!--  Part rotation: 0° / 90° / 180° / 270° buttons stacked vertically  -->
+                            <partPreview:PartRotationPanel
+                                x:Name="PartRotationPanel"
+                                Grid.Column="1"
+                                Margin="0,4,0,0"
+                                VerticalAlignment="Top" />                        </Grid>
 
                         <GridSplitter
                             Grid.Column="1"

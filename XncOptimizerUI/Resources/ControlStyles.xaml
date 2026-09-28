@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--  Part rotation panel: metrics  -->
+    <GridLength x:Key="PartRotationColumnWidth">56</GridLength>
+
+    <!--
+        Radio button drawn as a toggle button: stays "pressed" while checked, until another
+        button of the same group is checked
+    -->
+    <Style
+        x:Key="RotationToggleRadioStyle"
+        BasedOn="{StaticResource {x:Type ToggleButton}}"
+        TargetType="RadioButton">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Focusable" Value="False" />
+        <Style.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="FontWeight" Value="Bold" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

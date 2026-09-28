@@ -73,11 +73,11 @@ per selected part. Deferred:
   deferred: milling
   contours/rectangles and pockets, sourced from the same
   `IProjectService.ReadXncPrograms(partId)` result (`AppViewModel.SelectedXncPrograms`).
-  When they land, note the overlay coordinates must be rotated into the display frame
-  by `XncProgram.Turn` (the face rectangle is already sized from the turned `dx`/`dy`,
-  but per-feature `x`/`y` are still in each program's own frame) - bores and groovings
-  are unaffected only because the sample data used so far has `turn="0"`.
-- **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
+  Each program's `x`/`y` are already in its own turned frame (`dx`/`dy` given for the turn),
+  and "Rotate part" (`RotatePart`, card 031) rewrites the coordinates whenever the turn
+  changes, so overlays draw program coordinates directly. A part whose programs disagree
+  on `turn` still overlays inconsistent frames until it is rotated once (rotation brings
+  every program to the same turn).- **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
 

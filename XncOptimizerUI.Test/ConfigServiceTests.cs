@@ -95,6 +95,17 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void NeverFlipTclOnTurn_DefaultsToFalseAndPersistsUpdate()
+        {
+            var first = new ConfigService(_path);
+            Assert.That(first.NeverFlipTclOnTurn, Is.False);
+
+            first.UpdateNeverFlipTclOnTurn(true);
+
+            Assert.That(new ConfigService(_path).NeverFlipTclOnTurn, Is.True);
+        }
+
+        [Test]
         public void UpdateLastLabelToProcessSelectedIndex_WithUnknownLabel_DoesNotPersistNegativeIndex()
         {
             var first = new ConfigService(_path);

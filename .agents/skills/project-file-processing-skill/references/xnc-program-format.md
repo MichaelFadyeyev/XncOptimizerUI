@@ -52,7 +52,7 @@ bores only. **One XNC operation per machined face.**
 | attribute | meaning |
 |---|---|
 | `side` | boolean string `true` / `false` — which panel face this program machines. Every bore / groove / milling inside inherits this as its "side"; the sub-elements have no `side` of their own. |
-| `turn` | part orientation relative to the XNC machine coordinate origin: `0`→0°, `1`→90°, `2`→180°, `3`→270°, **clockwise**. The part is rotated about the machine-coords origin; `<program>` `dx`/`dy` are already given in this turned frame. Absent / unparseable → `0`. (seen `0`) |
+| `turn` | part orientation relative to the XNC machine coordinate origin: `0`→0°, `1`→90°, `2`→180°, `3`→270°, **clockwise**. The part is rotated about the machine-coords origin; `<program>` `dx`/`dy` are already given in this turned frame. Absent / unparseable → `0`. Rewritten by `RotatePart` (§6.9). |
 | `mirHor`, `mirVert` | mirror flags (seen `false`) |
 | `code`, `typeName` | part / program identifiers, e.g. `10_08_06x001x1`, `10.08.06.ПАН-600` |
 | `countBore`, `countCut`, `countMill` | summary counters (informational) |
@@ -176,11 +176,17 @@ No length / tool-number / spindle data is present. `d` is always a numeric liter
 **The machined surface ("side") is the element name**, not an attribute. The panel face
 (for `<bf>`) is the operation's `side`.
 
+**Top/bottom duality (confirmed with the user).** Coordinates are Y-down from the part's
+top-left corner (a bore at `y=35` is drawn above one at `y=65`), but plane names are visual:
+`<bt>` (and groove `p="3"`) is the screen-**top** edge, i.e. `y = 0`; `<bb>` (groove `p="4"`)
+is the screen-**bottom** edge, `y = dy`. `TestData/td-grooving-preview.project` agrees (`p=3`
+grooves run at `y=0`, `p=4` at `y=200`).
+
 | element | surface | fixed coordinate | position given by | `td-2.project` count |
 |---|---|---|---|---|
 | `bf` | panel **face** (vertical drill) | — (face = operation `side`) | `x`, `y` — centre on the face | 4150 |
-| `bt` | **top** edge (`y = dy`), runs along X | `y = dy` | `x` (along edge), `z` (through thickness) | 384 |
-| `bb` | **bottom** edge (`y = 0`), runs along X | `y = 0` | `x`, `z` | 684 |
+| `bt` | **top** edge (screen top, `y = 0`), runs along X | `y = 0` | `x` (along edge), `z` (through thickness) | 384 |
+| `bb` | **bottom** edge (screen bottom, `y = dy`), runs along X | `y = dy` | `x`, `z` | 684 |
 | `bl` | **left** edge (`x = 0`), runs along Y | `x = 0` | `y` (along edge), `z` (through thickness) | 595 |
 | `br` | **right** edge (`x = dx`), runs along Y | `x = dx` | `y`, `z` | 570 |
 
@@ -194,13 +200,13 @@ Attributes:
 | `name` | all | tool reference → `<tool>` |
 | `dp` | all | **drill depth**, mm, into the surface |
 | `x`, `y` | `bf` | **centre** of the hole on the face |
-| `y`, `z` | `bl`, `br` | `y` = distance along the edge; `z` = through-thickness position of the horizontal hole |
-| `x`, `z` | `bt`, `bb` | `x` = distance along the edge; `z` = through-thickness position |
+| `y`, `z` | `bl`, `br` | `y` = distance along the edge; `z` = through-thickness position of the horizontal hole (omitted when `m="true"`) |
+| `x`, `z` | `bt`, `bb` | `x` = distance along the edge; `z` = through-thickness position (omitted when `m="true"`) |
 | `ver` | `bl` (seen `2`) | element schema version |
 | `ac` | all (seen `1`) | repeated-bore **array count**, integer, `1` by default (no repetition) |
 | `as` | all | repeated-bore **array step**, mm, `null`/absent by default |
 | `av` | all (bool, seen `false`) | repeated-bore **array is vertical** — step direction for the array (`ac`/`as`), unrelated to hole depth |
-| `m` | `bl` (bool, seen `false`) | mirrored flag |
+| `m` | edge bores `bt`/`bb`/`bl`/`br` (bool) | **middle** flag (confirmed by the user): `true` ⇒ the hole sits at mid-thickness, `z = dz/2`, and no `z` attribute is needed (`m` wins over any `z`); `false`/absent ⇒ `z` is required. `TestData/td-bl-65-bore.project` has `m="true"` with no `z` (`dz=18` ⇒ `z=9`) |
 
 `ac`/`as`/`av` together describe one `<bf>`/`<bt>`/… element expanding into a row (or
 column, when `av="true"`) of `ac` evenly-spaced holes starting at `(x, y)`, step `as` mm
@@ -216,7 +222,7 @@ top/bottom (`bt`/`bb`).
 
 **What to extract:** side = element name (+ operation `side` for `bf`); tool = `name`;
 centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `edgeConst ∈ {0, dx}`,
-`bt`/`bb` → `(x, edgeConst, z)` with `edgeConst ∈ {0, dy}`; depth = `dp`.
+`bt`/`bb` → `(x, edgeConst, z)` with `edgeConst` = `0` for `bt`, `dy` for `bb`; depth = `dp`.
 
 `bt` / `bb` / `br` are implemented in `XncProgramReader.cs` exactly as documented above
 (edge pinned to `0`/`dx`/`dy`, other axis + `z` read from the element) — confirmed against
@@ -423,6 +429,38 @@ This includes rectangular pockets (`<mr c="3">`), elliptical pockets (`<me c="3"
 contour-based pockets. Keep `sxy` as the expression so it follows the active tool diameter.
 The `c` attribute selects centre-line/tool-position or pocket mode; it is distinct from `in`,
 `out`, `fwd`, and `sxy`.
+
+### 6.9 Rotating a program (`turn` rewrite)
+
+`IProjectService.RotatePart(ref log, partId, targetTurn)` (geometry in
+`Services/Xnc/XncProgramRotator.cs`) turns a part to an absolute `turn`. Every XNC operation of
+the part gets `turn = targetTurn`; its program is rotated by
+`k = (targetTurn − ownTurn) mod 4` clockwise quarter steps (operations already at the target are
+untouched, so a discordant part ends consistent). Both faces (`side` true/false) use the same
+transform, matching the preview, which overlays them in one frame.
+
+One clockwise step, in the Y-down frame with the origin kept at the top-left corner:
+`(x, y) → (dy − y, x)`, then `dx`/`dy` swap.
+
+| element | rewrite per step |
+|---|---|
+| `<program>` | `dx` ↔ `dy` |
+| `<bf>`, `<ms>`, `<ml>`, `<ma>` | point `x,y` (`r`, `dir`, `fwd` unchanged) |
+| `<mac>` | points `x,y` and `cx,cy` (`dir` unchanged — rotation keeps handedness) |
+| `<bt>/<br>/<bb>/<bl>` | tag moves clockwise `bt→br→bb→bl→bt`; the edge point is rotated and the new along-edge coordinate (`x` on top/bottom, `y` on left/right) taken from it; `z`, `dp` unchanged |
+| bore array (`ac>1`) | step vector turns with the part (face bore: `av` flips); a step that would point backwards restarts the array from its last hole so `as` stays positive |
+| `<gr>` `p="0"` | points `x1,y1` / `x2,y2`; order kept (`c` is relative to start → end); `c`, `t`, `dp` unchanged |
+| `<gr>` `p` 1..4 | points rotated, then swapped when `x1 > x2` or `y1 > y2` so start ≤ end (GibLab's own behavior, confirmed by the user); `p` moves clockwise `3→2→4→1→3`; `c` Right ↔ Left flips on each step that leaves top/bottom (`p` 3/4) — an edge groove's `c` is relative to a fixed travel per plane (+X for `p` 3/4, −Y for `p` 1/2, the convention `GroovePreviewRenderer.ResolveTravelPosition` draws), which a clockwise step reverses from top/bottom to right/left but keeps from right/left to bottom/top. GibLab itself never flips `c` on a turn (a GibLab bug, per the user); `RotatePart(..., flipEdgeGrooveTcl: false)` — the "Never flips TCL on program turning" option — reproduces that. `z`, `t`, `dp` unchanged |
+| `<mr>`, `<me>` | centre `x,y`; `l` ↔ `w` (same `a` — the shape is centrally symmetric) |
+
+Values are resolved against the original symbols (`dx`, `dy`, `dz`, `<var>`s, per-element
+`tool.dia`). A coordinate whose value changes is written as a number rounded to 4 decimals; any
+other value keeps its authored text. On an odd number of steps every expression attribute
+(`x y z x1 y1 x2 y2 cx cy dp t l w r a sxy as` and `<var expr>`) has whole `dx`/`dy` identifiers
+swapped (`dx+10` → `dy+10`, `dp="dx"` → `dp="dy"`), so it evaluates to the same length in the
+turned frame. Verified by `XncOptimizerUI.Test/PartRotationTests.cs` (`td-rotation.project`,
+`td-bl-65-bore.project`: a `bl` bore at `y=65` on `500×200` becomes a `bt` bore at `x=135` on
+`200×500`).
 
 ## 7. Worked example — `TestData/td-programs.project`
 

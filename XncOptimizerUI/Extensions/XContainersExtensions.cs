@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -130,6 +131,7 @@ namespace XncOptimizerUI.Extensions
         public static string? GetDzValue(this XElement element) => element.Attribute("dz")?.Value;
         public static string? GetSideValue(this XElement element) => element.Attribute("side")?.Value;
         public static string? GetTurnValue(this XElement element) => element.Attribute("turn")?.Value;
+        public static void SetTurnValue(this XElement element, int value) => element.SetAttributeValue("turn", value.ToString(CultureInfo.InvariantCulture));
         public static string? GetDValue(this XElement element) => element.Attribute("d")?.Value;
         public static string? GetExprValue(this XElement element) => element.Attribute("expr")?.Value;
         public static string? GetCommentValue(this XElement element) => element.Attribute("comment")?.Value;
@@ -152,6 +154,7 @@ namespace XncOptimizerUI.Extensions
         public static string? GetDirValue(this XElement element) => element.Attribute("dir")?.Value;
         public static string? GetFwdValue(this XElement element) => element.Attribute("fwd")?.Value;
         public static string? GetAvValue(this XElement element) => element.Attribute("av")?.Value;
+        public static string? GetMValue(this XElement element) => element.Attribute("m")?.Value;
         public static string? GetAValue(this XElement element) => element.Attribute("a")?.Value;
         public static string? GetRValue(this XElement element) => element.Attribute("r")?.Value;
         // <mr> length/width reuse GetLengthValue ("l") and GetWidthValue ("w") above.
