@@ -142,11 +142,14 @@ Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter
 - **`BoresToMills`**, per `<bf>` whose `<tool>` diameter `> BoreMillMinDiameter` (35 mm): mill it
   out with a fixed 6 mm cutter, `EnsureConversionTool(bf, 6.0, "Mill", ...)` -> `Mill6` (reused
   if already declared at 6 mm). `dp` is carried across verbatim (string). Default form emits a
-  closed contour: `<ms x=cx+r y=cy dp in="0" out="1" sxy="tool.dia/2" fwd="true" c=? name="Mill6"/>`
-  then two `<mac>` half-circle arcs about `(cx, cy)` with `dir="true"` (clockwise) back to the
-  entry. `useEllipse` emits one `<me x=cx y=cy dp ... l=r w=r a="0" c=? name="Mill6"/>` instead
-  (**`<me>` `l`/`w` are semi-axes = radius, not diameter**). Both forms pick `c` the same way:
-  `c="3"` (pocket) when the bore is blind (`av != "true"` and `dp < dz`), else `c="1"`. Edge
+  closed contour: `<ms x=cx y=cy-r dp in="0" out="1" sxy="tool.dia/2" fwd="true" c=? name="Mill6"/>`
+  (top of the circle) then four `<mac>` quarter arcs about `(cx, cy)` with `dir="false"`, ending
+  at `(cx-r, cy)`, `(cx, cy+r)`, `(cx+r, cy)` and back at `(cx, cy-r)` - declared
+  counter-clockwise on screen. `useEllipse` emits one `<me x=cx y=cy dp ... l=r w=r a="0" c=? name="Mill6"/>`
+  instead (**`<me>` `l`/`w` are semi-axes = radius, not diameter**). A blind bore (`av != "true"`
+  and `dp < dz`) is a pocket, `c="3"`, in both forms. A through bore keeps the tool inside the
+  hole: `c="2"` for the counter-clockwise contour, `c="1"` for the `<me>` (clockwise for
+  `fwd="true"`, so right = inside) - see `xnc-program-format.md` §6.4. Edge
   bores and Ø<=35 bores are untouched (not tallied). Orphaned `Bore*` tools dropped via
   `RemoveUnreferencedTools`.
 - **`MillsToBores`**: an `<me>` with `l == w` (Ø = `2*l`), or an `<ms>` + a run of >= 2 arc

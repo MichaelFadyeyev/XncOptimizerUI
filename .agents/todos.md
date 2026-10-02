@@ -96,11 +96,7 @@ clockwise sweep (geometry only); `fwd="true"` on a closed `<ms>` contour means
 counter-clockwise traversal, on an `<mr>` / `<me>` clockwise (pockets included; open paths:
 authored order). Clockwise is the operator's view, i.e. the raw XNC frame mirrored in Y.
 (`XncProgramReader` follows it: `XncArcSegment.Clockwise = dir`, plus `Forward` from `fwd` on
-every mill; `ContourOffsetGeometry.TravelsCounterClockwise` encodes the per-kind rule.) Still
-inconsistent with that:
-
-- The bore -> mill converter emits closed two-arc `<ms>` contours with `fwd="true"` described
-  as "clockwise" (and the generated-defaults sections of `xnc-program-format.md` say so), but a
-  closed `<ms>` with `fwd="true"` travels counter-clockwise. Generated `<mr>` / `<me>` with
-  `fwd="true"` are clockwise, as intended. Decide with the user whether generated closed
-  contours should switch to `fwd="false"`.
+every mill; `ContourOffsetGeometry.TravelsCounterClockwise` encodes the per-kind rule.) The
+bore -> mill converter follows it as specified by the user: its round `<ms>` contour starts at
+the circle top and is declared counter-clockwise with four `<mac dir="false">` quarter arcs,
+`fwd="true"`, through bores `c="2"` (tool inside the hole).

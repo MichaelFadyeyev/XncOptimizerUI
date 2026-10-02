@@ -1339,11 +1339,13 @@ namespace XncOptimizerUI.Services
 
         // --- Bore <-> Mill conversion ---------------------------------------------------------
         // A face bore wider than BoreMillMinDiameter is milled out with a fixed 6 mm cutter
-        // ("Mill6"): a closed two-arc contour (<ms> + two <mac> half circles), or a single
-        // elliptical mill (<me>) when the caller opts in. Traversal is clockwise: <ms>/<me>
-        // carry fwd="true", the curved <mac> segments carry dir="true". A through bore keeps the
-        // right-of-centre-line position (c="1"); a blind bore is milled as a pocket (c="3") --
-        // in both the contour and the ellipse form. The mill depth equals the bore depth. The
+        // ("Mill6"): a closed contour of four quarter arcs (<ms> at the circle's top, then
+        // <mac dir="false"> to its left, bottom, right and top - declared counter-clockwise on
+        // screen), or a single elliptical mill (<me>) when the caller opts in. Both carry
+        // fwd="true" (counter-clockwise for the <ms> contour, clockwise for the <me>). A through
+        // bore keeps the tool inside the hole: c="2" for the counter-clockwise contour, c="1"
+        // (right of clockwise travel) for the ellipse; a blind bore is milled as a pocket (c="3")
+        // in both forms. The mill depth equals the bore depth. The
         // reverse turns a round mill (a closed contour of <mac>/<ma> arcs, or an l==w ellipse)
         // back into a face bore and declares a "Bore<diameter>" tool sized to the mill.
         //
@@ -1389,9 +1391,9 @@ namespace XncOptimizerUI.Services
                 var millTool = EnsureConversionTool(
                     bore, BoreMillCutterDiameter, "Mill", toolsByName, addedToolNames);
 
-                // A blind bore is milled as a pocket (c="3"); a through bore keeps the
-                // right-of-centre-line position (c="1"). "Through" = the av flag is set, or the
-                // depth reaches the far face. Applies to both the contour and the ellipse form.
+                // A blind bore is milled as a pocket (c="3"); a through bore keeps the tool
+                // inside the hole (c="1" for the ellipse; the contour below uses c="2").
+                // "Through" = the av flag is set, or the depth reaches the far face.
                 var through = string.Equals(bore.GetAvValue(), "true", StringComparison.OrdinalIgnoreCase)
                     || EvalXnc(depth, symbols) >= dz - BoreMillGeomTolerance;
                 var positionCode = through ? "1" : "3";
@@ -1415,36 +1417,41 @@ namespace XncOptimizerUI.Services
                 }
                 else
                 {
-                    var entryX = cx + radius;
-                    var oppositeX = cx - radius;
+                    // Declared counter-clockwise on screen, from the top of the circle: top,
+                    // left, bottom, right, back to the top. Declared counter-clockwise, the tool
+                    // is inside the perimeter for c="2" (and c="3"), outside for c="1".
+                    var contourPositionCode = through ? "2" : positionCode;
 
                     bore.AddBeforeSelf(new XElement("ms",
-                        new XAttribute("x", XmlConvert.ToString(entryX)),
-                        new XAttribute("y", XmlConvert.ToString(cy)),
+                        new XAttribute("x", XmlConvert.ToString(cx)),
+                        new XAttribute("y", XmlConvert.ToString(cy - radius)),
                         new XAttribute("dp", depth),
                         new XAttribute("in", "0"),
                         new XAttribute("out", "1"),
                         new XAttribute("sxy", "tool.dia/2"),
                         new XAttribute("fwd", "true"),
-                        new XAttribute("c", positionCode),
+                        new XAttribute("c", contourPositionCode),
                         new XAttribute("name", millTool)));
 
-                    // Curved paths are machined clockwise with dir="true".
-                    bore.AddBeforeSelf(new XElement("mac",
-                        new XAttribute("x", XmlConvert.ToString(oppositeX)),
-                        new XAttribute("y", XmlConvert.ToString(cy)),
-                        new XAttribute("cx", XmlConvert.ToString(cx)),
-                        new XAttribute("cy", XmlConvert.ToString(cy)),
-                        new XAttribute("dp", depth),
-                        new XAttribute("dir", "true")));
+                    // Four counter-clockwise (dir="false") quarter arcs.
+                    var quarterEnds = new[]
+                    {
+                        (X: cx - radius, Y: cy),
+                        (X: cx, Y: cy + radius),
+                        (X: cx + radius, Y: cy),
+                        (X: cx, Y: cy - radius),
+                    };
 
-                    bore.AddBeforeSelf(new XElement("mac",
-                        new XAttribute("x", XmlConvert.ToString(entryX)),
-                        new XAttribute("y", XmlConvert.ToString(cy)),
-                        new XAttribute("cx", XmlConvert.ToString(cx)),
-                        new XAttribute("cy", XmlConvert.ToString(cy)),
-                        new XAttribute("dp", depth),
-                        new XAttribute("dir", "true")));
+                    foreach (var (x, y) in quarterEnds)
+                    {
+                        bore.AddBeforeSelf(new XElement("mac",
+                            new XAttribute("x", XmlConvert.ToString(x)),
+                            new XAttribute("y", XmlConvert.ToString(y)),
+                            new XAttribute("cx", XmlConvert.ToString(cx)),
+                            new XAttribute("cy", XmlConvert.ToString(cy)),
+                            new XAttribute("dp", depth),
+                            new XAttribute("dir", "false")));
+                    }
                 }
 
                 bore.Remove();

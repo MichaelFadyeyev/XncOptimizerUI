@@ -276,12 +276,13 @@ bore / groove / tool / var / end of program) belongs to it.
 row (the fixture has three straight ones followed by the circle); each `<ms>` closes the
 previous contour and opens a new one.
 
-For every newly created milling operation, set `in="0" out="1"` and encode a **clockwise**
-traversal:
+For every newly created milling operation, set `in="0" out="1"` and `fwd="true"`:
 
-- a **straight / linear** contour (`<ms>` + `<ml>`), an ellipse (`<me>`) and a rectangle
-  (`<mr>`) carry `fwd="true"`;
-- a **curved** contour's arc segments (`<mac>` / `<ma>`) carry `dir="true"`.
+- a **straight / linear** contour (`<ms>` + `<ml>`), an ellipse (`<me>`, clockwise) and a
+  rectangle (`<mr>`, clockwise) carry `fwd="true"`;
+- a **round** contour (bore -> mill) starts at the circle top `(cx, cy-r)` and is declared
+  counter-clockwise on screen with four `<mac dir="false">` quarter arcs (left, bottom, right,
+  top); with `fwd="true"` it also travels counter-clockwise (see §6.8).
 
 #### Traversal direction (confirmed with the user)
 
@@ -314,9 +315,8 @@ travel direction and start point. Open contours: `c="1"`/`c="2"` are right/left 
 `<mr>` / `<me>`: `c="1"`/`c="2"` are right/left of their travel (`fwd` above), `c="3"` inside.
 Implemented by the part preview (`MillPreviewGeometry`); "Offset mill path" does not use `c`.
 
-> The generated-mill defaults above (`fwd="true"` described as clockwise) predate this rule.
-> They hold for `<mr>` / `<me>`, but a generated closed `<ms>` contour with `fwd="true"` travels
-> counter-clockwise; see `.agents/todos.md`.
+> Generated mills follow this rule: `<mr>` / `<me>` with `fwd="true"` travel clockwise, a
+> generated round `<ms>` contour with `fwd="true"` counter-clockwise.
 
 ### 6.5 Milling segments
 
@@ -435,12 +435,14 @@ fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.pro
 
 ### 6.8 Generated milling defaults
 
-When a converter creates any milling primitive, it must set `in="0" out="1"` and encode a
-**clockwise** traversal:
+When a converter creates any milling primitive, it must set `in="0" out="1"` and `fwd="true"`:
 
 - **linear** contour starts (`<ms>` + `<ml>`), ellipses (`<me>`) and rectangles (`<mr>`) carry
-  `fwd="true"`;
-- the arc segments of a **curved** contour (`<mac>` / `<ma>`) carry `dir="true"`.
+  `fwd="true"` (`<mr>` / `<me>` therefore travel clockwise);
+- a **round** contour (bore -> mill) is `<ms x=cx y=cy-r fwd="true">` followed by four
+  `<mac dir="false">` quarter arcs ending at `(cx-r, cy)`, `(cx, cy+r)`, `(cx+r, cy)`,
+  `(cx, cy-r)` - declared and travelled counter-clockwise on screen. A through bore uses
+  `c="2"` (tool inside the hole, per "Tool side of a closed `<ms>` contour"), a blind one `c="3"`.
 
 For every pocket-type mill, also set:
 

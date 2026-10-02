@@ -869,7 +869,7 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
-        public void ConvertBoresAndMills_BoresToMills_LargeBoreBecomesClosedTwoArcContour()
+        public void ConvertBoresAndMills_BoresToMills_LargeBoreBecomesClosedFourArcContour()
         {
             var service = CreateService();
             service.OpenProject(CopyFixture("td-bores-large.project"));
@@ -905,9 +905,9 @@ namespace XncOptimizerUI.Test
                 Assert.That(contour.ToolName, Is.EqualTo("Mill6"));
                 Assert.That(contour.Position, Is.EqualTo(ToolPosition.Pocket)); // Bore40 dp=12 < dz=19 => blind => c="3"
                 Assert.That(contour.EntryDepth, Is.EqualTo(12d));
-                Assert.That(contour.Entry.X, Is.EqualTo(220d));  // cx + r = 200 + 20
-                Assert.That(contour.Entry.Y, Is.EqualTo(300d));
-                Assert.That(contour.Segments, Has.Count.EqualTo(2));
+                Assert.That(contour.Entry, Is.EqualTo(new XncPoint(200, 280)));  // top: (cx, cy - r)
+                Assert.That(contour.Forward, Is.True);
+                Assert.That(contour.Segments, Has.Count.EqualTo(4));
                 Assert.That(contour.Segments, Is.All.InstanceOf<XncArcSegment>());
             });
 
@@ -915,17 +915,16 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(arcs[0].Center.X, Is.EqualTo(200d));
-                Assert.That(arcs[0].Center.Y, Is.EqualTo(300d));
-                Assert.That(arcs[0].Radius, Is.EqualTo(20d).Within(1e-6));
-                Assert.That(arcs[0].End.X, Is.EqualTo(180d));             // opposite point
-                Assert.That(arcs[1].End.X, Is.EqualTo(220d));             // closes onto the entry
-                Assert.That(arcs[1].End.Y, Is.EqualTo(300d));
+                Assert.That(arcs, Is.All.Matches<XncArcSegment>(a => a.Center == new XncPoint(200, 300)));
+                Assert.That(arcs.Select(a => a.Radius), Is.All.EqualTo(20d).Within(1e-6));
+                // Declared counter-clockwise on screen: left, bottom, right, back to the top.
+                Assert.That(arcs.Select(a => a.End), Is.EqualTo(new[]
+                {
+                    new XncPoint(180, 300), new XncPoint(200, 320), new XncPoint(220, 300), new XncPoint(200, 280),
+                }));
+                Assert.That(arcs.Select(a => a.Clockwise), Is.All.False);  // dir="false"
                 Assert.That(arcs.Select(a => a.Depth), Is.All.EqualTo(12d));
             });
-
-            // Curved paths are emitted clockwise as dir="true".
-            Assert.That(File.ReadAllText(service.FullPath), Does.Contain("dir=&quot;true&quot;"));
         }
 
         [Test]
@@ -971,12 +970,12 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(contour.ToolName, Is.EqualTo("Mill6"));
-                // dz=18, dp="throughBoreDepth" (var expr dz+2.00=20) >= dz => through, not a pocket.
-                Assert.That(contour.Position, Is.EqualTo(ToolPosition.Right));
+                // dz=18, dp="throughBoreDepth" (var expr dz+2.00=20) >= dz => through, not a pocket;
+                // declared counter-clockwise, c="2" keeps the tool inside the hole.
+                Assert.That(contour.Position, Is.EqualTo(ToolPosition.Left));
                 Assert.That(contour.EntryDepth, Is.EqualTo(20d));
-                Assert.That(contour.Entry.X, Is.EqualTo(334d)); // cx + r = 300 + 34 (DX/2=300, Bore68 r=34)
-                Assert.That(contour.Entry.Y, Is.EqualTo(150d)); // DY/2 = 150
-                Assert.That(contour.Segments, Has.Count.EqualTo(2));
+                Assert.That(contour.Entry, Is.EqualTo(new XncPoint(300, 116))); // (cx, cy - r): DX/2=300, DY/2=150, Bore68 r=34
+                Assert.That(contour.Segments, Has.Count.EqualTo(4));
                 Assert.That(contour.Segments, Is.All.InstanceOf<XncArcSegment>());
             });
 
@@ -985,8 +984,10 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(arcs, Is.All.Matches<XncArcSegment>(a => a.Center.X == 300d && a.Center.Y == 150d));
-                Assert.That(arcs[0].End.X, Is.EqualTo(266d)); // opposite point
-                Assert.That(arcs[1].End.X, Is.EqualTo(334d)); // closes onto the entry
+                Assert.That(arcs.Select(a => a.End), Is.EqualTo(new[]
+                {
+                    new XncPoint(266, 150), new XncPoint(300, 184), new XncPoint(334, 150), new XncPoint(300, 116),
+                }));
             });
         }
 
@@ -1259,7 +1260,7 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
-        public void ConvertBoresAndMills_BoresToMills_RichFixture_EveryLargeBoreBecomesATwoArcContour()
+        public void ConvertBoresAndMills_BoresToMills_RichFixture_EveryLargeBoreBecomesAFourArcContour()
         {
             var service = CreateService();
             service.OpenProject(CopyFixture("td-br-ml-conversion.project"));
@@ -1276,9 +1277,9 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(contours, Has.Count.EqualTo(3));  // 2 front + 1 back
                 Assert.That(contours, Is.All.Matches<XncMillingContour>(
-                    c => c.ToolName == "Mill6" && c.Segments.Count == 2));
-                // dz=18: the dp=20 bore is through (c="1" Right), the two dp=15 bores are blind (c="3" Pocket).
-                Assert.That(contours.Count(c => c.Position == ToolPosition.Right), Is.EqualTo(1));
+                    c => c.ToolName == "Mill6" && c.Segments.Count == 4));
+                // dz=18: the dp=20 bore is through (c="2" Left: tool inside the counter-clockwise hole), the two dp=15 bores are blind (c="3" Pocket).
+                Assert.That(contours.Count(c => c.Position == ToolPosition.Left), Is.EqualTo(1));
                 Assert.That(contours.Count(c => c.Position == ToolPosition.Pocket), Is.EqualTo(2));
                 Assert.That(service.ReadXncPrograms(3).SelectMany(p => p.Bores), Is.Empty);
             });

@@ -99,11 +99,12 @@ added/removed counts. Nothing converted ⇒ returns `false`, saves nothing. Outp
 **Convert bores ⇄ mills** — for the parts **checked** in the Parts grid, rewrites every XNC
 program in the chosen direction. *Bores → Mills*: each face bore (`<bf>`) whose tool diameter
 exceeds 35 mm is milled out with a fixed 6 mm cutter (`Mill6`, created if absent) — by default
-a closed two-arc contour (`<ms>` entry at `(cx+r, cy)` + two `<mac>` half circles about the
-bore centre), or a single elliptical mill (`<me>` with `l = w = radius`) when the "as ellipses"
-checkbox is set. Traversal is clockwise (`<ms>`/`<me>` `fwd="true"`, `<mac> dir="true"`). A through
-bore keeps the right-of-centre-line position (`c="1"`); a blind bore is milled as a pocket
-(`c="3"`) — in both the contour and the ellipse form. The mill depth equals the bore depth.
+a closed four-arc contour (`<ms fwd="true">` entry at the circle's top `(cx, cy-r)` + four
+`<mac dir="false">` quarter arcs about the bore centre to its left, bottom, right and back to the
+top — declared counter-clockwise on screen), or a single elliptical mill (`<me>` with
+`l = w = radius`, `fwd="true"`, i.e. clockwise) when the "as ellipses" checkbox is set. A through
+bore keeps the tool inside the hole (`c="2"` for the counter-clockwise contour, `c="1"` for the
+ellipse); a blind bore is milled as a pocket (`c="3"`) — in both forms. The mill depth equals the bore depth.
 Smaller bores and edge bores are left untouched. *Mills → Bores*: a round mill — an `<ms>` entry plus ≥ 2 arc
 segments (`<mac>` or radius-defined `<ma>`) that share one centre and radius and close onto the
 entry point, or an `l == w` `<me>` ellipse — with diameter > 35 mm becomes a face bore, cut

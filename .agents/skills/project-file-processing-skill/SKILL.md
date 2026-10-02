@@ -112,7 +112,8 @@ To *read* programs for inspection, use `svc.ReadXncPrograms(partId)` -> `IReadOn
 ### Convert programs
 - **Bores <-> mills:** `ConvertBoresAndMills(ref log, parts, direction, useEllipse)`. Face bores
   (`<bf>`) wider than 35 mm <-> round mills cut with a fixed 6 mm `Mill6`: default is a closed
-  `<ms>` + two `<mac>` half-circle contour, `useEllipse` emits an `<me>` (l/w = radius). The
+  `<ms>` (circle top) + four `<mac dir="false">` quarter-arc contour, declared counter-clockwise,
+  `useEllipse` emits an `<me>` (l/w = radius). The
   reverse also accepts `<ma>` arcs and `l==w` ellipses; it makes a `Bore<diameter>` tool. Saves
   `_bm.project`. Details: `references/dotnet-api.md` §Conversions.
 - **Grooves <-> mills:** `ConvertGroovesAndMills(ref log, parts, direction, processPockets)`.
