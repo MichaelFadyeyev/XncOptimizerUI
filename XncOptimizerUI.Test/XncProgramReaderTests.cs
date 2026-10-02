@@ -129,6 +129,54 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        private static XncProgram ReadInline(string body) =>
+            XncProgramReader.Read(new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"100\" dy=\"80\" dz=\"18\"><tool name=\"Mill6\" d=\"6\" />" + body + "</program>")));
+
+        [Test]
+        public void Reads_millForward_fromFwd_defaultingToTrue()
+        {
+            var program = ReadInline(
+                "<ms name=\"Mill6\" x=\"0\" y=\"0\" dp=\"4\" c=\"1\" fwd=\"false\" /><ml x=\"10\" y=\"0\" />"
+                + "<ms name=\"Mill6\" x=\"0\" y=\"10\" dp=\"4\" c=\"1\" /><ml x=\"10\" y=\"10\" />"
+                + "<mr name=\"Mill6\" x=\"50\" y=\"40\" l=\"20\" w=\"10\" a=\"0\" r=\"0\" dp=\"4\" c=\"3\" fwd=\"false\" />"
+                + "<me name=\"Mill6\" x=\"50\" y=\"40\" l=\"20\" w=\"10\" a=\"0\" dp=\"4\" c=\"3\" />");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.MillingContours[0].Forward, Is.False);
+                Assert.That(program.MillingContours[1].Forward, Is.True);
+                Assert.That(program.MillingRectangles.Single().Forward, Is.False);
+                Assert.That(program.MillingEllipses.Single().Forward, Is.True);
+            });
+        }
+
+        [Test]
+        public void Reads_radiusArc_withReconstructedCentreAndOperatorClockwise()
+        {
+            var contour = ReadInline(
+                "<ms name=\"Mill6\" x=\"10\" y=\"40\" dp=\"4\" c=\"0\" />"
+                + "<ma x=\"30\" y=\"40\" r=\"10\" dir=\"true\" />"
+                + "<ma x=\"10\" y=\"40\" r=\"10\" dir=\"true\" dp=\"6\" />").MillingContours.Single();
+
+            Assert.That(contour.Segments, Has.Count.EqualTo(2));
+            var arcs = contour.Segments.Cast<XncArcSegment>().ToList();
+            Assert.Multiple(() =>
+            {
+                Assert.That(arcs[0].Center.X, Is.EqualTo(20).Within(1e-9));
+                Assert.That(arcs[0].Center.Y, Is.EqualTo(40).Within(1e-9));
+                Assert.That(arcs[0].Radius, Is.EqualTo(10));
+                Assert.That(arcs[0].Clockwise, Is.True);
+                Assert.That(arcs[0].End, Is.EqualTo(new XncPoint(30, 40)));
+                Assert.That(arcs[0].Depth, Is.EqualTo(4));
+                Assert.That(arcs[1].End, Is.EqualTo(new XncPoint(10, 40)));
+                Assert.That(arcs[1].Depth, Is.EqualTo(6));
+            });
+        }
+
         [Test]
         public void Reads_edgeBores_withPinnedEdgeAndResolvedDepth()
         {
@@ -326,7 +374,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(arc.Center, Is.EqualTo(new XncPoint(250, 400)));
                 Assert.That(arc.Radius, Is.EqualTo(17.5).Within(1e-9));
-                Assert.That(arc.Clockwise, Is.True);                          // dir = "false"
+                Assert.That(arc.Clockwise, Is.False);                         // dir = "false" -> counter-clockwise (operator's view)
             }
         }
 

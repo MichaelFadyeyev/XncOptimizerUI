@@ -18,6 +18,13 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Tool position relative to the contour centre line (the <c>c</c> attribute).</summary>
         public ToolPosition Position { get; init; }
 
+        /// <summary>
+        /// Traversal direction (the <c>fwd</c> attribute, absent = <c>true</c>). A closed contour
+        /// travels counter-clockwise for <c>true</c> and clockwise for <c>false</c> (operator's
+        /// view); an open one travels in authored order for <c>true</c>, reversed for <c>false</c>.
+        /// </summary>
+        public bool Forward { get; init; } = true;
+
         /// <summary>Lead-in code (the <c>in</c> attribute); 0 means none.</summary>
         public int LeadIn { get; init; }
 

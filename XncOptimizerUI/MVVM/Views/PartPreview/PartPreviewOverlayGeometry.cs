@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -26,6 +27,52 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             shape.StrokeDashArray = dashLengthPx is double d
                 ? new DoubleCollection { d / thickness, d / thickness }
                 : null;
+        }
+
+        /// <summary>
+        /// Draws the crossed centre lines of a circular symbol (bore, mill start marker) as four
+        /// arms of <paramref name="armPx"/> running outward from (<paramref name="cx"/>,
+        /// <paramref name="cy"/>). Starting every arm at the centre keeps a dashed pattern
+        /// symmetric about it (a dash always crosses the centre) instead of drifting with the
+        /// full line's length.
+        /// </summary>
+        internal static void AddCrossArms(Action<double, double, double, double> addLine, double cx, double cy, double armPx)
+        {
+            addLine(cx, cy, cx + armPx, cy);
+            addLine(cx, cy, cx - armPx, cy);
+            addLine(cx, cy, cx, cy + armPx);
+            addLine(cx, cy, cx, cy - armPx);
+        }
+
+        /// <summary>
+        /// Makes every shape in <paramref name="clickTargets"/> toggle the selection of one
+        /// machining element: each click switches all of its <paramref name="stroked"/> shapes to
+        /// <paramref name="selectedBrush"/> or back to each shape's own normal brush. Selection is
+        /// local to the current render pass.
+        /// </summary>
+        internal static void AttachClickToggle(
+            IEnumerable<Shape> clickTargets,
+            IReadOnlyList<(Shape Shape, Brush Normal)> stroked,
+            Brush selectedBrush)
+        {
+            var selected = false;
+
+            void OnClick(object sender, MouseButtonEventArgs e)
+            {
+                selected = !selected;
+
+                foreach (var (shape, normal) in stroked)
+                {
+                    shape.Stroke = selected ? selectedBrush : normal;
+                }
+
+                e.Handled = true;
+            }
+
+            foreach (var shape in clickTargets)
+            {
+                shape.MouseLeftButtonDown += OnClick;
+            }
         }
 
         /// <summary>

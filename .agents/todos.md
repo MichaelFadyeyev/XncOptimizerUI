@@ -69,27 +69,38 @@ per selected part. Deferred:
   like an edge bore. All four of one edge-plane groove's shapes
   (or five of a front-plane groove's) toggle red together on click, same as a bore.
   Verified against `TestData/td-grooving-preview.project` (front plane at both
-  `side="true"`/`"false"`, plus one part per Right/Left/Top/Bottom plane). Still
-  deferred: milling
-  contours/rectangles and pockets, sourced from the same
-  `IProjectService.ReadXncPrograms(partId)` result (`AppViewModel.SelectedXncPrograms`).
+  `side="true"`/`"false"`, plus one part per Right/Left/Top/Bottom plane).
+  Mills (`<ms>` contours, `<mr>`, `<me>`) are drawn by `MillPreviewRenderer`
+  (`MVVM/Views/PartPreview/MillPreviewRenderer.cs`, geometry in `MillPreviewGeometry.cs`) on
+  the **Face rectangle only**: cut-off area fill (`c` right/left/pocket; through vs blind
+  brush), swept strip, centre line, dashed tool path (offset via the shared
+  `Services/Xnc/ContourOffsetGeometry.cs`), start marker; click toggles red like a groove.
+  Still deferred for mills: edge-band projections; an open mill with an end inside the
+  part gets no cut-off fill; overlapping cut-off fills stack per
+  program as contours, then rectangles, then ellipses (a later blind fill can paint over an
+  earlier through one).
   Each program's `x`/`y` are already in its own turned frame (`dx`/`dy` given for the turn),
   and "Rotate part" (`RotatePart`, card 031) rewrites the coordinates whenever the turn
   changes, so overlays draw program coordinates directly. A part whose programs disagree
   on `turn` still overlays inconsistent frames until it is rotated once (rotation brings
-  every program to the same turn).- **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
+  every program to the same turn). Selection of bores/grooves/mills is local to the render
+  pass, not yet wired into `AppViewModel` (shapes carry `BoreTag`/`GrooveTag`/`MillTag`).
+- **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
 
 ## Milling direction conventions
 
 Confirmed with the user while building "Offset mill path" (card 030): arc `dir="true"` is a
-clockwise sweep (geometry only), and `fwd="true"` on a closed mill / `<mr>` / `<me>` means
-counter-clockwise traversal (open paths: authored order). Clockwise is the operator's view,
-i.e. the raw XNC frame mirrored in Y. Still inconsistent with that:
+clockwise sweep (geometry only); `fwd="true"` on a closed `<ms>` contour means
+counter-clockwise traversal, on an `<mr>` / `<me>` clockwise (pockets included; open paths:
+authored order). Clockwise is the operator's view, i.e. the raw XNC frame mirrored in Y.
+(`XncProgramReader` follows it: `XncArcSegment.Clockwise = dir`, plus `Forward` from `fwd` on
+every mill; `ContourOffsetGeometry.TravelsCounterClockwise` encodes the per-kind rule.) Still
+inconsistent with that:
 
-- `XncProgramReader` reads `XncArcSegment.Clockwise = !dir` - inverted; fix and update the
-  reader tests.
-- The bore/groove -> mill converters emit `fwd="true"` described as "clockwise" (and the
-  generated-defaults sections of `xnc-program-format.md` say so). Decide with the user whether
-  generated mills should keep `fwd="true"` (now counter-clockwise) or switch to `fwd="false"`.
+- The bore -> mill converter emits closed two-arc `<ms>` contours with `fwd="true"` described
+  as "clockwise" (and the generated-defaults sections of `xnc-program-format.md` say so), but a
+  closed `<ms>` with `fwd="true"` travels counter-clockwise. Generated `<mr>` / `<me>` with
+  `fwd="true"` are clockwise, as intended. Decide with the user whether generated closed
+  contours should switch to `fwd="false"`.

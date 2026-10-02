@@ -1,5 +1,4 @@
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -168,8 +167,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 circle.Fill = brushes.ThroughFill;
             }
 
-            AddCrossCenterLine(cx - radiusPx - overshootPx, cy, cx + radiusPx + overshootPx, cy);
-            AddCrossCenterLine(cx, cy - radiusPx - overshootPx, cx, cy + radiusPx + overshootPx);
+            PartPreviewOverlayGeometry.AddCrossArms(AddCrossCenterLine, cx, cy, radiusPx + overshootPx);
 
             // Edge-band (side) projections: one rectangle + one center line per band.
             PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cx - radiusPx, cx + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: true, near: true);
@@ -177,25 +175,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cy - radiusPx, cy + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: false, near: true);
             PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cy - radiusPx, cy + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: false, near: false);
 
-            var selected = false;
-
-            void OnClick(object sender, MouseButtonEventArgs e)
-            {
-                selected = !selected;
-                var brush = selected ? brushes.Selected : normalBrush;
-
-                foreach (var shape in allStroked)
-                {
-                    shape.Stroke = brush;
-                }
-
-                e.Handled = true;
-            }
-
-            foreach (var shape in clickTargets)
-            {
-                shape.MouseLeftButtonDown += OnClick;
-            }
+            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
         }
 
         /// <summary>
@@ -293,33 +273,14 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             Canvas.SetTop(circle, cy - radiusPx);
             AddCircleShape(circle, isClickTarget: true);
 
-            AddCrossCenterLine(cx - radiusPx - overshootPx, cy, cx + radiusPx + overshootPx, cy);
-            AddCrossCenterLine(cx, cy - radiusPx - overshootPx, cx, cy + radiusPx + overshootPx);
+            PartPreviewOverlayGeometry.AddCrossArms(AddCrossCenterLine, cx, cy, radiusPx + overshootPx);
 
             // Front (rectangle) projection: the depth reading, always flush to the bore's own
             // physical Face edge and growing inward toward the panel center - no Side
             // branching, since the edge is fixed regardless of which face the program machines.
             PartPreviewOverlayGeometry.AddFaceRectangleRange(AddRectShape, AddCenterLine, alongAxisPx - radiusPx, alongAxisPx + radiusPx, depthPx, overshootPx, layout, bore.Surface, horizontal);
 
-            var selected = false;
-
-            void OnClick(object sender, MouseButtonEventArgs e)
-            {
-                selected = !selected;
-                var brush = selected ? brushes.Selected : normalBrush;
-
-                foreach (var shape in allStroked)
-                {
-                    shape.Stroke = brush;
-                }
-
-                e.Handled = true;
-            }
-
-            foreach (var shape in clickTargets)
-            {
-                shape.MouseLeftButtonDown += OnClick;
-            }
+            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
         }
 
     }

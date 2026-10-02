@@ -288,16 +288,21 @@ traversal:
 - The traversal direction belongs to the mill's head element (`<ms>`, `<me>`, `<mr>`) through
   `fwd` (absent = `true`) and is the same for every `<ml>` / `<mac>` / `<ma>` of that `<ms>`.
   An arc's `dir` only defines the arc's geometry (which arc is drawn), never the traversal.
-- **Closed** paths, pockets, ellipses and rectangles: `fwd="true"` ⇒ counter-clockwise,
-  `fwd="false"` ⇒ clockwise.
+- **Closed** `<ms>` + `<ml>` / `<mac>` / `<ma>` contours (pockets, `c="3"`, included):
+  `fwd="true"` ⇒ counter-clockwise, `fwd="false"` ⇒ clockwise.
+- **Rectangles (`<mr>`) and ellipses (`<me>`)** (pockets included) run the other way:
+  `fwd="true"` ⇒ clockwise, `fwd="false"` ⇒ counter-clockwise.
 - **Open** paths: `fwd="true"` ⇒ from the `<ms>` entry through each segment end to the last
   one; `fwd="false"` ⇒ the reverse (last segment end back to the entry).
 - Clockwise is meant in the operator's view, which is the raw XNC frame mirrored in Y: the
   GibLab-authored circles in `TestData/td.project` use `dir="false"` (counter-clockwise) while
-  their raw math angle decreases. `Services/Xnc/MillPathOffsetter.cs` relies on this.
+  their raw math angle decreases. `Services/Xnc/ContourOffsetGeometry.cs`
+  (`TravelsCounterClockwise`) encodes these rules for both "Offset mill path" and the part
+  preview's mill overlay.
 
-> The generated-mill defaults above (`fwd="true"` described as clockwise) predate this rule and
-> are left as they are; see `.agents/todos.md`.
+> The generated-mill defaults above (`fwd="true"` described as clockwise) predate this rule.
+> They hold for `<mr>` / `<me>`, but a generated closed `<ms>` contour with `fwd="true"` travels
+> counter-clockwise; see `.agents/todos.md`.
 
 ### 6.5 Milling segments
 
@@ -350,8 +355,10 @@ with `<mac>`, but its radius is explicit:
 | `dir` | arc sweep direction (bool): `dir="true"` = **clockwise** sweep, `false` = counter-clockwise |
 | `dp` | optional depth at the endpoint; absent means keep the current contour depth |
 
-The centre is reconstructed from the implicit start point, endpoint, radius, and `dir`. Do not
-infer an `<ma>` centre from comments or from the face on which the operation appears.
+The centre is reconstructed from the implicit start point, endpoint, radius, and `dir`
+(`XncProgramMath.TryReconstructArcCentre`, used by both `XncProgramReader` and the mill-offset
+rewriter). Do not infer an `<ma>` centre from comments or from the face on which the operation
+appears. An `<ma>` whose radius cannot span its chord is a format error.
 
 The reader tracks a running depth per contour: seeded from the `<ms>` entry `dp`, replaced
 whenever an `<ml>`, `<mac>`, or `<ma>` carries its own `dp`, and stamped onto every segment as
@@ -372,12 +379,13 @@ followed by `<ml>`, `<mac>`, or `<ma>` segments.
 | `name` | milling tool |
 | `x`, `y` | ellipse reference position |
 | `l`, `w` | ellipse **semi-axes** (radii), mm — a round `<me>` has `l == w` and diameter `2*l` (confirmed by `TestData/td-br-ml-conversion.project`, where an "R20" circle is `l="20" w="20"`) |
-| `a` | rotation angle |
+| `a` | rotation angle, degrees; positive turns **clockwise** in the operator's view (on screen) - confirmed with the user |
 | `dp` | milling depth |
 | `c` | tool-to-path or pocket positioning mode |
 | `in`, `out` | entry and exit movement codes |
 | `sxy` | XY start/path offset |
-| `fwd` | traversal direction: `true` = counter-clockwise, `false` = clockwise (see §6.4 "Traversal direction") |
+| `fwd` | traversal direction: `true` = clockwise, `false` = counter-clockwise (see §6.4 "Traversal direction") |
+| (start) | cutting starts at the local `y-` end of the `w` semi-axis, turned by `a` (confirmed with the user) |
 
 Newly created ellipse mills must set `in="0"`, `out="1"`, and `fwd="true"` (CW). A mill created
 over a **blind** feature is a pocket (`c="3"`); one over a **through** feature keeps its
@@ -399,13 +407,14 @@ segments — it has no following `<ml>`/`<mac>`/`<ma>`.
 | `name` | tool reference |
 | `x`, `y` | rectangle reference point (centre) |
 | `l`, `w` | rectangle length / width, mm (literal or expression) |
-| `a` | rotation angle, degrees (seen `0`) |
+| `a` | rotation angle, degrees; positive turns **clockwise** in the operator's view (on screen) - confirmed with the user |
 | `r` | corner radius, mm (seen `0` = sharp corners) |
 | `dp` | milling **depth**, mm |
 | `c` | **tool-to-centre-line position**: `0` = center, `1` = right, `2` = left, `3` = pocket (the fixture uses `3`) |
 | `in`, `out` | entry and exit movement codes; newly created mills use `0` and `1` |
 | `sxy` | XY start/path offset; pocket-type mills must use `tool.dia/2` |
-| `fwd` | traversal direction: `true` = counter-clockwise, `false` = clockwise (see §6.4 "Traversal direction") |
+| `fwd` | traversal direction: `true` = clockwise, `false` = counter-clockwise (see §6.4 "Traversal direction") |
+| (start) | cutting starts at the middle of the local `y-` side, turned by `a` (confirmed with the user) |
 
 **side** comes from the operation's `side`. Attribute meanings are inferred from the single
 fixture instance — confirm `x/y` reference and `a`/`r` units against `td-2.project`.
@@ -515,11 +524,11 @@ The reader described above is implemented:
 
 ## 9. Open items — verify against `TestData/td-2.project`
 
-- `<mac>`/`<ma>` `dir`: **`dir="true"` = clockwise sweep** — now confirmed by the user (geometry
-  only; see §6.4 "Traversal direction"). `XncProgramReader` still reads it the other
-  way round (`Clockwise = !dir`) — its `XncArcSegment.Clockwise` is inverted for this dialect
-  and should not be trusted until the reader is fixed.
+- `<mac>`/`<ma>` `dir`: **`dir="true"` = clockwise sweep** — confirmed by the user (geometry
+  only; see §6.4 "Traversal direction"). `XncProgramReader` reads it that way:
+  `XncArcSegment.Clockwise = dir`, clockwise in the operator's view (= the Y-down part preview).
 - `<mr>` — whether `x`/`y` is a corner or the centre; units of `a` (degrees assumed) and `r`.
+  The part preview assumes centre and degrees; `a` turns clockwise on screen (confirmed).
 - `in` / `out` lead-code enumeration (only `0` and `1` seen).
 - `p` on `<gr>` (only `0` seen; not modelled).
 - Confirm no milling segment types beyond `<ml>` and `<mac>`.

@@ -1,5 +1,4 @@
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -266,7 +265,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 DrawCrossSection(bandHorizontal: false, near: false, edgeMm: faceWidthMm, rightTouches);
             }
 
-            AttachClickToggle(clickTargets, allStroked, normalBrush, brushes.Selected);
+            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
         }
 
         private static void DrawEdgePlaneGroove(
@@ -398,7 +397,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var markerEndB = otherHorizontal ? (X: markerHiPx, Y: anchorB) : (X: anchorB, Y: markerHiPx);
             AddOffsetRectangle(ReachesFarEdge(axisHi, faceExtentMm) ? addSolidShape : addDashedShape, addCenterLine, markerStartB, markerEndB, widthPx, markerBPosition, overshootPx);
 
-            AttachClickToggle(clickTargets, allStroked, normalBrush, brushes.Selected);
+            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
         }
 
         /// <summary>
@@ -637,28 +636,5 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// </summary>
         private static ToolPosition ResolveTravelPosition(XncGrooving groove) =>
             groove.SideCode is 1 or 2 ? MirrorPosition(groove.Position) : groove.Position;
-
-        private static void AttachClickToggle(List<Shape> clickTargets, List<Shape> allStroked, Brush normalBrush, Brush selectedBrush)
-        {
-            var selected = false;
-
-            void OnClick(object sender, MouseButtonEventArgs e)
-            {
-                selected = !selected;
-                var brush = selected ? selectedBrush : normalBrush;
-
-                foreach (var shape in allStroked)
-                {
-                    shape.Stroke = brush;
-                }
-
-                e.Handled = true;
-            }
-
-            foreach (var shape in clickTargets)
-            {
-                shape.MouseLeftButtonDown += OnClick;
-            }
-        }
     }
 }

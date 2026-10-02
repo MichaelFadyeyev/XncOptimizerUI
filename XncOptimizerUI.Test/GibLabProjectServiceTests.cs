@@ -1354,7 +1354,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(OpenMillParts.Select(id => ReadSavedProgram(service.FullPath, id).Element("ms")!.Attribute("y")!.Value),
                     Is.EqualTo(new[] { "300", "300", "100", "100", "100" }), "open paths untouched");
                 Assert.That(Points(ReadSavedProgram(service.FullPath, 6))[0], Is.EqualTo("97,97"));
-                Assert.That(ReadSavedProgram(service.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("106"));
+                Assert.That(ReadSavedProgram(service.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("94"), "fwd=\"true\" <mr> travels clockwise, right = inside");
             });
         }
 
@@ -1494,9 +1494,9 @@ namespace XncOptimizerUI.Test
             });
         }
 
-        [TestCase(10, MillOffsetSide.Right, "106", "46", "3")] // fwd="true": CCW, right = outside
-        [TestCase(10, MillOffsetSide.Left, "94", "34", "0")]   // corner radius never goes negative
-        [TestCase(11, MillOffsetSide.Right, "94", "34", "2")]  // fwd="false": CW, right = inside
+        [TestCase(10, MillOffsetSide.Right, "94", "34", "0")]   // fwd="true": CW, right = inside; corner radius never goes negative
+        [TestCase(10, MillOffsetSide.Left, "106", "46", "3")]
+        [TestCase(11, MillOffsetSide.Right, "106", "46", "8")]  // fwd="false": CCW, right = outside
         public void OffsetMillPaths_Rectangle_ChangesSizeByTwiceTheOffsetAndRadiusByTheOffset(
             int partId, MillOffsetSide side, string l, string w, string r)
         {
@@ -1516,8 +1516,8 @@ namespace XncOptimizerUI.Test
             });
         }
 
-        [TestCase(MillOffsetSide.Right, "23", "13")]
-        [TestCase(MillOffsetSide.Left, "17", "7")]
+        [TestCase(MillOffsetSide.Right, "17", "7")]  // fwd="true": CW, right = inside
+        [TestCase(MillOffsetSide.Left, "23", "13")]
         public void OffsetMillPaths_Ellipse_ChangesSemiAxesByTheOffset(MillOffsetSide side, string l, string w)
         {
             var (service, result, _) = OffsetMills(3, side, 12);

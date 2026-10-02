@@ -92,6 +92,11 @@
         <sys:Double x:Key="DashLengthPx">3</sys:Double>
         <sys:Double x:Key="CenterLineDashMm">3</sys:Double>
         <sys:Double x:Key="BoreCenterLineOvershootMm">3</sys:Double>
+
+        <!--  Part preview: mill overlay - cut-off area colors and swept-strip opacity  -->
+        <SolidColorBrush x:Key="ThroughCutOffsBrush" Color="#E1F1FD" />
+        <SolidColorBrush x:Key="BlindCutOffsBrush" Color="#56A1D8" />
+        <sys:Double x:Key="MillStripOpacity">0.5</sys:Double>
     </Window.Resources>
 
     <!--  Main grid  -->

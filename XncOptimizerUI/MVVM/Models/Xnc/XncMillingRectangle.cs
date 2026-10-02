@@ -31,6 +31,9 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Tool position relative to the rectangle outline (the <c>c</c> attribute); <see cref="ToolPosition.Pocket"/> clears the interior.</summary>
         public ToolPosition Position { get; init; }
 
+        /// <summary>Traversal direction (the <c>fwd</c> attribute, absent = <c>true</c>): <c>true</c> = clockwise, <c>false</c> = counter-clockwise (operator's view; pockets included) - the opposite of a closed <c>&lt;ms&gt;</c> contour.</summary>
+        public bool Forward { get; init; } = true;
+
         /// <summary>Lead-in code (the <c>in</c> attribute); 0 means none.</summary>
         public int LeadIn { get; init; }
 

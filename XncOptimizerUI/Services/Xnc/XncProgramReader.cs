@@ -133,6 +133,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Entry = new XncPoint(Eval(element.GetXValue(), "<ms> @x"), Eval(element.GetYValue(), "<ms> @y")),
                             EntryDepth = entryDepth,
                             Position = ParsePosition(element.GetCValue()),
+                            Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
                             StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<ms> @sxy") : null,
@@ -164,8 +165,34 @@ namespace XncOptimizerUI.Services.Xnc
                         {
                             End = end,
                             Center = center,
-                            Clockwise = !ParseBool(element.GetDirValue(), false),
+                            Clockwise = ParseBool(element.GetDirValue(), false),
                             Radius = Distance(center, end),
+                            Depth = open.CurrentDepth
+                        });
+                        break;
+                    }
+
+                    case "ma":
+                    {
+                        var open = contour ?? throw new XncProgramFormatException("<ma> outside a milling contour.");
+                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
+                        var start = open.Segments.Count > 0 ? open.Segments[^1].End : open.Entry;
+                        var end = new XncPoint(Eval(element.GetXValue(), "<ma> @x"), Eval(element.GetYValue(), "<ma> @y"));
+                        var radius = Eval(element.GetRValue(), "<ma> @r");
+
+                        if (!XncProgramMath.TryReconstructArcCentre(
+                                start.X, start.Y, end.X, end.Y, radius, XncProgramMath.ParseDirSign(element.GetDirValue()),
+                                out var centerX, out var centerY))
+                        {
+                            throw new XncProgramFormatException($"<ma> radius {radius} cannot span {start} -> {end}.");
+                        }
+
+                        open.Segments.Add(new XncArcSegment
+                        {
+                            End = end,
+                            Center = new XncPoint(centerX, centerY),
+                            Clockwise = ParseBool(element.GetDirValue(), false),
+                            Radius = radius,
                             Depth = open.CurrentDepth
                         });
                         break;
@@ -205,6 +232,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Angle = Eval(element.GetAValue(), "<me> @a"),
                             Depth = Eval(element.GetDpValue(), "<me> @dp"),
                             Position = ParsePosition(element.GetCValue()),
+                            Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
                             StartOffsetXY = element.GetSxyValue() is { } sxy
@@ -228,6 +256,7 @@ namespace XncOptimizerUI.Services.Xnc
                             CornerRadius = Eval(element.GetRValue(), "<mr> @r"),
                             Depth = Eval(element.GetDpValue(), "<mr> @dp"),
                             Position = ParsePosition(element.GetCValue()),
+                            Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
                             StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<mr> @sxy") : null
@@ -345,6 +374,7 @@ namespace XncOptimizerUI.Services.Xnc
             public XncPoint Entry { get; init; }
             public double EntryDepth { get; init; }
             public ToolPosition Position { get; init; }
+            public bool Forward { get; init; } = true;
             public int LeadIn { get; init; }
             public int LeadOut { get; init; }
             public double? StartOffsetXY { get; init; }
@@ -360,6 +390,7 @@ namespace XncOptimizerUI.Services.Xnc
                 Entry = Entry,
                 EntryDepth = EntryDepth,
                 Position = Position,
+                Forward = Forward,
                 LeadIn = LeadIn,
                 LeadOut = LeadOut,
                 StartOffsetXY = StartOffsetXY,
