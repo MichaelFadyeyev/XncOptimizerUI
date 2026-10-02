@@ -157,34 +157,55 @@ namespace XncOptimizerUI.Test
             AssertPoint(Start(mill), 50, 35);
         }
 
-        [Test]
-        public void ClosedContour_authoredClockwise_isTravelledCounterClockwiseWhenForward()
+        /// <summary>A 40 mm square from (20, 20), declared clockwise or counter-clockwise on screen.</summary>
+        private static XncMillingContour Square(bool declaredCounterClockwise, ToolPosition position, bool forward = true)
         {
             // Clockwise on screen: right along the top, down, left along the bottom, up.
-            var square = new XncMillingContour
+            XncPoint[] corners = declaredCounterClockwise
+                ? [new(20, 60), new(60, 60), new(60, 20), new(20, 20)]
+                : [new(60, 20), new(60, 60), new(20, 60), new(20, 20)];
+
+            return new XncMillingContour
             {
                 ToolName = "Mill10",
                 Entry = new XncPoint(20, 20),
                 EntryDepth = 5,
-                Position = ToolPosition.Right,
-                Segments =
-                [
-                    new XncLineSegment { End = new XncPoint(60, 20), Depth = 5 },
-                    new XncLineSegment { End = new XncPoint(60, 60), Depth = 5 },
-                    new XncLineSegment { End = new XncPoint(20, 60), Depth = 5 },
-                    new XncLineSegment { End = new XncPoint(20, 20), Depth = 5 },
-                ],
+                Position = position,
+                Forward = forward,
+                Segments = corners.Select(c => (XncMillingSegment)new XncLineSegment { End = c, Depth = 5 }).ToList(),
             };
+        }
 
-            var mill = Path(square);
+        [Test]
+        public void ClosedContour_declaredClockwise_isTravelledCounterClockwiseWhenForward()
+        {
+            var mill = Path(Square(declaredCounterClockwise: false, ToolPosition.Right));
 
             Assert.Multiple(() =>
             {
                 Assert.That(mill.Closed, Is.True);
                 Assert.That(ContourOffsetGeometry.OperatorSignedArea(mill.Travel), Is.GreaterThan(0));
-                Assert.That(MillPreviewGeometry.RemovedRegion(mill, Outline)!.Outside, Is.True);
             });
-            AssertPoint(Start(mill), 15, 15);
+        }
+
+        // Inside/outside follows the declaration order on screen only, never fwd: declared
+        // counter-clockwise, c=1 is outside and c=2 inside; declared clockwise, the reverse;
+        // a pocket (c=3) is always inside. Outside starts at (15, 15), inside at (25, 25).
+        [TestCase(true, ToolPosition.Right, true, true, 15)]
+        [TestCase(true, ToolPosition.Left, true, false, 25)]
+        [TestCase(false, ToolPosition.Right, true, false, 25)]
+        [TestCase(false, ToolPosition.Left, true, true, 15)]
+        [TestCase(true, ToolPosition.Right, false, true, 15)]
+        [TestCase(false, ToolPosition.Right, false, false, 25)]
+        [TestCase(true, ToolPosition.Pocket, true, false, 25)]
+        [TestCase(false, ToolPosition.Pocket, true, false, 25)]
+        public void ClosedContour_toolSideFollowsDeclarationOrder(
+            bool declaredCounterClockwise, ToolPosition position, bool forward, bool removesOutside, double start)
+        {
+            var mill = Path(Square(declaredCounterClockwise, position, forward));
+
+            Assert.That(MillPreviewGeometry.RemovedRegion(mill, Outline)!.Outside, Is.EqualTo(removesOutside));
+            AssertPoint(Start(mill), start, start);
         }
 
         [Test]

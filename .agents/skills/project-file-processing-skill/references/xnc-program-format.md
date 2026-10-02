@@ -300,6 +300,20 @@ traversal:
   (`TravelsCounterClockwise`) encodes these rules for both "Offset mill path" and the part
   preview's mill overlay.
 
+#### Tool side of a closed `<ms>` contour (confirmed with the user)
+
+Whether the tool runs inside or outside the shape's perimeter follows the **declaration order**
+of the segment end points alone (as seen on screen), never `fwd`:
+
+- declared counter-clockwise: `c="1"` (right) ⇒ tool **outside**, `c="2"` (left) ⇒ tool **inside**;
+- declared clockwise: the reverse - `c="1"` ⇒ inside, `c="2"` ⇒ outside;
+- `c="3"` (pocket) ⇒ always inside (pockets are declared counter-clockwise).
+
+In other words `c="1"`/`c="2"` are right/left of the declared order; `fwd` only changes the
+travel direction and start point. Open contours: `c="1"`/`c="2"` are right/left of travel.
+`<mr>` / `<me>`: `c="1"`/`c="2"` are right/left of their travel (`fwd` above), `c="3"` inside.
+Implemented by the part preview (`MillPreviewGeometry`); "Offset mill path" does not use `c`.
+
 > The generated-mill defaults above (`fwd="true"` described as clockwise) predate this rule.
 > They hold for `<mr>` / `<me>`, but a generated closed `<ms>` contour with `fwd="true"` travels
 > counter-clockwise; see `.agents/todos.md`.

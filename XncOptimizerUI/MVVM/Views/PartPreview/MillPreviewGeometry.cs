@@ -28,12 +28,14 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <param name="Position">The mill's <c>c</c>.</param>
         /// <param name="Diameter">Tool diameter, mm.</param>
         /// <param name="Depth">Deepest cut along the mill, mm.</param>
+        /// <param name="ToolSide">Side of <paramref name="Travel"/> the tool runs on, or <c>null</c> when it is centred on the centre line.</param>
         internal sealed record MillPath(
             IReadOnlyList<Primitive> Travel,
             bool Closed,
             ToolPosition Position,
             double Diameter,
-            double Depth);
+            double Depth,
+            MillOffsetSide? ToolSide);
 
         /// <summary>
         /// The removed (cut-off) area of a mill, as a closed primitive chain: either the area the
@@ -59,8 +61,57 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var closed = ContourOffsetGeometry.IsClosed(authored);
             var depth = contour.Segments.Select(s => s.Depth).Append(contour.EntryDepth).Max();
 
-            return new MillPath(Orient(authored, closed, contour.Forward, isRectangleOrEllipse: false), closed, contour.Position, diameter, depth);
+            var travel = Orient(authored, closed, contour.Forward, isRectangleOrEllipse: false);
+            var toolSide = closed
+                ? ClosedContourToolSide(contour.Position, IsCounterClockwise(authored), IsCounterClockwise(travel))
+                : OpenToolSide(contour.Position);
+
+            return new MillPath(travel, closed, contour.Position, diameter, depth, toolSide);
         }
+
+        /// <summary>
+        /// Tool side of an open path: <c>c="1"</c> right and <c>c="2"</c> left of its travel
+        /// direction; a pocket has no meaning on an open path and is treated as centred.
+        /// </summary>
+        private static MillOffsetSide? OpenToolSide(ToolPosition position) => position switch
+        {
+            ToolPosition.Right => MillOffsetSide.Right,
+            ToolPosition.Left => MillOffsetSide.Left,
+            _ => null,
+        };
+
+        /// <summary>
+        /// Tool side of a closed <c>&lt;ms&gt;</c> contour, relative to its travel (confirmed with
+        /// the user). Inside/outside follows the segments' declaration order alone, whatever
+        /// <c>fwd</c> says: declared counter-clockwise on screen, <c>c="1"</c> puts the tool outside
+        /// the shape and <c>c="2"</c> inside; declared clockwise, the other way round. A pocket
+        /// (<c>c="3"</c>) is always inside.
+        /// </summary>
+        private static MillOffsetSide? ClosedContourToolSide(ToolPosition position, bool declaredCounterClockwise, bool travelCounterClockwise)
+        {
+            bool? outside = position switch
+            {
+                ToolPosition.Right => declaredCounterClockwise,
+                ToolPosition.Left => !declaredCounterClockwise,
+                ToolPosition.Pocket => false,
+                _ => null,
+            };
+
+            return outside is { } isOutside ? SideOf(isOutside, travelCounterClockwise) : null;
+        }
+
+        /// <summary>
+        /// Tool side of an <c>&lt;mr&gt;</c>/<c>&lt;me&gt;</c>: <c>c="1"</c> right and <c>c="2"</c>
+        /// left of its travel direction; a pocket is inside.
+        /// </summary>
+        private static MillOffsetSide? ShapeToolSide(ToolPosition position, IReadOnlyList<Primitive> travel) =>
+            position == ToolPosition.Pocket
+                ? SideOf(outside: false, IsCounterClockwise(travel))
+                : OpenToolSide(position);
+
+        /// <summary>Which side of a closed travel the outside or inside lies on: counter-clockwise travel has the outside on its right.</summary>
+        private static MillOffsetSide SideOf(bool outside, bool travelCounterClockwise) =>
+            outside == travelCounterClockwise ? MillOffsetSide.Right : MillOffsetSide.Left;
 
         /// <summary>
         /// Builds the path of a <c>&lt;mr&gt;</c>: an <c>l</c> x <c>w</c> rectangle centred on
@@ -83,7 +134,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 .Select(p => Place(p, rectangle.Origin, rectangle.Angle))
                 .ToList();
 
-            return new MillPath(Orient(counterClockwise, true, rectangle.Forward, isRectangleOrEllipse: true), true, rectangle.Position, diameter, rectangle.Depth);
+            var travel = Orient(counterClockwise, true, rectangle.Forward, isRectangleOrEllipse: true);
+
+            return new MillPath(travel, true, rectangle.Position, diameter, rectangle.Depth, ShapeToolSide(rectangle.Position, travel));
         }
 
         /// <summary>
@@ -105,7 +158,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 .Select(p => Place(p, ellipse.Center, ellipse.Angle))
                 .ToList();
 
-            return new MillPath(Orient(counterClockwise, true, ellipse.Forward, isRectangleOrEllipse: true), true, ellipse.Position, diameter, ellipse.Depth);
+            var travel = Orient(counterClockwise, true, ellipse.Forward, isRectangleOrEllipse: true);
+
+            return new MillPath(travel, true, ellipse.Position, diameter, ellipse.Depth, ShapeToolSide(ellipse.Position, travel));
         }
 
         private static List<Primitive> AuthoredPrimitives(XncMillingContour contour)
@@ -251,32 +306,20 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         public static bool IsThrough(MillPath mill, double thickness) => mill.Depth >= thickness - Tolerance;
 
         /// <summary>
-        /// Side of the travel direction the tool runs on, or <c>null</c> when the tool is centred on
-        /// the centre line. A pocket runs on the inside: left of counter-clockwise travel.
-        /// </summary>
-        public static MillOffsetSide? ToolSide(MillPath mill) => mill.Position switch
-        {
-            ToolPosition.Right => MillOffsetSide.Right,
-            ToolPosition.Left => MillOffsetSide.Left,
-            ToolPosition.Pocket when mill.Closed => IsCounterClockwise(mill) ? MillOffsetSide.Left : MillOffsetSide.Right,
-            _ => null,
-        };
-
-        /// <summary>
         /// The tool-centre path: the centre line shifted by half the tool diameter to
-        /// <see cref="ToolSide"/>, open ends kept clear of the outline like "Offset mill path" does.
+        /// <see cref="MillPath.ToolSide"/>, open ends kept clear of the outline like "Offset mill path" does.
         /// Falls back to the centre line itself when the tool is centred or the shift collapses.
         /// </summary>
         public static IReadOnlyList<Primitive> ToolPath(MillPath mill, Vec2 outline)
         {
-            if (ToolSide(mill) is not { } side || mill.Diameter <= Tolerance)
+            if (mill.ToolSide is not { } side || mill.Diameter <= Tolerance)
             {
                 return mill.Travel;
             }
 
             // Travel is already in traversal order, so it is passed as an authored path with
             // fwd="true" (open) or with its own orientation (closed).
-            var forward = !mill.Closed || IsCounterClockwise(mill);
+            var forward = !mill.Closed || IsCounterClockwise(mill.Travel);
 
             return ContourOffsetGeometry.TryOffset(mill.Travel, forward, outline, mill.Diameter / 2d, side)?.Chain()
                 ?? mill.Travel;
@@ -291,7 +334,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// </summary>
         public static CutOffRegion? RemovedRegion(MillPath mill, Vec2 outline)
         {
-            if (ToolSide(mill) is not { } side)
+            if (mill.ToolSide is not { } side)
             {
                 return null;
             }
@@ -300,7 +343,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             {
                 // Counter-clockwise travel has the outside on its right.
                 var removesOutside = mill.Position != ToolPosition.Pocket
-                    && (side == MillOffsetSide.Right) == IsCounterClockwise(mill);
+                    && (side == MillOffsetSide.Right) == IsCounterClockwise(mill.Travel);
 
                 return new CutOffRegion(mill.Travel, removesOutside);
             }
@@ -320,8 +363,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <summary>Where the tool enters: the first point of <see cref="ToolPath"/>.</summary>
         public static Vec2 StartPoint(IReadOnlyList<Primitive> toolPath) => toolPath[0].Start;
 
-        private static bool IsCounterClockwise(MillPath mill) =>
-            ContourOffsetGeometry.OperatorSignedArea(mill.Travel) > 0d;
+        /// <summary>Whether a closed path runs counter-clockwise on screen.</summary>
+        private static bool IsCounterClockwise(IReadOnlyList<Primitive> path) =>
+            ContourOffsetGeometry.OperatorSignedArea(path) > 0d;
 
         private static bool IsOnOrBeyondOutline(Vec2 point, Vec2 outline) =>
             point.X <= Tolerance || point.Y <= Tolerance
