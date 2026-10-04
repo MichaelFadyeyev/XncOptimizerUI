@@ -2648,6 +2648,19 @@ namespace XncOptimizerUI.Services
             };
         }
 
+        /// <summary>
+        /// The part's four banded edges: XML reference attribute, matching <see cref="Part"/> id
+        /// getter and band-name setter. Top/bottom bands run along the length, so their thickness
+        /// reduces the joint width (<c>jw</c>); left/right ones reduce the joint length (<c>jl</c>).
+        /// </summary>
+        private static readonly (string Attribute, Func<Part, int?> GetId, Action<Part, string?> SetMat)[] BandEdges =
+        [
+            ("elt", p => p.TopBandingId, (p, mat) => p.TopBandingMat = mat),
+            ("elb", p => p.BottomBandingId, (p, mat) => p.BottomBandingMat = mat),
+            ("ell", p => p.LeftBandingId, (p, mat) => p.LeftBandingMat = mat),
+            ("elr", p => p.RightBandingId, (p, mat) => p.RightBandingMat = mat),
+        ];
+
         public bool UpdatePart(ref string log, Part part)
         {
             var partToUpdate = GetProductGoods()
@@ -2659,8 +2672,27 @@ namespace XncOptimizerUI.Services
                 && partToUpdate.GetLengthDecimalValue() == part.Length
                 && partToUpdate.GetWidthDecimalValue() == part.Width
                 && partToUpdate.GetTxtBoolValue() == part.ConsiderTexture
+                && !HasBandingChanged(partToUpdate, part)
                 ) return false;
 
+            RenameXncOperations(ref log, part);
+
+            partToUpdate.SetNameValue(part.Name);
+            partToUpdate.SetLengthValue(part.Length);
+            partToUpdate.SetDLengthValue(part.Length);
+            partToUpdate.SetWidthValue(part.Width);
+            partToUpdate.SetDWidthValue(part.Width);
+            partToUpdate.SetTxtValue(part.ConsiderTexture);
+
+            ApplyBanding(ref log, partToUpdate, part);
+            SyncElOperationParts(partToUpdate);
+            ApplyJointSizes(partToUpdate);
+
+            return true;
+        }
+
+        private void RenameXncOperations(ref string log, Part part)
+        {
             var xncsToUPdate = GetXncOperations()
                  .Where(o => o.GetPart()?.GetIdIntValue() == part.Id);
 
@@ -2676,15 +2708,98 @@ namespace XncOptimizerUI.Services
 
                 log += $"""Cannot set new XNC typeName for part "{part.Name}" with old XNC typeName "{xnc.GetTypeNameValue()}".{'\n'}""";
             }
+        }
 
-            partToUpdate.SetNameValue(part.Name);
-            partToUpdate.SetLengthValue(part.Length);
-            partToUpdate.SetDLengthValue(part.Length);
-            partToUpdate.SetWidthValue(part.Width);
-            partToUpdate.SetDWidthValue(part.Width);
-            partToUpdate.SetTxtValue(part.ConsiderTexture);
+        private static bool HasBandingChanged(XElement partElement, Part part) =>
+            BandEdges.Any(edge => partElement.GetBandingIdIntValue(edge.Attribute) != edge.GetId(part));
 
-            return true;
+        /// <summary>
+        /// Writes each edge's band reference + name from <paramref name="part"/>'s banding ids and
+        /// mirrors the resolved band name back into the model. An id that matches no EL operation
+        /// leaves that edge untouched.
+        /// </summary>
+        private void ApplyBanding(ref string log, XElement partElement, Part part)
+        {
+            foreach (var (attribute, getId, setMat) in BandEdges)
+            {
+                var bandId = getId(part);
+                var band = bandId == null ? null : _bands.Find(b => b.Id == bandId);
+
+                if (bandId != null && band == null)
+                {
+                    log += $"""Cannot assign band operation #{bandId} to "{attribute}" of part "{part.Name}": no such band.{'\n'}""";
+                    continue;
+                }
+
+                partElement.SetBandingValue(attribute, bandId, band?.Name);
+                setMat(part, band?.Name);
+            }
+        }
+
+        /// <summary>
+        /// Keeps every EL operation's <c>&lt;part id&gt;</c> list in step with the part's edges: the
+        /// part is listed (in ascending id order) by each operation it uses on any edge, and only by those.
+        /// </summary>
+        private void SyncElOperationParts(XElement partElement)
+        {
+            var partId = partElement.GetIdIntValue();
+            var usedOperationIds = BandEdges
+                .Select(edge => partElement.GetBandingIdIntValue(edge.Attribute))
+                .OfType<int>()
+                .ToHashSet();
+
+            foreach (var operation in GetElOperations())
+            {
+                var listed = operation.GetParts().Where(p => p.GetIdIntValue() == partId).ToList();
+                var isUsed = usedOperationIds.Contains(operation.GetIdIntValue());
+
+                if (isUsed && listed.Count == 0)
+                {
+                    InsertPartReference(operation, partId);
+                }
+                else if (!isUsed)
+                {
+                    listed.ForEach(p => p.Remove());
+                }
+            }
+        }
+
+        private static void InsertPartReference(XElement operation, int partId)
+        {
+            var reference = new XElement("part", new XAttribute("id", partId));
+            var next = operation.GetParts().FirstOrDefault(p => p.GetIdIntValue() > partId);
+
+            if (next != null)
+            {
+                next.AddBeforeSelf(reference);
+            }
+            else if (operation.GetParts().LastOrDefault() is { } last)
+            {
+                last.AddAfterSelf(reference);
+            }
+            else
+            {
+                operation.Add(reference);
+            }
+        }
+
+        /// <summary>
+        /// Recalculates the part's joint size (size before edge banding): <c>jl = l − t(ell) − t(elr)</c>,
+        /// <c>jw = w − t(elt) − t(elb)</c>, with each band's thickness taken from its band good.
+        /// </summary>
+        private void ApplyJointSizes(XElement partElement)
+        {
+            partElement.SetJLengthValue(partElement.GetLengthDecimalValue()
+                - GetBandThickness(partElement, "ell") - GetBandThickness(partElement, "elr"));
+            partElement.SetJWidthValue(partElement.GetWidthDecimalValue()
+                - GetBandThickness(partElement, "elt") - GetBandThickness(partElement, "elb"));
+        }
+
+        private decimal GetBandThickness(XElement partElement, string edgeAttribute)
+        {
+            var bandId = partElement.GetBandingIdIntValue(edgeAttribute);
+
+            return _bands.Find(b => b.Id == bandId)?.Thickness ?? 0m;
         }
 
         private static Band CreateBand(XElement element)
