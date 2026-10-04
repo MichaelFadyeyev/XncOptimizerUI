@@ -21,6 +21,7 @@ namespace XncOptimizerUI.MVVM.Views
         private const double PartPreviewZoomStep = 1.1;
 
         private readonly AppViewModel _viewModel;
+        private PartVM? _previewedPart;
         private double _partPreviewZoom = 1;
         private bool _isHandlingPreviewSizeChanged;
         private bool _isPanningPreview;
@@ -35,6 +36,7 @@ namespace XncOptimizerUI.MVVM.Views
             InitializeComponent();
 
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            UpdatePreviewedPartSubscription(_viewModel.SelectedPart);
             PartPreviewScrollViewer.SizeChanged += PartPreviewScrollViewer_SizeChanged;
             PartCanvas.Loaded += (_, _) => RenderPart(_viewModel.SelectedPart);
             PartPreviewScrollViewer.PreviewMouseWheel += PartCanvas_MouseWheel;
@@ -72,6 +74,11 @@ namespace XncOptimizerUI.MVVM.Views
             if (e.PropertyName == nameof(AppViewModel.SelectedPart)
                 || e.PropertyName == nameof(AppViewModel.SelectedPartTurn))
             {
+                if (e.PropertyName == nameof(AppViewModel.SelectedPart))
+                {
+                    UpdatePreviewedPartSubscription(_viewModel.SelectedPart);
+                }
+
                 _partPreviewZoom = 1;
                 RenderPart(_viewModel.SelectedPart);
                 PartPreviewScrollViewer.ScrollToHome();
@@ -79,6 +86,34 @@ namespace XncOptimizerUI.MVVM.Views
             else if (e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
                 || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayWidth)
                 || e.PropertyName == nameof(AppViewModel.SelectedXncPrograms))
+            {
+                RenderPart(_viewModel.SelectedPart);
+            }
+        }
+
+        private void UpdatePreviewedPartSubscription(PartVM? part)
+        {
+            if (ReferenceEquals(_previewedPart, part))
+            {
+                return;
+            }
+
+            if (_previewedPart is not null)
+            {
+                _previewedPart.PropertyChanged -= OnPreviewedPartPropertyChanged;
+            }
+
+            _previewedPart = part;
+
+            if (_previewedPart is not null)
+            {
+                _previewedPart.PropertyChanged += OnPreviewedPartPropertyChanged;
+            }
+        }
+
+        private void OnPreviewedPartPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PartVM.ConsiderTexture))
             {
                 RenderPart(_viewModel.SelectedPart);
             }
@@ -350,8 +385,44 @@ namespace XncOptimizerUI.MVVM.Views
             BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
             GroovePreviewRenderer.DrawGrooves(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
 
+            if (part.ConsiderTexture)
+            {
+                var programTurn = _viewModel.SelectedXncPrograms.FirstOrDefault()?.Turn ?? 0;
+                DrawTextureIndicator(originX, originY, faceWidth, faceHeight, programTurn);
+            }
+
             DrawAxisGlyph(margin);
             DrawTurnLabel(_viewModel.SelectedPartTurnText);
+        }
+
+        private void DrawTextureIndicator(
+            double faceX, double faceY, double faceWidth, double faceHeight, int programTurn)
+        {
+            var centerX = faceX + (faceWidth / 2);
+            var centerY = faceY + (faceHeight / 2);
+            var brush = (Brush)FindResource("PartTextureBrush");
+            var thickness = (double)FindResource("PartTextureLineThickness");
+            var isVertical = Math.Abs(programTurn % 2) == 1;
+            var lineLength = (isVertical ? faceHeight : faceWidth) / 3;
+            var blockWidth = (isVertical ? faceWidth : faceHeight) / 5;
+
+            for (var i = 0; i < 3; i++)
+            {
+                var offset = (i - 1) * (blockWidth / 2);
+                var line = new Line
+                {
+                    X1 = 0,
+                    X2 = isVertical ? 0 : lineLength,
+                    Y1 = 0,
+                    Y2 = isVertical ? lineLength : 0,
+                    Stroke = brush,
+                    StrokeThickness = thickness,
+                };
+
+                Canvas.SetLeft(line, centerX + (isVertical ? offset : -lineLength / 2));
+                Canvas.SetTop(line, centerY + (isVertical ? -lineLength / 2 : offset));
+                PartCanvas.Children.Add(line);
+            }
         }
 
         /// <summary>

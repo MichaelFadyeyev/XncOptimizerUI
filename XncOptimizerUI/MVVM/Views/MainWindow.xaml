@@ -66,12 +66,14 @@
         <SolidColorBrush x:Key="PartFaceBrush" Color="#8DB9D9" />
         <SolidColorBrush x:Key="PartEdgeProjectionBrush" Color="#8DB9D9" />
         <SolidColorBrush x:Key="PartOutlineBrush" Color="#444444" />
+        <SolidColorBrush x:Key="PartTextureBrush" Color="#808080" />
         <SolidColorBrush x:Key="AxisXBrush" Color="#D00000" />
         <SolidColorBrush x:Key="AxisYBrush" Color="#0A7A0A" />
         <SolidColorBrush x:Key="TurnLabelBrush" Color="#444444" />
 
         <!--  Part preview: line widths and screen-space metrics (px)  -->
         <sys:Double x:Key="PartOutlineThickness">2</sys:Double>
+        <sys:Double x:Key="PartTextureLineThickness">1</sys:Double>
         <sys:Double x:Key="AxisThickness">1.5</sys:Double>
         <sys:Double x:Key="TurnLabelFontSize">24</sys:Double>
         <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
