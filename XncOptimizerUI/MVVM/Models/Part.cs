@@ -21,7 +21,7 @@
 
         public bool ConsiderTexture { get; set; }
         public int? TopBandingId { get; set; } // elt 
-        public int? BottomBandingId { get; set; } // elb;l
+        public int? BottomBandingId { get; set; } // elb
         public int? LeftBandingId { get; set; } // ell
         public int? RightBandingId { get; set; } // elr
 
