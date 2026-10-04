@@ -260,6 +260,128 @@ namespace XncOptimizerUI.Test
             Assert.That(reopened.ReadParts().First(p => p.Id == part.Id).ConsiderTexture, Is.EqualTo(newTexture));
         }
 
+        /// <summary>Saves, then returns the raw <c>&lt;part&gt;</c> of the product good with <paramref name="partId"/>.</summary>
+        private XElement SaveAndLoadProductPart(GibLabProjectService service, int partId)
+        {
+            service.SaveProject();
+
+            return XDocument.Load(_projectPath).Root!.Elements("good")
+                .Where(g => (string?)g.Attribute("typeId") == "product")
+                .SelectMany(g => g.Elements("part"))
+                .Single(p => (int)p.Attribute("id")! == partId);
+        }
+
+        private List<int> ElOperationPartIds(int operationId) =>
+            XDocument.Load(_projectPath).Root!.Elements("operation")
+                .Single(o => (string?)o.Attribute("typeId") == "EL" && (int)o.Attribute("id")! == operationId)
+                .Elements("part")
+                .Select(p => (int)p.Attribute("id")!)
+                .ToList();
+
+        [Test]
+        public void UpdatePart_WithReassignedBand_RewritesEdgeOperationListsAndJointLength()
+        {
+            // td.project part 2: l=2301, jl=2297, ell=op#1 (t=2), elr=op#2 (t=2), op#2 used only on elr.
+            var service = OpenAndRead(CreateService(), _projectPath);
+            var part = service.ReadParts().Single(p => p.Id == 2);
+            var band3 = service.ReadBands().Single(b => b.Id == 3);
+
+            part.RightBandingId = 3; // t=1
+
+            var log = string.Empty;
+
+            Assert.That(service.UpdatePart(ref log, part), Is.True);
+
+            var saved = SaveAndLoadProductPart(service, 2);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That((string?)saved.Attribute("elr"), Is.EqualTo("@operation#3"));
+                Assert.That((string?)saved.Attribute("elrMat"), Is.EqualTo(band3.Name));
+                Assert.That(part.RightBandingMat, Is.EqualTo(band3.Name));
+                Assert.That((string?)saved.Attribute("jl"), Is.EqualTo("2298"), "jl = 2301 - 2 - 1");
+                Assert.That((string?)saved.Attribute("jw"), Is.EqualTo("613"), "top/bottom untouched");
+                Assert.That(ElOperationPartIds(3), Does.Contain(2));
+                Assert.That(ElOperationPartIds(3), Is.Ordered, "part reference inserted in id order");
+                Assert.That(ElOperationPartIds(2), Does.Not.Contain(2), "no edge uses op#2 any more");
+                Assert.That(ElOperationPartIds(1), Does.Contain(2), "op#1 still on top/bottom/left");
+                Assert.That(log, Is.Empty);
+            });
+
+            var reopened = OpenAndRead(CreateService(), _projectPath);
+            Assert.That(reopened.ReadParts().Single(p => p.Id == 2).RightBandingId, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void UpdatePart_WithRemovedBand_DropsEdgeAttributesAndRecalculatesJointWidth()
+        {
+            // td.project part 1: w=263, jw=261, elt=op#1 (t=2), no elb.
+            var service = OpenAndRead(CreateService(), _projectPath);
+            var part = service.ReadParts().Single(p => p.Id == 1);
+
+            part.TopBandingId = null;
+
+            var log = string.Empty;
+
+            Assert.That(service.UpdatePart(ref log, part), Is.True);
+
+            var saved = SaveAndLoadProductPart(service, 1);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(saved.Attribute("elt"), Is.Null);
+                Assert.That(saved.Attribute("eltMat"), Is.Null);
+                Assert.That(part.TopBandingMat, Is.Null);
+                Assert.That((string?)saved.Attribute("jw"), Is.EqualTo("263"));
+                Assert.That((string?)saved.Attribute("jl"), Is.EqualTo("2297"));
+                Assert.That(ElOperationPartIds(1), Does.Contain(1), "left/right still use op#1");
+            });
+        }
+
+        [Test]
+        public void UpdatePart_WithBandOnUnbandedEdge_AddsEdgeAndListsPartInOperation()
+        {
+            // td.project part 1: w=263, elt=op#1 (t=2), no elb; op#3 (t=1) doesn't list part 1.
+            var service = OpenAndRead(CreateService(), _projectPath);
+            var part = service.ReadParts().Single(p => p.Id == 1);
+
+            part.BottomBandingId = 3;
+
+            var log = string.Empty;
+
+            Assert.That(service.UpdatePart(ref log, part), Is.True);
+
+            var saved = SaveAndLoadProductPart(service, 1);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That((string?)saved.Attribute("elb"), Is.EqualTo("@operation#3"));
+                Assert.That((string?)saved.Attribute("jw"), Is.EqualTo("260"), "jw = 263 - 2 - 1");
+                Assert.That(ElOperationPartIds(3), Does.Contain(1));
+                Assert.That(ElOperationPartIds(3), Is.Ordered);
+            });
+        }
+
+        [Test]
+        public void UpdatePart_WithUnknownBand_LogsAndLeavesEdgeUntouched()
+        {
+            var service = OpenAndRead(CreateService(), _projectPath);
+            var part = service.ReadParts().Single(p => p.Id == 1);
+
+            part.TopBandingId = 999_999;
+
+            var log = string.Empty;
+            service.UpdatePart(ref log, part);
+
+            var saved = SaveAndLoadProductPart(service, 1);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(log, Does.Contain("no such band"));
+                Assert.That((string?)saved.Attribute("elt"), Is.EqualTo("@operation#1"));
+            });
+        }
+
         [Test]
         public void PrepForSplitAlongX_UsesInjectedSawWidth()
         {

@@ -356,6 +356,76 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void OpenFile_BuildsBandOptions_WithEmptyOptionFirst()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.BandOptions.Select(o => o.Id), Is.EqualTo(new int?[] { null, 1, 2 }));
+                Assert.That(vm.BandOptions.Select(o => o.Symbol), Is.EqualTo(new[] { "", "S1", "S2" }),
+                    "the select shows each band's external symbol");
+                Assert.That(vm.BandOptions[1].Caption, Is.EqualTo("S1 " + vm.Bands[0].Name),
+                    "symbol and band name separated by a space");
+                Assert.That(vm.BandOptions[0].Caption, Is.Empty, "the remove option is an empty row");
+            });
+        }
+
+        [TestCase(nameof(PartVM.TopBandingId))]
+        [TestCase(nameof(PartVM.BottomBandingId))]
+        [TestCase(nameof(PartVM.LeftBandingId))]
+        [TestCase(nameof(PartVM.RightBandingId))]
+        public void ReassigningBand_OfNotSelectedPart_SavesImmediately(string edge)
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.SelectedPart = vm.Parts[0];
+            _projectService.Calls.Clear();
+
+            typeof(PartVM).GetProperty(edge)!.SetValue(vm.Parts[1], (int?)2);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+                Assert.That(vm.Log, Does.Contain("Updates saved"));
+            });
+        }
+
+        [Test]
+        public void RemovingBand_SavesImmediately()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.Parts[0].TopBandingId = null;
+
+            Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TogglingTxt_SavesImmediately()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.Parts[1].ConsiderTexture = !vm.Parts[1].ConsiderTexture;
+
+            Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+        }
+
+        [Test]
         public void SelectingPart_RendersItsXncProgramsAsBriefLines()
         {
             SeedTwoParts();

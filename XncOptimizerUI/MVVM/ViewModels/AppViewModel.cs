@@ -26,6 +26,20 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private readonly IConfigService _config;
         private readonly IDialogService _dialogs;
 
+        /// <summary>
+        /// Part properties edited through in-cell controls (Txt checkbox, band selects). Clicking
+        /// the Txt checkbox doesn't select its row, and a band pick should not wait for the
+        /// selection-change auto-save either; these are saved as soon as they change instead.
+        /// </summary>
+        private static readonly HashSet<string> ImmediatelySavedPartProperties =
+        [
+            nameof(PartVM.ConsiderTexture),
+            nameof(PartVM.TopBandingId),
+            nameof(PartVM.BottomBandingId),
+            nameof(PartVM.LeftBandingId),
+            nameof(PartVM.RightBandingId),
+        ];
+
         private string _filterName = string.Empty;
 
         // Each range bound keeps the raw text the user typed AND its parsed value. The text
@@ -200,6 +214,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [ObservableProperty]
         private ObservableCollection<BandVM> _bands = [];
 
+        /// <summary>
+        /// Choices of the Parts grid edge-band selects: <see cref="BandOptionVM.None"/> followed
+        /// by every band of <see cref="Bands"/>. Rebuilt with <see cref="Bands"/>.
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<BandOptionVM> _bandOptions = [];
+
         [ObservableProperty]
         private ObservableCollection<SheetVM> _sheets = [];
 
@@ -216,15 +237,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             if (_selectedPart != null)
             {
-                var log = Log;
-
-                if (_projectService.UpdatePart(ref log, _selectedPart.Part))
-                {
-                    _projectService.SaveProject();
-                    log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
-                }
-
-                Log = log;
+                SavePartEdits(_selectedPart);
             }
         }
 
@@ -819,6 +832,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             Parts = [];
             Bands = [];
+            BandOptions = [];
             Sheets = [];
             Products = [];
         }
@@ -997,6 +1011,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             var bands = _projectService.ReadBands().Select(b => new BandVM(b));
             Bands = new ObservableCollection<BandVM>(bands);
+            BandOptions = [BandOptionVM.None, .. Bands.Select(BandOptionVM.From)];
 
             var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
             Sheets = new ObservableCollection<SheetVM>(sheets);
@@ -1065,6 +1080,27 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 OnPropertyChanged(nameof(CheckedCount));
             }
+            else if (sender is PartVM part && e.PropertyName is { } name && ImmediatelySavedPartProperties.Contains(name))
+            {
+                SavePartEdits(part);
+            }
+        }
+
+        /// <summary>
+        /// Writes <paramref name="part"/>'s pending grid edits (name, size, Txt, bands) into the
+        /// document and saves the file in place when anything changed.
+        /// </summary>
+        private void SavePartEdits(PartVM part)
+        {
+            var log = Log;
+
+            if (_projectService.UpdatePart(ref log, part.Part))
+            {
+                _projectService.SaveProject();
+                log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
+            }
+
+            Log = log;
         }
 
         /// <summary>

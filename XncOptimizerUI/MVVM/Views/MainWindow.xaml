@@ -750,6 +750,8 @@
                         <!--  Parts list  -->
                         <DataGrid
                             x:Name="PartsDataGrid"
+                            EnableRowVirtualization="True"
+                            VirtualizingPanel.VirtualizationMode="Recycling"
                             AutoGenerateColumns="False"
                             CanUserAddRows="False"
                             ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
@@ -794,38 +796,119 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn
+                                <!--  Top edge band: "<external symbol> <name>" text, band select on click  -->
+                                <DataGridTemplateColumn
+                                    x:Name="PartsTopBandColumn"
                                     Width="15*"
-                                    Binding="{Binding TopBandingMat}"
+                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Top Band">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock x:Name="PartTopBandText" Style="{StaticResource BandCaptionTextStyle}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding Converter="{StaticResource BandCaption}">
+                                                        <Binding Path="TopBandingId" />
+                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                                x:Name="PartTopBandComboBox"
+                                                SelectedValue="{Binding TopBandingId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource BandSelectComboBoxStyle}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!--  Bottom edge band: "<external symbol> <name>" text, band select on click  -->
+                                <DataGridTemplateColumn
+                                    x:Name="PartsBottomBandColumn"
                                     Width="15*"
-                                    Binding="{Binding BottomBandingMat}"
+                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Bottom Band">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock x:Name="PartBottomBandText" Style="{StaticResource BandCaptionTextStyle}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding Converter="{StaticResource BandCaption}">
+                                                        <Binding Path="BottomBandingId" />
+                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                                x:Name="PartBottomBandComboBox"
+                                                SelectedValue="{Binding BottomBandingId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource BandSelectComboBoxStyle}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!--  Left edge band: "<external symbol> <name>" text, band select on click  -->
+                                <DataGridTemplateColumn
+                                    x:Name="PartsLeftBandColumn"
                                     Width="15*"
-                                    Binding="{Binding LeftBandingMat}"
-                                    Header="Left band">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn
+                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
+                                    Header="Left Band">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock x:Name="PartLeftBandText" Style="{StaticResource BandCaptionTextStyle}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding Converter="{StaticResource BandCaption}">
+                                                        <Binding Path="LeftBandingId" />
+                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                                x:Name="PartLeftBandComboBox"
+                                                SelectedValue="{Binding LeftBandingId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource BandSelectComboBoxStyle}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!--  Right edge band: "<external symbol> <name>" text, band select on click  -->
+                                <DataGridTemplateColumn
+                                    x:Name="PartsRightBandColumn"
                                     Width="15*"
-                                    Binding="{Binding RightBandingMat}"
+                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Right Band">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style BasedOn="{StaticResource TextWrappingStyle}" TargetType="TextBlock" />
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock x:Name="PartRightBandText" Style="{StaticResource BandCaptionTextStyle}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding Converter="{StaticResource BandCaption}">
+                                                        <Binding Path="RightBandingId" />
+                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                                x:Name="PartRightBandComboBox"
+                                                SelectedValue="{Binding RightBandingId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource BandSelectComboBoxStyle}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!--  Part name  -->
                                 <DataGridTextColumn
                                     Width="22*"
                                     Binding="{Binding Name}"

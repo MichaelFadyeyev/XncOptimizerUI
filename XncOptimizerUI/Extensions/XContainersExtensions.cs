@@ -50,50 +50,40 @@ namespace XncOptimizerUI.Extensions
 
         public static XAttribute? GetElbId(this XElement element) => element.Attribute("elb");
         public static string? GetElbIdValue(this XElement element) => element.Attribute("elb")?.Value;
-        public static int? GetElbIdIntValue(this XElement element)
-        {
-            if (element.Attribute("elb") == null) return null;
-
-            var encodedId = element.Attribute("elb")!.Value;
-
-            return int.Parse(encodedId.Split('#')[1]);
-        }
+        public static int? GetElbIdIntValue(this XElement element) => element.GetBandingIdIntValue("elb");
 
         public static XAttribute? GetEllId(this XElement element) => element.Attribute("ell");
         public static string? GetEllIdValue(this XElement element) => element.Attribute("ell")?.Value;
-        public static int? GetEllIdIntValue(this XElement element)
-        {
-            if (element.Attribute("ell") == null) return null;
-
-            var encodedId = element.Attribute("ell")!.Value;
-
-            return int.Parse(encodedId.Split('#')[1]);
-        }
-
+        public static int? GetEllIdIntValue(this XElement element) => element.GetBandingIdIntValue("ell");
 
         public static XAttribute? GetElrId(this XElement element) => element.Attribute("elr");
         public static string? GetElrIdValue(this XElement element) => element.Attribute("elr")?.Value;
-        public static int? GetElrIdIntValue(this XElement element)
-        {
-            if (element.Attribute("elr") == null) return null;
-
-            var encodedId = element.Attribute("elr")!.Value;
-
-            return int.Parse(encodedId.Split('#')[1]);
-        }
-
+        public static int? GetElrIdIntValue(this XElement element) => element.GetBandingIdIntValue("elr");
 
         public static XAttribute? GetEltId(this XElement element) => element.Attribute("elt");
         public static string? GetEltIdValue(this XElement element) => element.Attribute("elt")?.Value;
-        public static int? GetEltIdIntValue(this XElement element)
+        public static int? GetEltIdIntValue(this XElement element) => element.GetBandingIdIntValue("elt");
+
+        /// <summary>
+        /// Parses a part's edge-banding reference (<c>elt</c>/<c>elb</c>/<c>ell</c>/<c>elr</c>,
+        /// encoded as <c>@operation#&lt;EL operation id&gt;</c>); <c>null</c> when the edge is unbanded.
+        /// </summary>
+        public static int? GetBandingIdIntValue(this XElement element, string edgeAttribute)
         {
-            if (element.Attribute("elt") == null) return null;
+            var encodedId = element.Attribute(edgeAttribute)?.Value;
 
-            var encodedId = element.Attribute("elt")!.Value;
-
-            return int.Parse(encodedId.Split('#')[1]);
+            return encodedId == null ? null : int.Parse(encodedId.Split('#')[1]);
         }
 
+        /// <summary>
+        /// Points a part's edge (<c>elt</c>/<c>elb</c>/<c>ell</c>/<c>elr</c>) at an EL operation and
+        /// writes the matching <c>&lt;edge&gt;Mat</c> band name; a <c>null</c> id removes both.
+        /// </summary>
+        public static void SetBandingValue(this XElement element, string edgeAttribute, int? elOperationId, string? materialName)
+        {
+            element.SetAttributeValue(edgeAttribute, elOperationId == null ? null : $"@operation#{elOperationId}");
+            element.SetAttributeValue($"{edgeAttribute}Mat", elOperationId == null ? null : materialName);
+        }
 
         public static string? GetOperationMaterialIdValue(this XElement element)
         {
@@ -117,6 +107,8 @@ namespace XncOptimizerUI.Extensions
         public static decimal GetWidthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("w")?.Value ?? "0");
         public static void SetWidthValue(this XElement element, decimal value) => element.SetAttributeValue("w", value.ToString());
         public static void SetDWidthValue(this XElement element, decimal value) => element.SetAttributeValue("dw", value.ToString());
+        public static void SetJLengthValue(this XElement element, decimal value) => element.SetAttributeValue("jl", value.ToString());
+        public static void SetJWidthValue(this XElement element, decimal value) => element.SetAttributeValue("jw", value.ToString());
 
 
         public static bool GetTxtBoolValue(this XElement element) => XmlConvert.ToBoolean(element.Attribute("txt")?.Value ?? "false");
