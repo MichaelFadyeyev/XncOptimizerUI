@@ -119,6 +119,10 @@ namespace XncOptimizerUI.Extensions
         public static void SetDWidthValue(this XElement element, decimal value) => element.SetAttributeValue("dw", value.ToString());
 
 
+        public static bool GetTxtBoolValue(this XElement element) => XmlConvert.ToBoolean(element.Attribute("txt")?.Value ?? "false");
+        public static void SetTxtValue(this XElement element, bool value) => element.SetAttributeValue("txt", XmlConvert.ToString(value));
+
+
         public static string? GetThicknessValue(this XElement element) => element.Attribute("t")?.Value;
         public static decimal GetThicknessDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("t")?.Value ?? "0");
 

@@ -2640,6 +2640,7 @@ namespace XncOptimizerUI.Services
                 Count = int.Parse(element.Attribute("count")!.Value),
                 Length = element.GetLengthDecimalValue(),
                 Width = element.GetWidthDecimalValue(),
+                ConsiderTexture = element.GetTxtBoolValue(),
                 TopBandingId = element.GetEltIdIntValue(),
                 BottomBandingId = element.GetElbIdIntValue(),
                 LeftBandingId = element.GetEllIdIntValue(),
@@ -2657,6 +2658,7 @@ namespace XncOptimizerUI.Services
             if (partToUpdate.GetNameValue() == part.Name
                 && partToUpdate.GetLengthDecimalValue() == part.Length
                 && partToUpdate.GetWidthDecimalValue() == part.Width
+                && partToUpdate.GetTxtBoolValue() == part.ConsiderTexture
                 ) return false;
 
             var xncsToUPdate = GetXncOperations()
@@ -2680,6 +2682,7 @@ namespace XncOptimizerUI.Services
             partToUpdate.SetDLengthValue(part.Length);
             partToUpdate.SetWidthValue(part.Width);
             partToUpdate.SetDWidthValue(part.Width);
+            partToUpdate.SetTxtValue(part.ConsiderTexture);
 
             return true;
         }

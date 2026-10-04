@@ -778,6 +778,22 @@
                                     Width="5*"
                                     Binding="{Binding Count}"
                                     Header="Count" />
+
+                                <!--  Consider texture (txt) flag  -->
+                                <DataGridTemplateColumn
+                                    x:Name="PartsTxtColumn"
+                                    Width="5*"
+                                    Header="Txt">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox
+                                                x:Name="PartTxtCheckBox"
+                                                HorizontalAlignment="Center"
+                                                IsChecked="{Binding ConsiderTexture, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
                                 <DataGridTextColumn
                                     Width="15*"
                                     Binding="{Binding TopBandingMat}"

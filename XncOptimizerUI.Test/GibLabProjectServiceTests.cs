@@ -232,6 +232,35 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void ReadParts_ReadsConsiderTextureFromTxt()
+        {
+            var service = OpenAndRead(CreateService(), _projectPath);
+
+            Assert.That(service.ReadParts().First().ConsiderTexture, Is.True,
+                "td.project parts are declared with txt=\"true\"");
+        }
+
+        [Test]
+        public void UpdatePart_WithToggledTexture_ReturnsTrueAndPersists()
+        {
+            var service = OpenAndRead(CreateService(), _projectPath);
+
+            var part = service.ReadParts().First();
+            var newTexture = !part.ConsiderTexture;
+            part.ConsiderTexture = newTexture;
+
+            var log = string.Empty;
+
+            Assert.That(service.UpdatePart(ref log, part), Is.True);
+
+            service.SaveProject();
+
+            var reopened = OpenAndRead(CreateService(), _projectPath);
+
+            Assert.That(reopened.ReadParts().First(p => p.Id == part.Id).ConsiderTexture, Is.EqualTo(newTexture));
+        }
+
+        [Test]
         public void PrepForSplitAlongX_UsesInjectedSawWidth()
         {
             var service = OpenAndRead(CreateService(), _projectPath);
