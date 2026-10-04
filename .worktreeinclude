@@ -1,3 +1,2 @@
 # .worktreeinclude
-.env
-.env.local
+!treehouse.toml
