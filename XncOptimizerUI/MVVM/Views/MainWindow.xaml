@@ -798,11 +798,10 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!--  Top edge band: "<external symbol> <name>" text, band select on click  -->
+                                <!--  Top edge band: "<internal symbol> <name>" text, band select on click  -->
                                 <DataGridTemplateColumn
                                     x:Name="PartsTopBandColumn"
                                     Width="15*"
-                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Top Band">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -826,11 +825,10 @@
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!--  Bottom edge band: "<external symbol> <name>" text, band select on click  -->
+                                <!--  Bottom edge band: "<internal symbol> <name>" text, band select on click  -->
                                 <DataGridTemplateColumn
                                     x:Name="PartsBottomBandColumn"
                                     Width="15*"
-                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Bottom Band">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -854,11 +852,10 @@
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!--  Left edge band: "<external symbol> <name>" text, band select on click  -->
+                                <!--  Left edge band: "<internal symbol> <name>" text, band select on click  -->
                                 <DataGridTemplateColumn
                                     x:Name="PartsLeftBandColumn"
                                     Width="15*"
-                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Left Band">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -882,11 +879,10 @@
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!--  Right edge band: "<external symbol> <name>" text, band select on click  -->
+                                <!--  Right edge band: "<internal symbol> <name>" text, band select on click  -->
                                 <DataGridTemplateColumn
                                     x:Name="PartsRightBandColumn"
                                     Width="15*"
-                                    CellStyle="{StaticResource SingleClickEditCellStyle}"
                                     Header="Right Band">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>

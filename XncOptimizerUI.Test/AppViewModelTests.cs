@@ -366,9 +366,9 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.BandOptions.Select(o => o.Id), Is.EqualTo(new int?[] { null, 1, 2 }));
-                Assert.That(vm.BandOptions.Select(o => o.Symbol), Is.EqualTo(new[] { "", "S1", "S2" }),
-                    "the select shows each band's external symbol");
-                Assert.That(vm.BandOptions[1].Caption, Is.EqualTo("S1 " + vm.Bands[0].Name),
+                Assert.That(vm.BandOptions.Select(o => o.InternalSymbol), Is.EqualTo(new[] { "", "i1", "i2" }),
+                    "the select shows each band's internal symbol");
+                Assert.That(vm.BandOptions[1].Caption, Is.EqualTo("i1 " + vm.Bands[0].Name),
                     "symbol and band name separated by a space");
                 Assert.That(vm.BandOptions[0].Caption, Is.Empty, "the remove option is an empty row");
             });

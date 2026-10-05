@@ -10,17 +10,17 @@ namespace XncOptimizerUI.Test
         private static readonly BandOptionVM[] Options =
         [
             BandOptionVM.None,
-            new(1, "S1", "Band one"),
-            new(2, "S2", "Band two"),
+            new(1, "i1", "Band one"),
+            new(2, "i2", "Band two"),
         ];
 
         private static object Convert(params object?[] values) =>
             new BandCaptionConverter().Convert(values, typeof(string), null, CultureInfo.InvariantCulture);
 
         [Test]
-        public void KnownId_ReturnsExternalSymbolAndName()
+        public void KnownId_ReturnsInternalSymbolAndName()
         {
-            Assert.That(Convert(2, Options), Is.EqualTo("S2 Band two"));
+            Assert.That(Convert(2, Options), Is.EqualTo("i2 Band two"));
         }
 
         [Test]

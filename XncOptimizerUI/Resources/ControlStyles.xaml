@@ -26,11 +26,11 @@
         </Style.Triggers>
     </Style>
 
-    <!--  Resolves a PartVM.*BandingId to "<external symbol> <name>" (values: id, BandOptions)  -->
+    <!--  Resolves a PartVM.*BandingId to "<internal symbol> <name>" (values: id, BandOptions)  -->
     <helpers:BandCaptionConverter x:Key="BandCaption" />
 
     <!--
-        Parts grid edge-band cell, display mode: plain text "<external symbol> <name>", also as
+        Parts grid edge-band cell, display mode: plain text "<internal symbol> <name>", also as
         tooltip. Each column sets Text through a BandCaption MultiBinding.
     -->
     <Style x:Key="BandCaptionTextStyle" TargetType="TextBlock">
@@ -40,16 +40,8 @@
     </Style>
 
     <!--
-        DataGrid cell that enters edit mode on the first click (selecting its row), so a
-        display-only cell can swap to its editor without the default second click
-    -->
-    <Style x:Key="SingleClickEditCellStyle" TargetType="DataGridCell">
-        <Setter Property="helpers:DataGridCellEditBehavior.SingleClickEdit" Value="True" />
-    </Style>
-
-    <!--
         Parts grid edge-band select, edit mode only: lists AppViewModel.BandOptions (empty option
-        first) and shows each band as "<external symbol> <name>", both in the box and in the
+        first) and shows each band as "<internal symbol> <name>", both in the box and in the
         drop-down. Opens its list when it appears; closing the list returns the cell to text.
         Each column binds only SelectedValue to its PartVM.*BandingId.
     -->
