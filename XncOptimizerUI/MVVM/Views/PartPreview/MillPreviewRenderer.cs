@@ -19,7 +19,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <c>c="0"</c> keeps both sides, so nothing is filled;</item>
     /// <item>the strip the tool sweeps - its centre path stroked one tool diameter wide with
     /// semicircular ends, in the face brush at reduced opacity;</item>
-    /// <item>the programmed centre line, styled like the part outline;</item>
+    /// <item>the programmed centre line, styled like the part outline (a back-side mill's in
+    /// the back-side bore colour);</item>
     /// <item>the tool-centre path (centre line shifted by half the diameter for <c>c</c> =
     /// right/left/pocket), dashed;</item>
     /// <item>a tool-diameter circle with crossed centre lines at the tool path's start, styled like
@@ -160,8 +161,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 Opacity = brushes.StripOpacity,
             }, normalStroke: null, isClickTarget: true);
 
-            // 3. Programmed centre line, drawn like the part's own ridges.
-            var centreLine = Add(layers.CentreLines, new Path { Data = ToGeometry(path.Travel, layout, filled: false) }, brushes.CentreLine, isClickTarget: true);
+            // 3. Programmed centre line, drawn like the part's own ridges; a back-side mill's in the
+            // back-side bore colour.
+            var centreLineBrush = program.Side ? brushes.CentreLine : lines.SideFalse;
+            var centreLine = Add(layers.CentreLines, new Path { Data = ToGeometry(path.Travel, layout, filled: false) }, centreLineBrush, isClickTarget: true);
             centreLine.StrokeThickness = brushes.CentreLineThickness;
 
             // 4. Tool-centre path, dashed like a groove's reference lines.
