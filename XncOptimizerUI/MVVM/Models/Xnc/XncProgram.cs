@@ -7,6 +7,9 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// </summary>
     public class XncProgram
     {
+        /// <summary>The owning <c>&lt;operation typeId="XNC"&gt;</c>'s <c>id</c> (0 when absent).</summary>
+        public int OperationId { get; init; }
+
         /// <summary>Part length in millimetres (<c>&lt;program dx&gt;</c>).</summary>
         public double Dx { get; init; }
 
@@ -48,8 +51,11 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>All rectangular milling primitives (<c>&lt;mr&gt;</c>), in document order.</summary>
         public IReadOnlyList<XncMillingRectangle> MillingRectangles { get; init; } = [];
 
+        /// <summary>Every <c>&lt;var&gt;</c> declaration as authored (any type), in document order.</summary>
+        public IReadOnlyList<XncVariable> DeclaredVariables { get; init; } = [];
+
         /// <summary>
-        /// Custom variables declared by <c>&lt;var&gt;</c>, resolved to their numeric values.
+        /// Custom numeric (<c>int</c>/<c>double</c>) variables declared by <c>&lt;var&gt;</c>, resolved to their values.
         /// Keys are compared case-insensitively.
         /// </summary>
         public IReadOnlyDictionary<string, double> Variables { get; init; } =

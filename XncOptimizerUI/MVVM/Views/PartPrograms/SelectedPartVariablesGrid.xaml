@@ -1,0 +1,141 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartVariablesGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--
+        Selected part <var> declarations: Name / Type / Expr / Comment editable in place (click
+        the selected cell or F2), each cell committed on its own through VariableRowVM
+    -->
+    <DataGrid
+        x:Name="VariablesDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
+        AutoGenerateColumns="False"
+        CanUserAddRows="False"
+        ItemsSource="{Binding SelectedPartVariables}"
+        SelectionMode="Single"
+        SelectionUnit="FullRow">
+        <DataGrid.Columns>
+
+            <!--  Read-only variable identity  -->
+            <DataGridTextColumn
+                x:Name="VariablesNumberColumn"
+                Width="Auto"
+                Binding="{Binding Number}"
+                Header="#"
+                IsReadOnly="True" />
+            <DataGridTextColumn
+                x:Name="VariablesSideColumn"
+                Width="Auto"
+                Binding="{Binding Side}"
+                Header="Side"
+                IsReadOnly="True" />
+
+            <!--  Name: renaming also rewrites the program's references  -->
+            <DataGridTemplateColumn
+                x:Name="VariablesNameColumn"
+                Width="2*"
+                Header="Name">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock x:Name="VariableNameText" Text="{Binding Name}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="VariableNameInput"
+                            Style="{StaticResource ValidatedCellEditBoxStyle}"
+                            Text="{Binding NameInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Type: plain text, selector built only in edit mode  -->
+            <DataGridTemplateColumn
+                x:Name="VariablesTypeColumn"
+                Width="Auto"
+                MinWidth="60"
+                Header="Type">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock x:Name="VariableTypeText" Text="{Binding Type}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <ComboBox
+                            x:Name="VariableTypeComboBox"
+                            SelectedItem="{Binding TypeInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                            Style="{StaticResource VariableTypeComboBoxStyle}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Expr: number / expression (int, double), true / false (bool) or any text (string)  -->
+            <DataGridTemplateColumn
+                x:Name="VariablesExprColumn"
+                Width="3*"
+                Header="Expr">
+                <DataGridTemplateColumn.HeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="ToolTip" Value="int / double: number or expression with dx, dy, dz and earlier variables; bool: true / false; string: any text" />
+                    </Style>
+                </DataGridTemplateColumn.HeaderStyle>
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock x:Name="VariableExprText" Text="{Binding Expr}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="VariableExprInput"
+                            Style="{StaticResource ExpressionCellEditBoxStyle}"
+                            Text="{Binding ExprInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Value: resolved number, read-only  -->
+            <DataGridTextColumn
+                x:Name="VariablesValueColumn"
+                Width="Auto"
+                Binding="{Binding Value}"
+                Header="Value"
+                IsReadOnly="True" />
+
+            <!--  Comment: free text, empty removes the attribute  -->
+            <DataGridTemplateColumn
+                x:Name="VariablesCommentColumn"
+                Width="4*"
+                Header="Comment">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            x:Name="VariableCommentText"
+                            Text="{Binding Comment}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip="{Binding Comment}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="VariableCommentInput"
+                            Style="{StaticResource ValidatedCellEditBoxStyle}"
+                            Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

@@ -1,0 +1,142 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartBoresGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--
+        Selected part bores: X / Y / Depth editable in place (click the selected cell or F2),
+        each cell committed on its own through BoreRowVM (ICellEditableRow)
+    -->
+    <DataGrid
+        x:Name="BoresDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
+        AutoGenerateColumns="False"
+        CanUserAddRows="False"
+        ItemsSource="{Binding SelectedPartBores}"
+        SelectedItem="{Binding SelectedBore}"
+        SelectionMode="Extended"
+        SelectionUnit="FullRow">
+        <DataGrid.Columns>
+
+            <!--  Check: feeds AppViewModel.CheckedBores  -->
+            <DataGridTemplateColumn
+                x:Name="BoresCheckColumn"
+                Width="Auto"
+                Header="Check">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <CheckBox
+                            x:Name="BoreCheckBox"
+                            HorizontalAlignment="Center"
+                            IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Read-only bore identity  -->
+            <DataGridTextColumn
+                x:Name="BoresNumberColumn"
+                Width="Auto"
+                Binding="{Binding Number}"
+                Header="#"
+                IsReadOnly="True" />
+            <DataGridTextColumn
+                x:Name="BoresSideColumn"
+                Width="Auto"
+                Binding="{Binding Side}"
+                Header="Side"
+                IsReadOnly="True" />
+
+            <!--  X: evaluated value (hover: authored expression = exact value), edits the authored x (z for a Left/Right edge bore)  -->
+            <DataGridTemplateColumn
+                x:Name="BoresXColumn"
+                Width="*"
+                Header="X"
+                HeaderStyle="{StaticResource ExpressionColumnHeaderStyle}">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            x:Name="BoreXText"
+                            Style="{StaticResource ExpressionCellTextStyle}"
+                            Text="{Binding X}"
+                            ToolTip="{Binding XToolTip}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="BoreXInput"
+                            Style="{StaticResource ExpressionCellEditBoxStyle}"
+                            Text="{Binding XInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Y: evaluated value (hover: authored expression = exact value), edits the authored y (z for a Top/Bottom edge bore)  -->
+            <DataGridTemplateColumn
+                x:Name="BoresYColumn"
+                Width="*"
+                Header="Y"
+                HeaderStyle="{StaticResource ExpressionColumnHeaderStyle}">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            x:Name="BoreYText"
+                            Style="{StaticResource ExpressionCellTextStyle}"
+                            Text="{Binding Y}"
+                            ToolTip="{Binding YToolTip}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="BoreYInput"
+                            Style="{StaticResource ExpressionCellEditBoxStyle}"
+                            Text="{Binding YInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Diameter: from the bore's tool, read-only  -->
+            <DataGridTextColumn
+                x:Name="BoresDiameterColumn"
+                Width="*"
+                Binding="{Binding Diameter}"
+                Header="Ø"
+                IsReadOnly="True" />
+
+            <!--  Depth: evaluated value (hover: authored expression = exact value), edits the authored dp  -->
+            <DataGridTemplateColumn
+                x:Name="BoresDepthColumn"
+                Width="*"
+                Header="Depth"
+                HeaderStyle="{StaticResource ExpressionColumnHeaderStyle}">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <TextBlock
+                            x:Name="BoreDepthText"
+                            Style="{StaticResource ExpressionCellTextStyle}"
+                            Text="{Binding Depth}"
+                            ToolTip="{Binding DepthToolTip}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+                <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                        <TextBox
+                            x:Name="BoreDepthInput"
+                            Style="{StaticResource ExpressionCellEditBoxStyle}"
+                            Text="{Binding DepthInput, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellEditingTemplate>
+            </DataGridTemplateColumn>
+
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

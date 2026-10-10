@@ -1035,18 +1035,201 @@ namespace XncOptimizerUI.Services
                 return null;
             }
 
+            var programXml = LoadProgramDocument(operation);
+
+            XncProgramRotator.RotateProgram(ProgramRoot(programXml), quarterTurns, flipEdgeGrooveTcl);
+
+            return SerializeProgram(programXml);
+        }
+
+        /// <summary>Decodes the escaped <c>program</c> attribute of an XNC operation.</summary>
+        private static XDocument LoadProgramDocument(XElement operation)
+        {
             var programAttribute = operation.GetProgram()
                 ?? throw new Exception("XNC operation has no 'program' attribute.");
-            var programXml = XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
-            var program = programXml.Element("program")
+
+            return XDocument.Parse(WebUtility.HtmlDecode(programAttribute.Value));
+        }
+
+        private static XElement ProgramRoot(XDocument programXml) =>
+            programXml.Element("program")
                 ?? throw new Exception("XNC program has no <program> root element.");
 
-            XncProgramRotator.RotateProgram(program, quarterTurns, flipEdgeGrooveTcl);
+        /// <summary>Program text to store back into the <c>program</c> attribute (declaration kept).</summary>
+        private static string SerializeProgram(XDocument programXml)
+        {
+            var program = ProgramRoot(programXml);
 
             return programXml.Declaration is { } declaration
                 ? declaration + program.ToString()
                 : program.ToString();
         }
+
+        // --- Bore attribute editing ----------------------------------------------------------
+
+        public bool UpdateBore(ref string log, int operationId, int boreIndex, BoreAttribute attribute, string expression) =>
+            EditOperationProgram(ref log, operationId, $"Bore #{boreIndex + 1}", program =>
+            {
+                var bore = FindBoreElement(program, boreIndex);
+                var text = RequireValidBoreExpression(program, bore, attribute, expression);
+
+                ApplyBoreAttribute(bore, attribute, text);
+            });
+
+        /// <summary>
+        /// Decodes the program of XNC operation <paramref name="operationId"/>, applies
+        /// <paramref name="edit"/> and writes the program back. An exception thrown by the edit is
+        /// logged (prefixed with <paramref name="subject"/>) and leaves the document unchanged.
+        /// </summary>
+        private bool EditOperationProgram(ref string log, int operationId, string subject, Action<XElement> edit)
+        {
+            if (_project == null)
+            {
+                log += "***\nNo project is opened.\n";
+                return false;
+            }
+
+            try
+            {
+                var operation = FindXncOperation(operationId);
+                var programXml = LoadProgramDocument(operation);
+
+                edit(ProgramRoot(programXml));
+                operation.GetProgram()!.Value = SerializeProgram(programXml);
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{subject} of operation id={operationId}: {e.Message}\n";
+                return false;
+            }
+
+            return true;
+        }
+
+        private XElement FindXncOperation(int operationId) =>
+            GetXncOperations().FirstOrDefault(o => o.Attribute("id")?.Value == operationId.ToString(CultureInfo.InvariantCulture))
+                ?? throw new Exception("XNC operation not found.");
+
+        private static XElement FindBoreElement(XElement program, int boreIndex) =>
+            program.Elements().Where(e => ElementIsBore(e.Name.LocalName)).ElementAtOrDefault(boreIndex)
+                ?? throw new Exception("bore not found in the program.");
+
+        /// <summary>Trimmed <paramref name="expression"/> once it is acceptable for this bore and attribute.</summary>
+        private static string RequireValidBoreExpression(XElement program, XElement bore, BoreAttribute attribute, string expression)
+        {
+            var surface = BoreAttributes.SurfaceOf(bore.Name.LocalName)!.Value;
+
+            if (!attribute.AppliesTo(surface))
+            {
+                throw new Exception($"<{bore.Name.LocalName}> has no editable '{attribute.XmlName()}' attribute.");
+            }
+
+            var valid = BoreExpression.TryEvaluate(
+                expression, attribute, SeedProgramSymbols(program), out _, out var error);
+
+            return valid ? expression.Trim() : throw new Exception($"invalid {attribute.XmlName()} \"{expression}\": {error}.");
+        }
+
+        /// <summary>Writes the attribute; an explicit <c>z</c> replaces the <c>m="true"</c> middle pin.</summary>
+        private static void ApplyBoreAttribute(XElement bore, BoreAttribute attribute, string text)
+        {
+            bore.SetAttributeValue(attribute.XmlName(), text);
+
+            if (attribute == BoreAttribute.Z)
+            {
+                bore.SetAttributeValue("m", null);
+            }
+        }
+
+        // --- Variable (<var>) editing ---------------------------------------------------------
+
+        public bool UpdateVariable(ref string log, int operationId, int variableIndex, XncVariableAttribute attribute, string value) =>
+            EditOperationProgram(ref log, operationId, $"Variable #{variableIndex + 1}", program =>
+            {
+                var variable = program.Elements("var").ElementAtOrDefault(variableIndex)
+                    ?? throw new Exception("variable not found in the program.");
+
+                switch (attribute)
+                {
+                    case XncVariableAttribute.Name: RenameVariable(program, variable, value); break;
+                    case XncVariableAttribute.Type: ChangeVariableType(program, variable, value); break;
+                    case XncVariableAttribute.Expr: ChangeVariableExpr(program, variable, value); break;
+                    default: variable.SetAttributeValue("comment", string.IsNullOrEmpty(value) ? null : value); break;
+                }
+            });
+
+        /// <summary>Renames the variable and every whole-identifier reference to it in the program's expressions.</summary>
+        private static void RenameVariable(XElement program, XElement variable, string value)
+        {
+            var oldName = variable.GetNameValue() ?? string.Empty;
+            var newName = value.Trim();
+            var otherNames = program.Elements("var").Where(v => v != variable).Select(v => v.GetNameValue() ?? string.Empty);
+
+            if (XncVariableRules.CheckName(newName, otherNames) is { } error)
+            {
+                throw new Exception($"invalid name \"{value}\": {error}.");
+            }
+
+            ExpressionReferences(program, variable, oldName)
+                .ToList()
+                .ForEach(attribute => attribute.Value = RenameIdentifier(attribute.Value, oldName, newName));
+
+            variable.SetAttributeValue("name", newName);
+        }
+
+        /// <summary>
+        /// Sets the type when the current expr is valid for it; a string/bool variable cannot be
+        /// referenced from an arithmetic expression, so that change is refused while it is.
+        /// </summary>
+        private static void ChangeVariableType(XElement program, XElement variable, string value)
+        {
+            if (!XncVariableTypes.TryParseExact(value, out var type))
+            {
+                throw new Exception($"unknown type \"{value}\" (use int, double, string or bool).");
+            }
+
+            var name = variable.GetNameValue() ?? string.Empty;
+            var uses = ExpressionReferences(program, variable, name).Count();
+
+            if (!type.IsNumeric() && uses > 0)
+            {
+                throw new Exception($"'{name}' is used in {uses} expression(s); a {type.XmlName()} variable cannot be referenced there.");
+            }
+
+            RequireValidVariableExpr(program, variable, variable.GetExprValue(), type);
+            variable.SetAttributeValue("type", type.XmlName());
+        }
+
+        private static void ChangeVariableExpr(XElement program, XElement variable, string value)
+        {
+            var type = XncVariableTypes.Parse(variable.GetTypeValue());
+
+            RequireValidVariableExpr(program, variable, value, type);
+            variable.SetAttributeValue("expr", XncVariableRules.NormalizeExpr(value, type));
+        }
+
+        private static void RequireValidVariableExpr(XElement program, XElement variable, string? expr, XncVariableType type)
+        {
+            var symbols = SeedProgramSymbols(program, before: variable);
+
+            if (!XncVariableRules.TryCheckExpr(expr, type, symbols, out _, out var error))
+            {
+                throw new Exception($"invalid {type.XmlName()} expr \"{expr}\": {error}.");
+            }
+        }
+
+        /// <summary>
+        /// Expression attributes of the program (other than <paramref name="variable"/>'s own)
+        /// that reference <paramref name="name"/>. A string/bool var's expr is a literal, not an
+        /// expression, so it never counts.
+        /// </summary>
+        private static IEnumerable<XAttribute> ExpressionReferences(XElement program, XElement variable, string name) =>
+            program.Elements()
+                .Where(element => element != variable)
+                .Where(element => element.Name.LocalName != "var" || XncVariableTypes.Parse(element.GetTypeValue()).IsNumeric())
+                .SelectMany(element => element.Attributes())
+                .Where(attribute => ExpressionAttributes.Contains(attribute.Name.LocalName))
+                .Where(attribute => ReferencesIdentifier(attribute.Value, name));
 
         private static void ApplyRotatedProgram(XElement operation, string? program, int targetTurn)
         {

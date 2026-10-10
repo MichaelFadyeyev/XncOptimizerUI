@@ -7,6 +7,7 @@
     xmlns:local="clr-namespace:XncOptimizerUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:partPreview="clr-namespace:XncOptimizerUI.MVVM.Views.PartPreview"
+    xmlns:partPrograms="clr-namespace:XncOptimizerUI.MVVM.Views.PartPrograms"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:validators="clr-namespace:XncOptimizerUI.MVVM.Validators"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
@@ -752,12 +753,12 @@
                         <!--  Parts list  -->
                         <DataGrid
                             x:Name="PartsDataGrid"
-                            EnableRowVirtualization="True"
-                            VirtualizingPanel.VirtualizationMode="Recycling"
                             AutoGenerateColumns="False"
                             CanUserAddRows="False"
+                            EnableRowVirtualization="True"
                             ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
-                            SelectedItem="{Binding SelectedPart}">
+                            SelectedItem="{Binding SelectedPart}"
+                            VirtualizingPanel.VirtualizationMode="Recycling">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Width="Auto" Header="Check">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -934,7 +935,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" MinWidth="120" />
                             <ColumnDefinition Width="5" />
-                            <ColumnDefinition Width="350" MinWidth="160" />
+                            <ColumnDefinition Width="420" MinWidth="160" />
                         </Grid.ColumnDefinitions>
 
                         <!--  Preview area: part preview and fixed-width rotation buttons column  -->
@@ -970,7 +971,8 @@
                                 x:Name="PartRotationPanel"
                                 Grid.Column="1"
                                 Margin="0,4,0,0"
-                                VerticalAlignment="Top" />                        </Grid>
+                                VerticalAlignment="Top" />                        
+                        </Grid>
 
                         <GridSplitter
                             Grid.Column="1"
@@ -1003,56 +1005,11 @@
                                                 Content="Bores"
                                                 FontSize="12"
                                                 Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
-                                            <DataGrid
+                                            <partPrograms:SelectedPartBoresGrid
                                                 x:Name="SelectedPartBoresGrid"
                                                 MaxHeight="250"
                                                 Margin="0,0,0,4"
-                                                AutoGenerateColumns="False"
-                                                CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartBores}"
-                                                SelectionMode="Extended"
-                                                SelectionUnit="FullRow"
-                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}">
-                                                <DataGrid.Columns>
-                                                    <DataGridTemplateColumn Width="Auto" Header="Check">
-                                                        <DataGridTemplateColumn.CellTemplate>
-                                                            <DataTemplate>
-                                                                <CheckBox HorizontalAlignment="Center" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            </DataTemplate>
-                                                        </DataGridTemplateColumn.CellTemplate>
-                                                    </DataGridTemplateColumn>
-                                                    <DataGridTextColumn
-                                                        Width="Auto"
-                                                        Binding="{Binding Number}"
-                                                        Header="#"
-                                                        IsReadOnly="True" />
-                                                    <DataGridTextColumn
-                                                        Width="Auto"
-                                                        Binding="{Binding Side}"
-                                                        Header="Side"
-                                                        IsReadOnly="True" />
-                                                    <DataGridTextColumn
-                                                        Width="*"
-                                                        Binding="{Binding X}"
-                                                        Header="X"
-                                                        IsReadOnly="True" />
-                                                    <DataGridTextColumn
-                                                        Width="*"
-                                                        Binding="{Binding Y}"
-                                                        Header="Y"
-                                                        IsReadOnly="True" />
-                                                    <DataGridTextColumn
-                                                        Width="*"
-                                                        Binding="{Binding Diameter}"
-                                                        Header="Ø"
-                                                        IsReadOnly="True" />
-                                                    <DataGridTextColumn
-                                                        Width="*"
-                                                        Binding="{Binding Depth}"
-                                                        Header="Depth"
-                                                        IsReadOnly="True" />
-                                                </DataGrid.Columns>
-                                            </DataGrid>
+                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
 
                                             <!--  Selected Part Grooves List  -->
                                             <Label
@@ -1313,6 +1270,17 @@
                                             </DataGrid>
                                         </StackPanel>
                                     </ScrollViewer>
+                                </TabItem>
+
+                                <!--  Selected Part Variables: <var> declarations, editable  -->
+                                <TabItem
+                                    x:Name="SelectedPartVariablesTab"
+                                    Width="100"
+                                    Header="Variables">
+                                    <partPrograms:SelectedPartVariablesGrid
+                                        x:Name="SelectedPartVariablesGrid"
+                                        VerticalAlignment="Top"
+                                        Visibility="{Binding HasSelectedPartVariables, Converter={StaticResource BoolToVis}}" />
                                 </TabItem>
 
                                 <!--  Selected Part Programs List  -->

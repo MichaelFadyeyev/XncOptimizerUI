@@ -148,6 +148,48 @@ namespace XncOptimizerUI.Test.Fakes
             return RotatePartResult;
         }
 
+        public bool UpdateVariableResult { get; set; } = true;
+
+        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateVariable"/>; <c>null</c> keeps them.</summary>
+        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateVariable { get; set; }
+
+        public (int OperationId, int VariableIndex, XncVariableAttribute Attribute, string Value)? LastUpdateVariable { get; private set; }
+
+        public bool UpdateVariable(ref string log, int operationId, int variableIndex, XncVariableAttribute attribute, string value)
+        {
+            Calls.Add(nameof(UpdateVariable));
+            LastUpdateVariable = (operationId, variableIndex, attribute, value);
+            log += LogToAppend;
+
+            if (UpdateVariableResult && XncProgramsAfterUpdateVariable is { } updated)
+            {
+                XncPrograms = updated;
+            }
+
+            return UpdateVariableResult;
+        }
+
+        public bool UpdateBoreResult { get; set; } = true;
+
+        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateBore"/>; <c>null</c> keeps them.</summary>
+        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateBore { get; set; }
+
+        public (int OperationId, int BoreIndex, BoreAttribute Attribute, string Expression)? LastUpdateBore { get; private set; }
+
+        public bool UpdateBore(ref string log, int operationId, int boreIndex, BoreAttribute attribute, string expression)
+        {
+            Calls.Add(nameof(UpdateBore));
+            LastUpdateBore = (operationId, boreIndex, attribute, expression);
+            log += LogToAppend;
+
+            if (UpdateBoreResult && XncProgramsAfterUpdateBore is { } updated)
+            {
+                XncPrograms = updated;
+            }
+
+            return UpdateBoreResult;
+        }
+
         public int GetXncProgramsCount(int partId)
         {
             Calls.Add(nameof(GetXncProgramsCount));

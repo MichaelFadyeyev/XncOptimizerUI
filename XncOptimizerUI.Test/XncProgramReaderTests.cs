@@ -231,6 +231,32 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void Reads_boreIdentityAndAuthoredText()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("id", "7"),
+                new XAttribute("side", "true"),
+                new XAttribute("program",
+                    "<program dx=\"500\" dy=\"200\" dz=\"18\"><tool name=\"Bore8\" d=\"8\"/>"
+                    + "<bf x=\"dx-32\" y=\"dy/2\" dp=\"dz\" name=\"Bore8\"/>"
+                    + "<bt x=\"100\" z=\"dz-4\" dp=\"30\" name=\"Bore8\"/>"
+                    + "<bl y=\"65\" dp=\"30\" m=\"true\" name=\"Bore8\"/></program>"));
+
+            var program = XncProgramReader.Read(operation);
+            var bores = program.Bores;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.OperationId, Is.EqualTo(7));
+                Assert.That(bores.Select(b => b.Index), Is.EqualTo(new[] { 0, 1, 2 }));
+                Assert.That((bores[0].XText, bores[0].YText, bores[0].DepthText, bores[0].X), Is.EqualTo(("dx-32", "dy/2", "dz", 468d)));
+                Assert.That((bores[1].XText, bores[1].ZText, bores[1].Z), Is.EqualTo(("100", "dz-4", 14d)));
+                Assert.That((bores[2].YText, bores[2].ZText, bores[2].Z), Is.EqualTo(("65", (string?)null, 9d)));
+            });
+        }
+
+        [Test]
         public void Reads_edgeBoreWithoutMiddleFlagOrZ_Throws()
         {
             var operation = new XElement("operation",

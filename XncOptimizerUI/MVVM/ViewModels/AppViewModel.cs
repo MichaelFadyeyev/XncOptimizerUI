@@ -260,6 +260,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
         [ObservableProperty]
         private bool _hasSelectedPartBores;
 
+        /// <summary>
+        /// The bore row selected in the bores <c>DataGrid</c>; its X / Y / Depth cells are edited
+        /// in place (see <see cref="OnBoreRowEdited"/>).
+        /// </summary>
+        [ObservableProperty]
+        private BoreRowVM? _selectedBore;
+
         [ObservableProperty]
         private ObservableCollection<GrooveRowVM> _selectedPartGrooves = [];
 
@@ -271,6 +278,16 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         [ObservableProperty]
         private bool _hasSelectedPartTools;
+
+        /// <summary>
+        /// The <c>&lt;var&gt;</c> declarations of <see cref="SelectedPart"/>'s XNC programs, numbered
+        /// in order, for the Variables <c>DataGrid</c> (name / type / expr / comment editable).
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<VariableRowVM> _selectedPartVariables = [];
+
+        [ObservableProperty]
+        private bool _hasSelectedPartVariables;
 
         [ObservableProperty]
         private ObservableCollection<MillingContourRowVM> _selectedPartMillingContours = [];
@@ -1242,6 +1259,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
                     Line("tool", $"{tool.Name} Ø{Num(tool.Diameter)}");
                 }
 
+                foreach (var variable in program.DeclaredVariables)
+                {
+                    Line("var", DescribeVariable(variable));
+                }
+
                 foreach (var bore in program.Bores)
                 {
                     var through = bore.Through ? " through" : string.Empty;
@@ -1305,28 +1327,130 @@ namespace XncOptimizerUI.MVVM.ViewModels
                         _ => bore.Surface.ToString()
                     };
 
-                    var (x, y) = bore.Surface switch
-                    {
-                        BoreSurface.Top or BoreSurface.Bottom => (bore.X, bore.Z),
-                        BoreSurface.Left or BoreSurface.Right => (bore.Z, bore.Y),
-                        _ => (bore.X, bore.Y)
-                    };
-
                     var diameter = program.Tools.FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter;
 
                     rows.Add(new BoreRowVM(
                         ++number,
                         side,
-                        Num(x),
-                        Num(y),
                         diameter is null ? null : Num(diameter.Value),
-                        Num(bore.Depth),
                         bore,
-                        OnBoreRowSelectionChanged));
+                        program,
+                        OnBoreRowSelectionChanged,
+                        OnBoreRowEdited));
                 }
             }
 
             return rows;
+        }
+
+        /// <summary>
+        /// Writes one committed bore cell edit into its program, saves the file in place (together
+        /// with any pending grid edit of the part) and refreshes the bores and the preview.
+        /// Returns <c>false</c> when nothing was written, so the cell stays in edit mode.
+        /// </summary>
+        private bool OnBoreRowEdited(BoreRowVM row, BoreAttribute attribute, string expression) =>
+            SaveProgramEdit(
+                SelectedXncPrograms.FirstOrDefault(p => p.Bores.Contains(row.Bore))?.OperationId,
+                $"Bore #{row.Number} {attribute.XmlName()} = \"{expression}\"",
+                (ref string log, int operationId) => _projectService.UpdateBore(ref log, operationId, row.Bore.Index, attribute, expression),
+                RefreshSelectedPartBoresInPlace);
+
+        /// <summary>
+        /// Writes one committed variable cell edit into its program, saves the file in place and
+        /// refreshes everything derived from the programs (a variable may drive bores, mills, ...).
+        /// Returns <c>false</c> when nothing was written, so the cell stays in edit mode.
+        /// </summary>
+        private bool OnVariableRowEdited(VariableRowVM row, XncVariableAttribute attribute, string value) =>
+            SaveProgramEdit(
+                SelectedXncPrograms.FirstOrDefault(p => p.DeclaredVariables.Contains(row.Variable))?.OperationId,
+                $"Variable #{row.Number} {attribute.XmlName()} = \"{value}\"",
+                (ref string log, int operationId) => _projectService.UpdateVariable(ref log, operationId, row.Variable.Index, attribute, value),
+                RefreshSelectedPartAfterVariableEdit);
+
+        private delegate bool ProgramEdit(ref string log, int operationId);
+
+        /// <summary>
+        /// Applies <paramref name="edit"/> to the program of XNC operation <paramref name="operationId"/>
+        /// of the selected part (together with any pending grid edit of the part), saves the file
+        /// in place, logs <paramref name="description"/> and runs <paramref name="refresh"/>.
+        /// </summary>
+        private bool SaveProgramEdit(int? operationId, string description, ProgramEdit edit, Action<PartVM> refresh)
+        {
+            var part = SelectedPart;
+
+            if (part is null || operationId is null || string.IsNullOrEmpty(FullPath))
+            {
+                return false;
+            }
+
+            var log = Log;
+            _projectService.UpdatePart(ref log, part.Part);
+
+            if (!edit(ref log, operationId.Value))
+            {
+                Log = log;
+                return false;
+            }
+
+            log += SaveEditedProgram(description);
+            Log = log;
+            refresh(part);
+
+            return true;
+        }
+
+        /// <summary>Saves the document after a program edit; returns the log line describing the outcome.</summary>
+        private string SaveEditedProgram(string description)
+        {
+            try
+            {
+                _projectService.SaveProject();
+                return $"{description} saved: {DateTime.Now.ToLocalTime()}\n";
+            }
+            catch (Exception e)
+            {
+                return $"***\n{description}, but saving failed: {e.Message}\n";
+            }
+        }
+
+        /// <summary>
+        /// Re-reads <paramref name="part"/>'s programs after a bore edit and updates the bore rows
+        /// in place - the collection is not replaced, because this runs while the bores
+        /// <c>DataGrid</c> is still ending its cell edit (replacing its items source then throws),
+        /// and in-place rows keep the grid's selection and the checkboxes. Bores do not affect the
+        /// other machining tables, so those are left alone.
+        /// </summary>
+        private void RefreshSelectedPartBoresInPlace(PartVM part)
+        {
+            var programs = _projectService.ReadXncPrograms(part.Id);
+            var bores = programs.SelectMany(program => program.Bores.Select(bore => (Bore: bore, Program: program))).ToList();
+
+            if (bores.Count != SelectedPartBores.Count)
+            {
+                RefreshSelectedPartMachining(part);
+                return;
+            }
+
+            SelectedPartPrograms = BuildSelectedPartPrograms(part, programs, null);
+            SelectedXncPrograms = programs;
+
+            SelectedPartBores
+                .Zip(bores)
+                .ToList()
+                .ForEach(pair => ApplyBoreRow(pair.First, pair.Second.Bore, pair.Second.Program));
+        }
+
+        /// <summary>Refreshes one row and keeps <see cref="CheckedBores"/> pointing at its current bore.</summary>
+        private void ApplyBoreRow(BoreRowVM row, XncBore bore, XncProgram program)
+        {
+            var checkedAt = CheckedBores.IndexOf(row.Bore);
+
+            row.Apply(bore, program);
+
+            if (checkedAt >= 0)
+            {
+                CheckedBores[checkedAt] = bore;
+            }
         }
 
         private static ObservableCollection<ToolRowVM> BuildSelectedPartToolRows(
@@ -1344,6 +1468,30 @@ namespace XncOptimizerUI.MVVM.ViewModels
             }
 
             return rows;
+        }
+
+        /// <summary>
+        /// Flattens the <c>&lt;var&gt;</c> declarations across the selected part's XNC programs into
+        /// numbered, editable <see cref="VariableRowVM"/> rows for the Variables <c>DataGrid</c>.
+        /// </summary>
+        private ObservableCollection<VariableRowVM> BuildSelectedPartVariableRows(IReadOnlyList<XncProgram> programs) =>
+            new(programs
+                .SelectMany(program => program.DeclaredVariables.Select(variable => (Variable: variable, Program: program)))
+                .Select((entry, i) => new VariableRowVM(
+                    i + 1, entry.Program.Side ? "Front" : "Back", entry.Variable, entry.Program, OnVariableRowEdited)));
+
+        /// <summary>
+        /// XNC list text of a variable: <c>name type = expr</c>, then <c>(= value)</c> when a
+        /// numeric expr is not a plain number, then <c>// comment</c>.
+        /// </summary>
+        private static string DescribeVariable(XncVariable variable)
+        {
+            var value = variable.Value is { } number && Num(number) != variable.Expr.Trim()
+                ? $" (= {Num(number)})"
+                : string.Empty;
+            var comment = string.IsNullOrEmpty(variable.Comment) ? string.Empty : $" // {variable.Comment}";
+
+            return $"{variable.Name} {variable.Type.XmlName()} = {variable.Expr}{value}{comment}";
         }
 
         private ObservableCollection<MillingContourRowVM> BuildSelectedPartMillingContourRows(
@@ -1549,21 +1697,58 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         private void RefreshSelectedPartMachining(PartVM? part)
         {
-            string? readError = null;
-            IReadOnlyList<XncProgram> programs = [];
+            var (programs, readError) = ReadSelectedPartPrograms(part);
 
-            if (part is not null && !string.IsNullOrEmpty(FullPath))
+            ShowSelectedPartMachining(part, programs, readError);
+            SelectedPartVariables = BuildSelectedPartVariableRows(programs);
+            HasSelectedPartVariables = SelectedPartVariables.Count > 0;
+        }
+
+        /// <summary>
+        /// Re-reads <paramref name="part"/>'s programs after a variable edit and rebuilds every
+        /// table derived from them except the variables, whose rows are updated in place (this
+        /// runs while the Variables <c>DataGrid</c> is still ending its cell edit, when replacing
+        /// its items source throws).
+        /// </summary>
+        private void RefreshSelectedPartAfterVariableEdit(PartVM part)
+        {
+            var (programs, readError) = ReadSelectedPartPrograms(part);
+            var variables = programs.SelectMany(p => p.DeclaredVariables.Select(v => (Variable: v, Program: p))).ToList();
+
+            if (readError is not null || variables.Count != SelectedPartVariables.Count)
             {
-                try
-                {
-                    programs = _projectService.ReadXncPrograms(part.Id);
-                }
-                catch (Exception e)
-                {
-                    readError = e.Message;
-                }
+                RefreshSelectedPartMachining(part);
+                return;
             }
 
+            ShowSelectedPartMachining(part, programs, null);
+
+            SelectedPartVariables
+                .Zip(variables)
+                .ToList()
+                .ForEach(pair => pair.First.Apply(pair.Second.Variable, pair.Second.Program));
+        }
+
+        private (IReadOnlyList<XncProgram> Programs, string? ReadError) ReadSelectedPartPrograms(PartVM? part)
+        {
+            if (part is null || string.IsNullOrEmpty(FullPath))
+            {
+                return ([], null);
+            }
+
+            try
+            {
+                return (_projectService.ReadXncPrograms(part.Id), null);
+            }
+            catch (Exception e)
+            {
+                return ([], e.Message);
+            }
+        }
+
+        /// <summary>Programs summary, preview inputs, rotation state and the machining tables (all but the variables).</summary>
+        private void ShowSelectedPartMachining(PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
+        {
             SelectedPartPrograms = BuildSelectedPartPrograms(part, programs, readError);
             SelectedXncPrograms = programs;
             UpdateSelectedPartDisplay(part, programs);
@@ -1661,7 +1846,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             return parts.Count == 0 ? "0 seg" : string.Join("+", parts);
         }
 
-        private static string Num(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+        private static string Num(double value) => MachiningNumber.Format(value);
 
         private static decimal? TryParseToDecimal(string value) =>
             DecimalInput.TryParse(value, out var result) ? result : null;

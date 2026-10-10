@@ -31,5 +31,20 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// describe a repeated-bore array, unrelated to depth).
         /// </summary>
         public bool Through { get; init; }
+
+        /// <summary>Position among the bore elements of its program, in document order.</summary>
+        public int Index { get; init; }
+
+        /// <summary>Authored <c>x</c> attribute text (may be an expression such as <c>dx-32</c>); <c>null</c> when absent.</summary>
+        public string? XText { get; init; }
+
+        /// <summary>Authored <c>y</c> attribute text; <c>null</c> when absent.</summary>
+        public string? YText { get; init; }
+
+        /// <summary>Authored <c>z</c> attribute text; <c>null</c> when absent or pinned to the middle by <c>m="true"</c>.</summary>
+        public string? ZText { get; init; }
+
+        /// <summary>Authored <c>dp</c> attribute text.</summary>
+        public string? DepthText { get; init; }
     }
 }

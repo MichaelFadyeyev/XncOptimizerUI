@@ -37,10 +37,6 @@ namespace XncOptimizerUI.Services.Xnc
         /// <summary>Groove plane codes <c>p</c> in clockwise order (top → right → bottom → left).</summary>
         private static readonly int[] GroovePlaneCycle = [3, 2, 4, 1];
 
-        /// <summary>Attributes that may carry an expression referencing <c>dx</c>/<c>dy</c>.</summary>
-        private static readonly HashSet<string> ExpressionAttributes =
-            ["x", "y", "z", "x1", "y1", "x2", "y2", "cx", "cy", "dp", "t", "l", "w", "r", "a", "sxy", "expr", "as"];
-
         private static readonly Regex DxDyIdentifier = new(
             @"(?<![\w.])([dD])([xXyY])(?![\w.])",
             RegexOptions.CultureInvariant);
@@ -391,7 +387,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static void SwapDxDyInExpressions(XElement element)
         {
-            foreach (var attribute in element.Attributes().Where(a => ExpressionAttributes.Contains(a.Name.LocalName)))
+            foreach (var attribute in element.Attributes().Where(a => XncProgramMath.ExpressionAttributes.Contains(a.Name.LocalName)))
             {
                 attribute.Value = SwapDxDyIdentifiers(attribute.Value);
             }

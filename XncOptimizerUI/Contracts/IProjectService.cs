@@ -82,6 +82,30 @@ namespace XncOptimizerUI.Contracts
         /// </summary>
         bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl);
 
+        /// <summary>
+        /// Sets <paramref name="attribute"/> of the bore at <paramref name="boreIndex"/> (document
+        /// order among the bore elements) in the program of the XNC operation
+        /// <paramref name="operationId"/> to <paramref name="expression"/>, written as typed
+        /// (trimmed) so an expression such as <c>dx-32</c> stays parametric. The text is checked
+        /// by <see cref="Services.Xnc.BoreExpression"/> against the program's <c>dx</c>/<c>dy</c>/<c>dz</c>.
+        /// Setting <c>z</c> drops an <c>m="true"</c> middle pin. Saves nothing; the caller saves.
+        /// Returns <c>false</c> (with a log entry, document unchanged) when the operation or bore
+        /// does not exist, the bore has no such attribute, or the text is not acceptable.
+        /// </summary>
+        bool UpdateBore(ref string log, int operationId, int boreIndex, BoreAttribute attribute, string expression);
+
+        /// <summary>
+        /// Sets <paramref name="attribute"/> of the <paramref name="variableIndex"/>-th
+        /// <c>&lt;var&gt;</c> (document order) in the program of XNC operation
+        /// <paramref name="operationId"/>, checked by <see cref="Services.Xnc.XncVariableRules"/>.
+        /// A rename also rewrites every whole-identifier reference in the program's expressions;
+        /// a type change keeps the current <c>expr</c> and must be valid for it (a referenced
+        /// variable cannot become <c>string</c>/<c>bool</c>); an empty comment removes the attribute.
+        /// Saves nothing; the caller saves. Returns <c>false</c> (with a log entry, document
+        /// unchanged) when the operation or variable does not exist or the value is not acceptable.
+        /// </summary>
+        bool UpdateVariable(ref string log, int operationId, int variableIndex, XncVariableAttribute attribute, string value);
+
         int GetXncProgramsCount(int partId);
 
         /// <summary>

@@ -1,7 +1,8 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers">
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels">
 
     <!--  Part rotation panel: metrics  -->
     <GridLength x:Key="PartRotationColumnWidth">56</GridLength>
@@ -56,5 +57,74 @@
                 </DataTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!--
+        Program table cell text editor (bores X / Y / Depth, variables). Invalid
+        input (INotifyDataErrorInfo error on the bound draft) turns text and border red and shows
+        the reason as tooltip; the default error adorner is suppressed so it does not overlap
+        neighbouring cells.
+    -->
+    <Style x:Key="ValidatedCellEditBoxStyle" TargetType="TextBox">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="helpers:DataGridCellEditBehavior.FocusOnLoad" Value="True" />
+        <Setter Property="Validation.ErrorTemplate">
+            <Setter.Value>
+                <ControlTemplate>
+                    <AdornedElementPlaceholder />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="Foreground" Value="Red" />
+                <Setter Property="BorderBrush" Value="Red" />
+                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)[0].ErrorContent, RelativeSource={RelativeSource Self}}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--  Machining table header of an editable expression column  -->
+    <Style x:Key="ExpressionColumnHeaderStyle" TargetType="DataGridColumnHeader">
+        <Setter Property="ToolTip" Value="Number or expression with dx, dy, dz and program variables (F2 or click the selected cell to edit)" />
+    </Style>
+
+    <!--
+        Display cell of an editable expression column: transparent background so the whole cell
+        (not only the glyphs) shows the "expression = exact value" tooltip
+    -->
+    <Style x:Key="ExpressionCellTextStyle" TargetType="TextBlock">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!--  Machining table cell editor for a number or an expression (validated text editor)  -->
+    <Style
+        x:Key="ExpressionCellEditBoxStyle"
+        BasedOn="{StaticResource ValidatedCellEditBoxStyle}"
+        TargetType="TextBox" />
+
+    <!--
+        Variables table type selector, edit mode only (like the Parts grid band cells): opens its
+        list on load, closing it commits the cell; a type the expr does not fit is shown red with
+        the reason as tooltip
+    -->
+    <Style x:Key="VariableTypeComboBoxStyle" TargetType="ComboBox">
+        <Setter Property="ItemsSource" Value="{x:Static viewmodels:VariableRowVM.TypeOptions}" />
+        <Setter Property="helpers:DataGridCellEditBehavior.OpenDropDownOnLoad" Value="True" />
+        <Setter Property="Validation.ErrorTemplate">
+            <Setter.Value>
+                <ControlTemplate>
+                    <AdornedElementPlaceholder />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="Foreground" Value="Red" />
+                <Setter Property="BorderBrush" Value="Red" />
+                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)[0].ErrorContent, RelativeSource={RelativeSource Self}}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 </ResourceDictionary>

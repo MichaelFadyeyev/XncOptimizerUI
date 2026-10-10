@@ -767,6 +767,219 @@ namespace XncOptimizerUI.Test
             _config.Received(1).UpdateNeverFlipTclOnTurn(true);
         }
 
+        private static XncProgram ProgramWithBores(params (double X, string XText)[] bores) => new()
+        {
+            OperationId = 5,
+            Side = true,
+            Dx = 400,
+            Dy = 800,
+            Dz = 19,
+            Bores = bores.Select((b, i) => new XncBore
+            {
+                Surface = BoreSurface.Face,
+                Index = i,
+                X = b.X,
+                XText = b.XText,
+                Y = 50,
+                YText = "50",
+                Depth = 10,
+                DepthText = "10"
+            }).ToList()
+        };
+
+        private AppViewModel OpenWithBores()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [ProgramWithBores((100, "100"), (200, "200"))];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            return vm;
+        }
+
+        [Test]
+        public void EditingBoreX_CommitsExpression_SavesAndUpdatesRowInPlace()
+        {
+            var vm = OpenWithBores();
+            _projectService.XncProgramsAfterUpdateBore = [ProgramWithBores((368, "dx-32"), (200, "200"))];
+            var row = vm.SelectedPartBores[0];
+            vm.SelectedBore = row;
+            row.IsSelected = true;
+            var savesBefore = _projectService.SaveProjectCount;
+
+            row.BeginCellEdit();
+            row.XInput = "dx-32";
+            var committed = row.TryCommitCellEdit();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(committed, Is.True);
+                Assert.That(_projectService.LastUpdateBore, Is.EqualTo((5, 0, BoreAttribute.X, "dx-32")));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(vm.SelectedPartBores[0], Is.SameAs(row));
+                Assert.That(vm.SelectedBore, Is.SameAs(row));
+                Assert.That(row.X, Is.EqualTo("368"));
+                Assert.That(row.XInput, Is.EqualTo("dx-32"));
+                Assert.That(vm.CheckedBores, Is.EqualTo(new[] { row.Bore }));
+                Assert.That(vm.SelectedXncPrograms.Single().Bores[0].X, Is.EqualTo(368));
+                Assert.That(vm.Log, Does.Contain("Bore #1 x = \"dx-32\" saved"));
+            });
+        }
+
+        private static XncProgram ProgramWithVariable(string expr, double value, double boreDepth) => new()
+        {
+            OperationId = 5,
+            Side = true,
+            Dx = 400,
+            Dy = 800,
+            Dz = 19,
+            DeclaredVariables =
+            [
+                new XncVariable { Index = 0, Name = "depth", Type = XncVariableType.Double, Expr = expr, Comment = "Глибина", Value = value }
+            ],
+            Variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase) { ["depth"] = value },
+            Bores = [new XncBore { Surface = BoreSurface.Face, X = 100, Y = 50, Depth = boreDepth, DepthText = "depth" }]
+        };
+
+        [Test]
+        public void SelectingPart_ListsVariablesInTableAndXncList()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.HasSelectedPartVariables, Is.True);
+                Assert.That(vm.SelectedPartVariables.Single().Name, Is.EqualTo("depth"));
+                Assert.That(vm.SelectedPartPrograms, Does.Contain("/var/front/depth double = dz+2 (= 21) // Глибина"));
+            });
+        }
+
+        [Test]
+        public void EditingVariableExpr_SavesUpdatesRowInPlaceAndRebuildsDependents()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+            _projectService.XncProgramsAfterUpdateVariable = [ProgramWithVariable("dz+4", 23, 23)];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var row = vm.SelectedPartVariables.Single();
+            var savesBefore = _projectService.SaveProjectCount;
+
+            row.BeginCellEdit();
+            row.ExprInput = "dz+4";
+            var committed = row.TryCommitCellEdit();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(committed, Is.True);
+                Assert.That(_projectService.LastUpdateVariable, Is.EqualTo((5, 0, XncVariableAttribute.Expr, "dz+4")));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(vm.SelectedPartVariables.Single(), Is.SameAs(row));
+                Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "23")));
+                Assert.That(vm.SelectedPartBores.Single().Depth, Is.EqualTo("23"));
+                Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\" saved"));
+            });
+        }
+
+        [Test]
+        public void EditingVariable_WhenServiceRejects_SavesNothing()
+        {
+            SeedTwoParts();
+            _projectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+            _projectService.UpdateVariableResult = false;
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var row = vm.SelectedPartVariables.Single();
+            var savesBefore = _projectService.SaveProjectCount;
+
+            row.BeginCellEdit();
+            row.TypeInput = "int";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.TryCommitCellEdit(), Is.False);
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+            });
+        }
+
+        [Test]
+        public void EditingBore_InvalidInput_HasErrorAndRefusesCommit()
+        {
+            var vm = OpenWithBores();
+            var row = vm.SelectedPartBores[0];
+
+            row.BeginCellEdit();
+            row.XInput = "2*-3";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.HasErrors, Is.True);
+                Assert.That(row.GetErrors(nameof(BoreRowVM.XInput)).Cast<string>().Single(), Does.Contain("sign"));
+                Assert.That(row.TryCommitCellEdit(), Is.False);
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.UpdateBore)));
+            });
+        }
+
+        [Test]
+        public void EditingBore_Cancel_RestoresCommittedTextAndClearsError()
+        {
+            var vm = OpenWithBores();
+            var row = vm.SelectedPartBores[0];
+
+            row.BeginCellEdit();
+            row.XInput = "1,5";
+            row.CancelCellEdit();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.XInput, Is.EqualTo("100"));
+                Assert.That(row.HasErrors, Is.False);
+            });
+        }
+
+        [Test]
+        public void EditingBore_UnchangedText_CommitsWithoutWriting()
+        {
+            var vm = OpenWithBores();
+            var row = vm.SelectedPartBores[0];
+
+            row.BeginCellEdit();
+            row.XInput = " 100 ";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.TryCommitCellEdit(), Is.True);
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.UpdateBore)));
+            });
+        }
+
+        [Test]
+        public void EditingBore_WhenServiceRejects_KeepsEditAndSavesNothing()
+        {
+            var vm = OpenWithBores();
+            _projectService.UpdateBoreResult = false;
+            var row = vm.SelectedPartBores[0];
+            var savesBefore = _projectService.SaveProjectCount;
+
+            row.BeginCellEdit();
+            row.DepthInput = "dz";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.TryCommitCellEdit(), Is.False);
+                Assert.That(row.HasErrors, Is.True);
+                Assert.That(row.Depth, Is.EqualTo("10"));
+                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+            });
+        }
+
         [Test]
         public void ChangingRotation_WhenRotationFails_RestoresButtonsAndSavesNothing()
         {

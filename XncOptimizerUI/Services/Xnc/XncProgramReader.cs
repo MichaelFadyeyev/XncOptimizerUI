@@ -38,11 +38,12 @@ namespace XncOptimizerUI.Services.Xnc
 
             return Parse(
                 program,
+                ParseInt(xncOperation.Attribute("id")?.Value),
                 ParseBool(xncOperation.GetSideValue(), false),
                 ParseInt(xncOperation.GetTurnValue()));
         }
 
-        private static XncProgram Parse(XElement program, bool side, int turn)
+        private static XncProgram Parse(XElement program, int operationId, bool side, int turn)
         {
             var symbols = new XncSymbolTable();
             var dx = RequireDouble(program.GetDxValue(), "<program> @dx");
@@ -55,6 +56,7 @@ namespace XncOptimizerUI.Services.Xnc
             var tools = new List<XncTool>();
             var toolsByName = new Dictionary<string, XncTool>(StringComparer.OrdinalIgnoreCase);
             var variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var declaredVariables = new List<XncVariable>();
             var bores = new List<XncBore>();
             var groovings = new List<XncGrooving>();
             var contours = new List<XncMillingContour>();
@@ -116,9 +118,27 @@ namespace XncOptimizerUI.Services.Xnc
                         CloseContour();
                         var name = element.GetNameValue()
                             ?? throw new XncProgramFormatException("<var> has no name.");
-                        var value = Eval(element.GetExprValue(), $"<var> '{name}'");
-                        symbols.Set(name, value);
-                        variables[name] = value;
+                        var type = XncVariableTypes.Parse(element.GetTypeValue());
+
+                        // Only int/double vars are arithmetic symbols; a string/bool var's expr is
+                        // not a number and nothing numeric may reference it.
+                        double? value = type.IsNumeric() ? Eval(element.GetExprValue(), $"<var> '{name}'") : null;
+
+                        if (value is { } number)
+                        {
+                            symbols.Set(name, number);
+                            variables[name] = number;
+                        }
+
+                        declaredVariables.Add(new XncVariable
+                        {
+                            Index = declaredVariables.Count,
+                            Name = name,
+                            Type = type,
+                            Expr = element.GetExprValue() ?? string.Empty,
+                            Comment = element.GetCommentValue(),
+                            Value = value
+                        });
                         break;
                     }
 
@@ -275,7 +295,9 @@ namespace XncOptimizerUI.Services.Xnc
 
                         // Edge bore through-thickness position: m="true" ("middle") pins it to
                         // dz/2 and no z attribute is needed; otherwise z is required.
-                        double EdgeZ() => ParseBool(element.GetMValue(), false)
+                        var isMiddle = ParseBool(element.GetMValue(), false);
+
+                        double EdgeZ() => isMiddle
                             ? dz / 2d
                             : Eval(element.GetZValue(), $"<{tag}> @z");
 
@@ -313,7 +335,12 @@ namespace XncOptimizerUI.Services.Xnc
                             Y = by,
                             Z = bz,
                             Depth = boreDepth,
-                            Through = boreDepth >= throughAt
+                            Through = boreDepth >= throughAt,
+                            Index = bores.Count,
+                            XText = element.GetXValue(),
+                            YText = element.GetYValue(),
+                            ZText = isMiddle ? null : element.GetZValue(),
+                            DepthText = element.GetDpValue()
                         });
                         break;
                     }
@@ -328,6 +355,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             return new XncProgram
             {
+                OperationId = operationId,
                 Dx = dx,
                 Dy = dy,
                 Dz = dz,
@@ -339,7 +367,8 @@ namespace XncOptimizerUI.Services.Xnc
                 MillingContours = contours,
                 MillingEllipses = ellipses,
                 MillingRectangles = rectangles,
-                Variables = variables
+                Variables = variables,
+                DeclaredVariables = declaredVariables
             };
         }
 

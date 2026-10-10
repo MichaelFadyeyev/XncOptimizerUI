@@ -150,9 +150,27 @@ Any of `x y x1 y1 x2 y2 cx cy dp z t l w a r sxy` (and `<var expr>`) is **either
 | attribute | meaning |
 |---|---|
 | `name` | variable identifier (case-insensitive) |
-| `type` | declared type, seen `"double"` |
-| `expr` | formula string, evaluated against the symbol table at the point it appears |
+| `type` | `int` / `double` / `string` / `bool` (seen `"double"`); absent or unknown is read as `double` |
+| `expr` | `int`/`double`: formula evaluated against the symbol table at the point it appears; `bool`: `true`/`false`; `string`: any text |
 | `comment` | free text, e.g. `Глубина сквозного фрезерования контура` ("through-contour milling depth") |
+
+Only `int`/`double` vars become symbols (`XncProgramReader`, `XncProgramMath.SeedProgramSymbols`);
+a `string`/`bool` var is listed (`XncProgram.DeclaredVariables`, `Value = null`) but never
+evaluated, so nothing numeric may reference it.
+
+**Editing (Variables table):** `IProjectService.UpdateVariable(ref log, operationId, variableIndex, attribute, value)`
+rewrites one attribute of the `variableIndex`-th `<var>` (rules in `Services/Xnc/XncVariableRules.cs`):
+- `name` — a letter, then letters/digits/`_`/`.`; unique in the program (any case); not
+  `dx`/`dy`/`dz`/`tool.dia`. Every whole-identifier reference in the program's expression
+  attributes (`XncProgramMath.ExpressionAttributes`, incl. numeric vars' `expr`; not a string/bool
+  var's literal) is renamed with it.
+- `type` — one of the four; the current `expr` must fit it; a var referenced by any expression
+  cannot become `string`/`bool`.
+- `expr` — by type: `double` a numeric expression (same rules as bore values,
+  `Services/Xnc/NumericExpression.cs`) over `dx`/`dy`/`dz` and the numeric vars declared **before**
+  it; `int` the same, evaluating to a whole number; `bool` `true`/`false`; `string` any text
+  (kept as typed, others trimmed).
+- `comment` — free text; empty removes the attribute.
 
 ## 6. Element reference
 
@@ -227,6 +245,16 @@ centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `
 `bt` / `bb` / `br` are implemented in `XncProgramReader.cs` exactly as documented above
 (edge pinned to `0`/`dx`/`dy`, other axis + `z` read from the element) — confirmed against
 `td-2.project`, `td.project`, and `td-bores-displaying.project`.
+
+**Editing (bores table):** `IProjectService.UpdateBore(ref log, operationId, boreIndex, attribute, expression)`
+rewrites one attribute of the `boreIndex`-th bore element (document order among
+`bf`/`bt`/`bb`/`bl`/`br`) of the operation's program. Editable attributes per element:
+`bf` → `x`, `y`; `bt`/`bb` → `x`, `z`; `bl`/`br` → `y`, `z`; all → `dp` (the pinned edge
+coordinate is never an attribute). The text is written **as typed** (trimmed), so an expression
+such as `dx-32` stays parametric. Accepted input (`Services/Xnc/BoreExpression.cs`): digits,
+one `.` per number, `dx`/`dy`/`dz` only (no `<var>`s, no `tool.dia`), `+ - * /`, parentheses;
+a `+`/`-` sign only at the start or right after `(`; must evaluate to a finite number; `dp > 0`.
+Writing `z` removes `m="true"` (an explicit `z` replaces the middle pin).
 
 ### 6.3 Groovings — `<gr>`
 
