@@ -8,3 +8,4 @@ XNC replaced: "305.07.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підрі
 XNC replaced: "305.08.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
 ***
 Stored to: <temp>\td-execute-optimize_ren.project
+

@@ -12,3 +12,4 @@ Tool order: "512.08.06.ПАН-600" (id=8): sorted 2 program(s), 0 skipped
 Tool order: "512.08.07.ПАН-600" (id=9): sorted 2 program(s), 0 skipped
 ***
 Tool declaration sorting complete: sorted 18 program(s), skipped 0. Stored to: <temp>\td-gr-ml-conversion_to.project
+

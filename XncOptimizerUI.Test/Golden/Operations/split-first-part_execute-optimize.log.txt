@@ -4,3 +4,4 @@ output: td-execute-optimize_spl.project
 301.07.03.підріз.47=ПАН-ВРХ resized to 164.0; count changed: 1 -> 1
 ***
 Stored to: <temp>\td-execute-optimize_spl.project
+

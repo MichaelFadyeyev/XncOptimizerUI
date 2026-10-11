@@ -5,3 +5,4 @@ Mills->Bores: "Mill-Ellipse" (id=2): 3 mill(s) -> bore(s), 2 tool(s) added, 2 to
 Mills->Bores: "Mill-Path" (id=5): 3 mill(s) -> bore(s), 2 tool(s) added, 2 tool(s) removed, 0 ignored
 ***
 Bore/Mill conversion complete: converted 6, ignored 0, 4 tool(s) added, 4 tool(s) removed across 2 part(s). Stored to: <temp>\td-br-ml-conversion_bm.project
+

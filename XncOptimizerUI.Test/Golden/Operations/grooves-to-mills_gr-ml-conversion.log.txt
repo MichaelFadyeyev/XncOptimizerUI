@@ -12,3 +12,4 @@ Grooves->Mills: "512.08.06.ПАН-600" (id=8): 15 groove(s) -> mill(s), 1 tool(s
 Grooves->Mills: "512.08.07.ПАН-600" (id=9): 12 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
 ***
 Groove/Mill conversion complete: converted 136, ignored 0, 9 tool(s) added, 9 tool(s) removed across 9 part(s). Stored to: <temp>\td-gr-ml-conversion_gm.project
+

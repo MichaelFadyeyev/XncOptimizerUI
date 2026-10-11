@@ -16,3 +16,4 @@ Mill offset: "ellipse-too-small" (id=13): 0 mill(s) offset, 0 ignored, 1 skipped
 Mill offset: "closed-sharp-triangle" (id=14): 0 mill(s) offset, 0 ignored, 1 skipped
 ***
 Mill path offset complete: offset 5 open mill(s) by 1.5 mm R, ignored 0, skipped 8, across 13 part(s). Stored to: <temp>\td-mill-offset_off.project
+

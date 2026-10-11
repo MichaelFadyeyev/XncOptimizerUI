@@ -16,3 +16,4 @@ Clean: "mixed" (id=2), XNC id=10: removed <ms x="1010" y="200" dp="5" in="0" out
 Clean: "mixed" (id=2): 12 removed (0 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, 0 unresolved
 ***
 Outside operations cleaning complete: removed 12 (0 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, unresolved 0, across 1 part(s). Stored to: <temp>\td-clean-outside_cln.project
+

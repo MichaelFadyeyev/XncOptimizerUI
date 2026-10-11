@@ -104,7 +104,7 @@ namespace XncOptimizerUI.Services
                 if (partOperations.Count == 0)
                 {
                     var message = "File seems to be already optimized or contains no XNC.";
-                    log += $"***\n{message}";
+                    log += $"***\n{message}\n";
                     return false;
                 }
 
@@ -283,11 +283,11 @@ namespace XncOptimizerUI.Services
                 _fullPath = Path.Combine(_path, result);
                 _doc!.Save(_fullPath);
 
-                log += $"***\nStored to: {_fullPath}";
+                log += $"***\nStored to: {_fullPath}\n";
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
@@ -436,7 +436,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nStored to: {_fullPath}";
+            log += $"***\nStored to: {_fullPath}\n";
         }
 
         public bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)
@@ -444,7 +444,7 @@ namespace XncOptimizerUI.Services
             if (targetParts == null || targetParts.Count == 0)
             {
                 var message = "No target parts selected for XNC replacement.";
-                log += $"***\n{message}";
+                log += $"***\n{message}\n";
                 return false;
             }
 
@@ -456,14 +456,14 @@ namespace XncOptimizerUI.Services
             if (sourceOps.Count == 0)
             {
                 var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has no XNC operation.""";
-                log += $"***\n{message}";
+                log += $"***\n{message}\n";
                 return false;
             }
 
             if (sourceOps.GroupBy(GetXncFaceKey).Any(g => g.Count() > 1))
             {
                 var message = $"""Source part "{sourcePart.Name}" (id={sourcePart.Id}) has ambiguous XNC operations (duplicate face).""";
-                log += $"***\n{message}";
+                log += $"***\n{message}\n";
                 return false;
             }
 
@@ -502,7 +502,7 @@ namespace XncOptimizerUI.Services
             {
                 var message = "Copy aborted. The following parts are not identical to the source part:\n\n"
                     + string.Join("\n", problems);
-                log += $"***\n{message}";
+                log += $"***\n{message}\n";
                 return false;
             }
 
@@ -534,7 +534,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nStored to: {_fullPath}";
+            log += $"***\nStored to: {_fullPath}\n";
 
             return true;
         }
@@ -543,7 +543,7 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for groove/mill conversion.";
+                log += "***\nNo parts selected for groove/mill conversion.\n";
                 return false;
             }
 
@@ -554,7 +554,7 @@ namespace XncOptimizerUI.Services
 
             if (direction == GrooveMillDirection.GroovesToMills && millingToolDiameters.Length == 0)
             {
-                log += "***\nNo milling tools configured (AppOptions.MillingToolDiams is empty). Grooves->Mills conversion cancelled.";
+                log += "***\nNo milling tools configured (AppOptions.MillingToolDiams is empty). Grooves->Mills conversion cancelled.\n";
                 return false;
             }
 
@@ -562,7 +562,7 @@ namespace XncOptimizerUI.Services
 
             if (direction == GrooveMillDirection.MillsToGrooves && groovingToolWidths.Count == 0)
             {
-                log += "***\nNo grooving tools configured (AppOptions.GroovingToolWidths is empty). Mills->Grooves conversion cancelled.";
+                log += "***\nNo grooving tools configured (AppOptions.GroovingToolWidths is empty). Mills->Grooves conversion cancelled.\n";
                 return false;
             }
 
@@ -637,14 +637,14 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
             if (totalConverted == 0)
             {
                 var what = direction == GrooveMillDirection.GroovesToMills ? "grooves" : "mills";
-                log += $"***\nNo {what} converted (ignored {totalIgnored}).";
+                log += $"***\nNo {what} converted (ignored {totalIgnored}).\n";
                 return false;
             }
 
@@ -657,7 +657,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nGroove/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}";
+            log += $"***\nGroove/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}\n";
 
             return true;
         }
@@ -666,7 +666,7 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for bore/mill conversion.";
+                log += "***\nNo parts selected for bore/mill conversion.\n";
                 return false;
             }
 
@@ -739,14 +739,14 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
             if (totalConverted == 0)
             {
                 var what = direction == BoreMillDirection.BoresToMills ? "bores" : "mills";
-                log += $"***\nNo {what} converted (ignored {totalIgnored}).";
+                log += $"***\nNo {what} converted (ignored {totalIgnored}).\n";
                 return false;
             }
 
@@ -759,7 +759,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nBore/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}";
+            log += $"***\nBore/Mill conversion complete: converted {totalConverted}, ignored {totalIgnored}, {totalToolsAdded} tool(s) added, {totalToolsRemoved} tool(s) removed across {touchedParts} part(s). Stored to: {_fullPath}\n";
 
             return true;
         }
@@ -777,7 +777,7 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for mill traversal optimization.";
+                log += "***\nNo parts selected for mill traversal optimization.\n";
                 return false;
             }
 
@@ -843,13 +843,13 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
             if (totalReordered == 0)
             {
-                log += $"***\nNo mill passes reordered (ignored {totalIgnored}).";
+                log += $"***\nNo mill passes reordered (ignored {totalIgnored}).\n";
                 return false;
             }
 
@@ -860,7 +860,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nMill traversal optimization complete: reordered {totalReordered} pass(es) across {touchedParts} part(s). Stored to: {_fullPath}";
+            log += $"***\nMill traversal optimization complete: reordered {totalReordered} pass(es) across {touchedParts} part(s). Stored to: {_fullPath}\n";
 
             return true;
         }
@@ -876,7 +876,7 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for tool declaration sorting.";
+                log += "***\nNo parts selected for tool declaration sorting.\n";
                 return false;
             }
 
@@ -912,13 +912,13 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
             if (totalSorted == 0)
             {
-                log += $"***\nNo tool declarations reordered (skipped {totalSkipped} program(s)).";
+                log += $"***\nNo tool declarations reordered (skipped {totalSkipped} program(s)).\n";
                 return false;
             }
 
@@ -929,7 +929,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nTool declaration sorting complete: sorted {totalSorted} program(s), skipped {totalSkipped}. Stored to: {_fullPath}";
+            log += $"***\nTool declaration sorting complete: sorted {totalSorted} program(s), skipped {totalSkipped}. Stored to: {_fullPath}\n";
 
             return true;
         }
@@ -957,19 +957,19 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for mill path offset.";
+                log += "***\nNo parts selected for mill path offset.\n";
                 return false;
             }
 
             if (!(offset > 0d))
             {
-                log += $"***\nMill path offset must be greater than 0 (was {XmlConvert.ToString(offset)}).";
+                log += $"***\nMill path offset must be greater than 0 (was {XmlConvert.ToString(offset)}).\n";
                 return false;
             }
 
             if ((kinds & MillPathKinds.All) == MillPathKinds.None)
             {
-                log += "***\nNo mill path types selected for offset.";
+                log += "***\nNo mill path types selected for offset.\n";
                 return false;
             }
 
@@ -1032,13 +1032,13 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\n{e.Message}";
+                log += $"***\n{e.Message}\n";
                 return false;
             }
 
             if (totalOffset == 0)
             {
-                log += $"***\nNo mill paths offset (ignored {totalIgnored}, skipped {totalSkipped}).";
+                log += $"***\nNo mill paths offset (ignored {totalIgnored}, skipped {totalSkipped}).\n";
                 return false;
             }
 
@@ -1049,7 +1049,7 @@ namespace XncOptimizerUI.Services
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
 
-            log += $"***\nMill path offset complete: offset {totalOffset} {kindsName} mill(s) by {XmlConvert.ToString(offset)} mm {sideName}, ignored {totalIgnored}, skipped {totalSkipped}, across {touchedParts} part(s). Stored to: {_fullPath}";
+            log += $"***\nMill path offset complete: offset {totalOffset} {kindsName} mill(s) by {XmlConvert.ToString(offset)} mm {sideName}, ignored {totalIgnored}, skipped {totalSkipped}, across {touchedParts} part(s). Stored to: {_fullPath}\n";
 
             return true;
         }
@@ -1081,13 +1081,13 @@ namespace XncOptimizerUI.Services
         {
             if (parts == null || parts.Count == 0)
             {
-                log += "***\nNo parts selected for outside operations cleaning.";
+                log += "***\nNo parts selected for outside operations cleaning.\n";
                 return false;
             }
 
             if ((kinds & OutsideOperationKinds.All) == OutsideOperationKinds.None)
             {
-                log += "***\nNo operation types selected for outside cleaning.";
+                log += "***\nNo operation types selected for outside cleaning.\n";
                 return false;
             }
 
@@ -1107,7 +1107,7 @@ namespace XncOptimizerUI.Services
             }
             catch (Exception e)
             {
-                log += $"***\nOutside operations cleaning failed: {e.Message}";
+                log += $"***\nOutside operations cleaning failed: {e.Message}\n";
                 return false;
             }
 
@@ -1125,7 +1125,7 @@ namespace XncOptimizerUI.Services
 
             if (totalRemoved == 0)
             {
-                log += $"***\nNo outside {kindsName} found (unresolved {totalUnresolved}).";
+                log += $"***\nNo outside {kindsName} found (unresolved {totalUnresolved}).\n";
                 return false;
             }
 
@@ -1139,7 +1139,7 @@ namespace XncOptimizerUI.Services
             var touchedParts = cleanedParts.Count(p => p.Operations.Any(o => o.Cleaning.Removed.Count > 0));
 
             log += $"***\nOutside operations cleaning complete: removed {totalRemoved} ({DescribeRemovedCounts(cleanings.SelectMany(c => c.Removed))}), "
-                + $"{cleanings.Sum(c => c.ToolsRemoved)} tool(s) removed, unresolved {totalUnresolved}, across {touchedParts} part(s). Stored to: {_fullPath}";
+                + $"{cleanings.Sum(c => c.ToolsRemoved)} tool(s) removed, unresolved {totalUnresolved}, across {touchedParts} part(s). Stored to: {_fullPath}\n";
 
             return true;
         }

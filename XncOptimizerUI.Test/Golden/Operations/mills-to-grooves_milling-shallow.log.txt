@@ -4,3 +4,4 @@ output: td-milling-shallow_gm.project
 Mills->Grooves: "panel-1" (id=2): 1 mill(s) -> groove(s), 1 tool(s) removed, 0 ignored
 ***
 Groove/Mill conversion complete: converted 1, ignored 0, 1 tool(s) added, 1 tool(s) removed across 1 part(s). Stored to: <temp>\td-milling-shallow_gm.project
+

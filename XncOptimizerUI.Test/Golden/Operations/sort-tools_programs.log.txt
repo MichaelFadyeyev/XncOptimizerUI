@@ -4,3 +4,4 @@ output: td-programs_to.project
 Tool order: "10.08.06.ПАН-600" (id=1): sorted 2 program(s), 0 skipped
 ***
 Tool declaration sorting complete: sorted 2 program(s), skipped 0. Stored to: <temp>\td-programs_to.project
+
