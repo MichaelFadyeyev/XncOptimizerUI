@@ -17,29 +17,11 @@ namespace XncOptimizerUI.Test
     /// (<c>bt</c>/<c>p=3</c> top, <c>bb</c>/<c>p=4</c> bottom).
     /// </summary>
     [TestFixture]
-    public class PartRotationTests
+    public class PartRotationTests : TempFixtureTestBase
     {
         private const string RotationFixture = "td-rotation.project";
         private const int RichPartId = 2;
         private const int DiscordantPartId = 3;
-
-        private string _directory = string.Empty;
-
-        [SetUp]
-        public void SetUp()
-        {
-            _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(_directory);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (Directory.Exists(_directory))
-            {
-                Directory.Delete(_directory, recursive: true);
-            }
-        }
 
         [Test]
         public void RotatePart_To90_RecalculatesEveryElementAndSwapsSize()
@@ -303,8 +285,7 @@ namespace XncOptimizerUI.Test
 
         private GibLabProjectService Open(string fixture)
         {
-            var path = Path.Combine(_directory, fixture);
-            File.Copy(Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", fixture), path);
+            var path = CopyFixture(fixture);
 
             var service = new GibLabProjectService(Substitute.For<IConfigService>(), TimeProvider.System);
             service.OpenProject(path);

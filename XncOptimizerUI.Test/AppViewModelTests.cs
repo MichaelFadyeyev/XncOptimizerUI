@@ -17,7 +17,7 @@ namespace XncOptimizerUI.Test
     /// host indefinitely.
     /// </summary>
     [TestFixture]
-    public class AppViewModelTests
+    public class AppViewModelTests : TempFixtureTestBase
     {
         private FakeProjectService _projectService = null!;
         private IConfigService _config = null!;
@@ -168,44 +168,33 @@ namespace XncOptimizerUI.Test
         [Test]
         public void OpenFile_AfterExecuteOptimize_ReopeningSourceLeavesFirstPartNameUnchanged()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(directory);
-            try
-            {
-                var fixture = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "td-execute-optimize.project");
-                var sourcePath = Path.Combine(directory, "td-execute-optimize.project");
-                File.Copy(fixture, sourcePath);
+            var sourcePath = CopyFixture("td-execute-optimize.project");
 
-                var config = Substitute.For<IConfigService>();
-                config.SawWidth.Returns(4.0m);
-                config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
-                config.LabelsToProcess.Returns(["поріз.2х40"]);
-                config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
+            var config = Substitute.For<IConfigService>();
+            config.SawWidth.Returns(4.0m);
+            config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
+            config.LabelsToProcess.Returns(["поріз.2х40"]);
+            config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
 
-                var realService = new GibLabProjectService(config, TimeProvider.System);
-                var dialogs = Substitute.For<IDialogService>();
-                dialogs.ShowOpenProjectDialog().Returns(sourcePath);
+            var realService = new GibLabProjectService(config, TimeProvider.System);
+            var dialogs = Substitute.For<IDialogService>();
+            dialogs.ShowOpenProjectDialog().Returns(sourcePath);
 
-                var vm = new AppViewModel(
-                    realService, config, dialogs, "TestAssembly",
-                    new ObservableCollection<string>(config.LabelsToProcess),
-                    config.GetLastLabelToProcessSelected());
+            var vm = new AppViewModel(
+                realService, config, dialogs, "TestAssembly",
+                new ObservableCollection<string>(config.LabelsToProcess),
+                config.GetLastLabelToProcessSelected());
 
-                vm.OpenFileCommand.Execute(null);
-                vm.ExecuteOptimizeCommand.Execute(null);
+            vm.OpenFileCommand.Execute(null);
+            vm.ExecuteOptimizeCommand.Execute(null);
 
-                // Re-open the same original source file, as a user comparing source vs. result would.
-                vm.OpenFileCommand.Execute(null);
+            // Re-open the same original source file, as a user comparing source vs. result would.
+            vm.OpenFileCommand.Execute(null);
 
-                var firstPartName = XDocument.Load(sourcePath).Descendants("part").First().Attribute("name")!.Value;
+            var firstPartName = XDocument.Load(sourcePath).Descendants("part").First().Attribute("name")!.Value;
 
-                Assert.That(firstPartName, Is.EqualTo("301.07.03.підріз.47=ПАН-ВРХ"),
-                    "re-opening the source file after Execute Optimize must not rename its first part");
-            }
-            finally
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            Assert.That(firstPartName, Is.EqualTo("301.07.03.підріз.47=ПАН-ВРХ"),
+                "re-opening the source file after Execute Optimize must not rename its first part");
         }
 
         [Test]

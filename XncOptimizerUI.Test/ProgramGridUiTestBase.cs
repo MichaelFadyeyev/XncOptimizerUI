@@ -18,10 +18,8 @@ namespace XncOptimizerUI.Test
     /// showing the grid below an "outside" button, entering edit mode and leaving a cell.
     /// </summary>
     [Apartment(ApartmentState.STA)]
-    public abstract class ProgramGridUiTestBase
+    public abstract class ProgramGridUiTestBase : TempFixtureTestBase
     {
-        private string _directory = string.Empty;
-
         public enum LeaveBy
         {
             Enter,
@@ -42,27 +40,10 @@ namespace XncOptimizerUI.Test
             });
         }
 
-        [SetUp]
-        public void CreateTempDirectory()
-        {
-            _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(_directory);
-        }
-
-        [TearDown]
-        public void DeleteTempDirectory()
-        {
-            if (Directory.Exists(_directory))
-            {
-                Directory.Delete(_directory, recursive: true);
-            }
-        }
-
         /// <summary>Opens a copy of <paramref name="fixture"/>; the first part is selected.</summary>
         protected AppViewModel OpenProject(string fixture)
         {
-            var path = Path.Combine(_directory, fixture);
-            File.Copy(Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", fixture), path);
+            var path = CopyFixture(fixture);
 
             var config = Substitute.For<IConfigService>();
             config.SawWidth.Returns(4m);

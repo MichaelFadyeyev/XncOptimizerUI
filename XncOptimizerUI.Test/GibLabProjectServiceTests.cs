@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
@@ -14,9 +15,8 @@ namespace XncOptimizerUI.Test
     /// touched the developer's real %AppData% file.
     /// </summary>
     [TestFixture]
-    public class GibLabProjectServiceTests
+    public class GibLabProjectServiceTests : TempFixtureTestBase
     {
-        private string _directory = string.Empty;
         private string _projectPath = string.Empty;
         private IConfigService _config = null!;
 
@@ -31,35 +31,10 @@ namespace XncOptimizerUI.Test
             _config.SawWidth.Returns(4.0m);
             _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
 
-            _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(_directory);
-
-            // Work on a copy so the fixture is never mutated.
-            var source = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", "td.project");
-            _projectPath = Path.Combine(_directory, "td.project");
-            File.Copy(source, _projectPath);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (Directory.Exists(_directory))
-            {
-                Directory.Delete(_directory, recursive: true);
-            }
+            _projectPath = CopyFixture("td.project");
         }
 
         private GibLabProjectService CreateService() => new(_config, _clock);
-
-        /// <summary>Copies a named fixture into the per-test temp dir and returns its path.</summary>
-        private string CopyFixture(string name)
-        {
-            var source = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", name);
-            var dest = Path.Combine(_directory, name);
-            File.Copy(source, dest);
-
-            return dest;
-        }
 
         /// <summary>
         /// Opens the fixture and reads in the order the service requires: ReadParts
@@ -231,6 +206,35 @@ namespace XncOptimizerUI.Test
             Assert.That(reopened.ReadParts().First(p => p.Id == part.Id).Length, Is.EqualTo(newLength));
         }
 
+        /// <summary>
+        /// Regression: sizes were written with the user's culture, so on a Ukrainian
+        /// (comma-decimal) Windows a fractional length was saved as <c>l="1380,5"</c>.
+        /// </summary>
+        [Test]
+        [SetCulture("uk-UA")]
+        public void UpdatePart_WithFractionalSize_WritesInvariantDecimals()
+        {
+            var service = OpenAndRead(CreateService(), _projectPath);
+
+            var part = service.ReadParts().First();
+            part.Length += 0.5m;
+            part.Width += 0.25m;
+
+            var log = string.Empty;
+            service.UpdatePart(ref log, part);
+
+            var saved = SaveAndLoadProductPart(service, part.Id);
+
+            Assert.Multiple(() =>
+            {
+                foreach (var name in new[] { "l", "w", "dl", "dw", "jl", "jw" })
+                {
+                    var value = (string?)saved.Attribute(name);
+                    Assert.That(value, Does.Not.Contain(","), $"{name}=\"{value}\" must use '.' as decimal separator");
+                }
+            });
+        }
+
         [Test]
         public void ReadParts_ReadsConsiderTextureFromTxt()
         {
@@ -391,7 +395,7 @@ namespace XncOptimizerUI.Test
             var originalWidth = part.Width;
             var log = string.Empty;
 
-            service.PrepForSplitAlongX(ref log, [part.Id.ToString()]);
+            service.PrepForSplitAlongX(ref log, [part.Id.ToString(CultureInfo.InvariantCulture)]);
 
             var updated = service.ReadParts().First(p => p.Id == part.Id);
 
@@ -1592,7 +1596,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mill paths offset (ignored 0, skipped 5)."));
-                Assert.That(Directory.GetFiles(_directory, "*_off*.project"), Is.Empty);
+                Assert.That(Directory.GetFiles(TempDirectory, "*_off*.project"), Is.Empty);
             });
         }
 
@@ -1613,7 +1617,7 @@ namespace XncOptimizerUI.Test
         {
             var operation = XDocument.Load(path).Descendants("operation")
                 .Single(o => (string?)o.Attribute("typeId") == "XNC"
-                    && o.Elements("part").Any(p => (string?)p.Attribute("id") == partId.ToString()));
+                    && o.Elements("part").Any(p => (string?)p.Attribute("id") == partId.ToString(CultureInfo.InvariantCulture)));
 
             return XDocument.Parse(operation.Attribute("program")!.Value).Root!;
         }
@@ -1788,7 +1792,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mill paths offset (ignored 1, skipped 0)."));
                 Assert.That(service.FullPath, Does.EndWith(MillOffsetFixture));
-                Assert.That(Directory.GetFiles(_directory, "*_off*.project"), Is.Empty);
+                Assert.That(Directory.GetFiles(TempDirectory, "*_off*.project"), Is.Empty);
             });
         }
 

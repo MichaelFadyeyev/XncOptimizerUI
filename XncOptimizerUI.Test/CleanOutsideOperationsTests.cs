@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
@@ -13,33 +14,19 @@ namespace XncOptimizerUI.Test
     /// and mills; part 3 has one outside face bore; part 4 has nothing outside.
     /// </summary>
     [TestFixture]
-    public class CleanOutsideOperationsTests
+    public class CleanOutsideOperationsTests : TempFixtureTestBase
     {
         private const string Fixture = "td-clean-outside.project";
 
-        private string _directory = string.Empty;
+        private string _projectPath = string.Empty;
 
         [SetUp]
-        public void SetUp()
-        {
-            _directory = Path.Combine(Path.GetTempPath(), "XncOptimizerUI.Test", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(_directory);
-            File.Copy(Path.Combine(TestContext.CurrentContext.TestDirectory, "TestData", Fixture), Path.Combine(_directory, Fixture));
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (Directory.Exists(_directory))
-            {
-                Directory.Delete(_directory, recursive: true);
-            }
-        }
+        public void SetUp() => _projectPath = CopyFixture(Fixture);
 
         private (GibLabProjectService Service, bool Result, string Log) Clean(OutsideOperationKinds kinds, params int[] partIds)
         {
             var service = new GibLabProjectService(Substitute.For<IConfigService>(), TimeProvider.System);
-            service.OpenProject(Path.Combine(_directory, Fixture));
+            service.OpenProject(_projectPath);
 
             var log = string.Empty;
             var result = service.CleanOutsideOperations(
@@ -53,7 +40,7 @@ namespace XncOptimizerUI.Test
         {
             var operation = XDocument.Load(path).Descendants("operation")
                 .Single(o => (string?)o.Attribute("typeId") == "XNC"
-                    && o.Elements("part").Any(p => (string?)p.Attribute("id") == partId.ToString()));
+                    && o.Elements("part").Any(p => (string?)p.Attribute("id") == partId.ToString(CultureInfo.InvariantCulture)));
 
             return XDocument.Parse(operation.Attribute("program")!.Value).Root!;
         }
@@ -106,7 +93,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(log, Does.Contain("Clean: \"part-2\" (id=2), XNC id=10: removed <bf x=\"-5\" y=\"100\" dp=\"10\" name=\"Bore8\" />"));
                 Assert.That(log, Does.Contain("removed <ms x=\"-20\" y=\"100\" dp=\"5\" in=\"0\" out=\"1\" fwd=\"true\" c=\"0\" name=\"Mill10\" /> + 1 segment(s)"));
                 Assert.That(log, Does.Contain("Clean: \"part-2\" (id=2): 17 removed (5 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, 0 unresolved"));
-                Assert.That(log.Split('\n').Count(l => l.StartsWith("Clean: \"part-2\" (id=2), XNC id=10: removed")), Is.EqualTo(17));
+                Assert.That(log.Split('\n').Count(l => l.StartsWith("Clean: \"part-2\" (id=2), XNC id=10: removed", StringComparison.Ordinal)), Is.EqualTo(17));
             });
         }
 
@@ -169,7 +156,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No outside bores, grooves, mills found (unresolved 0)."));
-                Assert.That(Directory.GetFiles(_directory, "*_cln*.project"), Is.Empty);
+                Assert.That(Directory.GetFiles(TempDirectory, "*_cln*.project"), Is.Empty);
             });
         }
 
