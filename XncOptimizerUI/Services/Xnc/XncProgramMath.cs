@@ -67,7 +67,7 @@ namespace XncOptimizerUI.Services.Xnc
             foreach (var varElement in vars)
             {
                 var name = varElement.GetNameValue()
-                    ?? throw new Exception("<var> has no name.");
+                    ?? throw new XncProgramFormatException("<var> has no name.");
                 symbols.Set(name, EvalXnc(varElement.GetExprValue(), symbols));
             }
 
@@ -157,13 +157,13 @@ namespace XncOptimizerUI.Services.Xnc
                 return value;
             }
 
-            throw new Exception($"<program> @{name} is missing or not a number (was '{raw}').");
+            throw new XncProgramFormatException($"<program> @{name} is missing or not a number (was '{raw}').");
         }
 
         public static double EvalXnc(string? expression, XncSymbolTable symbols)
         {
             return XncExpressionEvaluator.Evaluate(
-                expression ?? throw new Exception("Missing XNC coordinate/value."),
+                expression ?? throw new XncProgramFormatException("Missing XNC coordinate/value."),
                 symbols);
         }
 

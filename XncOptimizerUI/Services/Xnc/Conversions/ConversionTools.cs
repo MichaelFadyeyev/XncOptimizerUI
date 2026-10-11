@@ -11,10 +11,6 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
     /// </summary>
     internal static class ConversionTools
     {
-        public const string MillPrefix = "Mill";
-        public const string GroovePrefix = "Cut";
-        public const string BorePrefix = "Bore";
-
         /// <summary>Diameter tolerance (mm) when matching a cutter to a groove width or an existing tool.</summary>
         public const double DiameterEpsilon = 1e-6;
 

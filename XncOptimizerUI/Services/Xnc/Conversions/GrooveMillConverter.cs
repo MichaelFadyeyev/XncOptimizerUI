@@ -99,7 +99,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         private static void InsertMillPath(
             XElement groove, double x1, double y1, double x2, double y2, double width, string depth, bool horizontal, ConversionContext context)
         {
-            var toolName = ConversionTools.Ensure(groove, width, ConversionTools.MillPrefix, context.Tools);
+            var toolName = ConversionTools.Ensure(groove, width, XncToolKinds.Mill, context.Tools);
 
             // The tool centre must clear the edge, but only along the axis the groove runs.
             var overshoot = width / 2d;
@@ -155,7 +155,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 ? (runCentre, constCoord, length, width)
                 : (constCoord, runCentre, width, length);
 
-            var toolName = ConversionTools.Ensure(groove, toolDiameter, ConversionTools.MillPrefix, context.Tools);
+            var toolName = ConversionTools.Ensure(groove, toolDiameter, XncToolKinds.Mill, context.Tools);
 
             groove.AddBeforeSelf(WithComment(new XElement(XncTags.Rectangle,
                 new XAttribute("x", XmlConvert.ToString(cx)),
@@ -232,7 +232,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
             }
 
             // The slot is cut by the grooving cutter (several passes when wider); the mill's tool only gives the width.
-            var grooveToolName = ConversionTools.Ensure(start, groovingToolDiameter, ConversionTools.GroovePrefix, context.Tools);
+            var grooveToolName = ConversionTools.Ensure(start, groovingToolDiameter, XncToolKinds.Groove, context.Tools);
 
             // An end outside the part is pulled onto the outline; only the running axis can be out of range.
             if (horizontal)
@@ -349,7 +349,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 ? (Math.Clamp(minX, 0d, context.Dx), (minY + maxY) / 2d, Math.Clamp(maxX, 0d, context.Dx), (minY + maxY) / 2d, maxY - minY)
                 : ((minX + maxX) / 2d, Math.Clamp(minY, 0d, context.Dy), (minX + maxX) / 2d, Math.Clamp(maxY, 0d, context.Dy), maxX - minX);
 
-            var grooveToolName = ConversionTools.Ensure(anchor, groovingToolDiameter, ConversionTools.GroovePrefix, context.Tools);
+            var grooveToolName = ConversionTools.Ensure(anchor, groovingToolDiameter, XncToolKinds.Groove, context.Tools);
 
             anchor.AddBeforeSelf(WithComment(new XElement(XncTags.Groove,
                 new XAttribute("x1", XmlConvert.ToString(x1)),

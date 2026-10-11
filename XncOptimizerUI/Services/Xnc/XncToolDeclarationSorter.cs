@@ -17,7 +17,7 @@ namespace XncOptimizerUI.Services.Xnc
     /// </summary>
     internal static class XncToolDeclarationSorter
     {
-        private static readonly string[] KindPrefixes = ["Bore", "Cut", "Mill"];
+        private static readonly string[] KindPrefixes = XncToolKinds.Ordered;
 
         private static readonly HashSet<string> ContourParts = ["ms", "ml", "mac", "ma"];
 

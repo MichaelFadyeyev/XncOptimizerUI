@@ -76,7 +76,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
             var centre = (X: context.Eval(bore.GetXValue()), Y: context.Eval(bore.GetYValue()));
             var depth = bore.GetDpValue() ?? "0";
             var radius = diameter / 2d;
-            var millTool = ConversionTools.Ensure(bore, CutterDiameter, ConversionTools.MillPrefix, context.Tools);
+            var millTool = ConversionTools.Ensure(bore, CutterDiameter, XncToolKinds.Mill, context.Tools);
 
             // "Through" = the av flag is set, or the depth reaches the far face.
             var through = string.Equals(bore.GetAvValue(), "true", StringComparison.OrdinalIgnoreCase)
@@ -255,7 +255,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         {
             context.Replacing(mill.GetNameValue());
 
-            var boreTool = ConversionTools.Ensure(mill, diameter, ConversionTools.BorePrefix, context.Tools);
+            var boreTool = ConversionTools.Ensure(mill, diameter, XncToolKinds.Bore, context.Tools);
 
             mill.AddBeforeSelf(new XElement(XncTags.FaceBore,
                 new XAttribute("x", XmlConvert.ToString(x)),

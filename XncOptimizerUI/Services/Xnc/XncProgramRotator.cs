@@ -472,7 +472,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             public double Eval(string? expression, string where) =>
                 XncExpressionEvaluator.Evaluate(
-                    expression ?? throw new Exception($"Missing value for {where}."),
+                    expression ?? throw new XncProgramFormatException($"Missing value for {where}."),
                     symbols);
 
             public Point ReadPoint(XElement element, string xAttribute, string yAttribute)

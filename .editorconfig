@@ -57,8 +57,6 @@ dotnet_diagnostic.CA1859.severity = none
 # XncVariableType.Int / Double / String name XNC variable types.
 dotnet_diagnostic.CA1711.severity = none
 dotnet_diagnostic.CA1720.severity = none
-# TODO (refactoring phase 1d): replace `throw new Exception` with specific exception types, then raise to warning.
-dotnet_diagnostic.CA2201.severity = suggestion
 
 # Tests: NUnit names are Method_Scenario_Expectation, inline arrays are test data.
 [XncOptimizerUI.Test/**.cs]
