@@ -157,6 +157,55 @@ namespace XncOptimizerUI.Test
                 "the part on the Сращ.(2) sheet should be followed by a separator row");
         }
 
+        [Test]
+        public void CopyPartsList_ForSplitSheet_SeparatorRowHasDashInNameColumn()
+        {
+            SeedTwoParts();
+            _projectService.Sheets[0].Name = "ДСП Сращ.(2)";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.CopyPartsListCommand.Execute(null);
+
+            Assert.That(CopiedText()!.Split('\n')[1], Is.EqualTo("\t\t\t\t\t\t\t-"));
+        }
+
+        /// <summary>Sizes are formatted with the user's culture on purpose, so a spreadsheet in that culture reads them as numbers.</summary>
+        [Test]
+        [SetCulture("uk-UA")]
+        public void CopyPartsList_FormatsFractionalSizesWithCurrentCulture()
+        {
+            SeedTwoParts();
+            _projectService.Parts[0].Length = 600.5m;
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.CopyPartsListCommand.Execute(null);
+
+            Assert.That(CopiedText()!.Split('\n')[0], Does.StartWith("600,5\t400\t2\t"));
+        }
+
+        [Test]
+        public void CopyPartsList_ListsOnlyFilteredParts()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.FilterName = "Бокова";
+
+            vm.CopyPartsListCommand.Execute(null);
+
+            Assert.That(CopiedText(), Is.EqualTo("800\t300\t4\t\t\t\t\tБокова\t"));
+        }
+
+        private string? CopiedText() =>
+            (string?)_dialogs.ReceivedCalls()
+                .Single(c => c.GetMethodInfo().Name == nameof(IDialogService.SetClipboardText))
+                .GetArguments()[0];
+
         /// <summary>
         /// Regression test for the bug where re-opening the file that was open before
         /// Execute Optimize ran (or any other file reusing the same part ids) got its

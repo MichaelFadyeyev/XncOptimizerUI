@@ -236,6 +236,70 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [TestCase("Old name", "New name", "New name", TestName = "UpdatePart_Rename_PlainXncTypeNameFollowsPartName")]
+        [TestCase("[03]Old name", "[03]New name", "[03]New name", TestName = "UpdatePart_Rename_GroupCodeKeptAndNameReplaced")]
+        [TestCase("[03]Old name", "[07]New name", "[03]New name", TestName = "UpdatePart_Rename_XncKeepsItsOwnGroupCode")]
+        public void UpdatePart_Rename_SyncsXncTypeName(string xncTypeName, string newPartName, string expectedTypeName)
+        {
+            var (service, part) = OpenWithXncTypeName(xncTypeName);
+            part.Name = newPartName;
+
+            var log = string.Empty;
+            service.UpdatePart(ref log, part);
+            service.SaveProject();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(XncTypeNamesOf(part.Id), Has.All.EqualTo(expectedTypeName));
+                Assert.That(log, Does.Not.Contain("Cannot set new XNC typeName"));
+            });
+        }
+
+        [TestCase("Old name", "[03]New name", TestName = "UpdatePart_Rename_GroupCodeOnPartOnly_LogsAndKeepsXncTypeName")]
+        [TestCase("[03]Old name", "New name", TestName = "UpdatePart_Rename_GroupCodeOnXncOnly_LogsAndKeepsXncTypeName")]
+        public void UpdatePart_Rename_MismatchedGroupCode_LogsAndKeepsXncTypeName(string xncTypeName, string newPartName)
+        {
+            var (service, part) = OpenWithXncTypeName(xncTypeName);
+            part.Name = newPartName;
+
+            var log = string.Empty;
+            service.UpdatePart(ref log, part);
+            service.SaveProject();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(XncTypeNamesOf(part.Id), Has.All.EqualTo(xncTypeName));
+                Assert.That(log, Does.Contain($"""Cannot set new XNC typeName for part "{newPartName}" with old XNC typeName "{xncTypeName}"."""));
+            });
+        }
+
+        /// <summary>Sets <c>typeName</c> of every XNC operation of the first machined part in the fixture copy, then opens it.</summary>
+        private (GibLabProjectService Service, Part Part) OpenWithXncTypeName(string xncTypeName)
+        {
+            var reader = OpenAndRead(CreateService(), _projectPath);
+            var partId = reader.ReadParts().First(p => reader.GetXncProgramsCount(p.Id) > 0).Id;
+
+            var doc = XDocument.Load(_projectPath);
+            foreach (var operation in XncOperationsOf(doc, partId))
+            {
+                operation.SetAttributeValue("typeName", xncTypeName);
+            }
+            doc.Save(_projectPath);
+
+            var service = OpenAndRead(CreateService(), _projectPath);
+
+            return (service, service.ReadParts().Single(p => p.Id == partId));
+        }
+
+        private IEnumerable<string?> XncTypeNamesOf(int partId) =>
+            XncOperationsOf(XDocument.Load(_projectPath), partId).Select(o => (string?)o.Attribute("typeName"));
+
+        private static IEnumerable<XElement> XncOperationsOf(XDocument doc, int partId) =>
+            doc.Root!.Elements("operation")
+                .Where(o => (string?)o.Attribute("typeId") == "XNC"
+                    && (string?)o.Element("part")?.Attribute("id") == partId.ToString(CultureInfo.InvariantCulture))
+                .ToList();
+
         [Test]
         public void ReadParts_ReadsConsiderTextureFromTxt()
         {
