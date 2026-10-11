@@ -1,0 +1,66 @@
+root = true
+
+# XAML / XML / project files
+[*.{xaml,xml,csproj,props,targets}]
+indent_style = space
+indent_size = 4
+
+# C# files
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# Usings and namespaces
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# var: prefer it everywhere (matches the existing code)
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# Expression bodies: short members only
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_lambdas = true:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line:silent
+
+# Modern language features
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_namespace_declarations = block_scoped:silent
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
+dotnet_style_readonly_field = true:suggestion
+
+# Naming: private fields are _camelCase, constants PascalCase
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private, private_protected
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_style.pascal.capitalization = pascal_case
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal
+dotnet_naming_rule.constants_pascal.severity = suggestion
+dotnet_naming_rule.constants_pascal.priority = 0
+
+# Analyzer tuning (AnalysisLevel = latest-recommended, see Directory.Build.props)
+# Prefer interface types in signatures (IReadOnlyList etc.) over concrete-type micro-optimisation.
+dotnet_diagnostic.CA1859.severity = none
+# Domain names mirror the XNC format: BoreAttribute / XncVariableAttribute name XML attributes,
+# XncVariableType.Int / Double / String name XNC variable types.
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1720.severity = none
+# TODO (refactoring phase 1d): replace `throw new Exception` with specific exception types, then raise to warning.
+dotnet_diagnostic.CA2201.severity = suggestion
+
+# Tests: NUnit names are Method_Scenario_Expectation, inline arrays are test data.
+[XncOptimizerUI.Test/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1861.severity = none

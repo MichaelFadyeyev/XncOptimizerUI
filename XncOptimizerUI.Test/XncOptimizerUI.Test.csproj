@@ -3,9 +3,6 @@
   <PropertyGroup>
     <!-- Must match the app's TFM: a net9.0 project cannot reference net9.0-windows (NU1201). -->
     <TargetFramework>net9.0-windows</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

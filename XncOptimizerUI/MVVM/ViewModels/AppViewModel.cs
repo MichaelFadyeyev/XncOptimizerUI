@@ -545,7 +545,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             var ids = Parts
                 .Where(p => p.Name.Contains(SelectedLabel))
-                .Select(p => p.Id.ToString())
+                .Select(p => p.Id.ToString(CultureInfo.InvariantCulture))
                 .ToArray() ?? [];
 
             _projectService.PrepForSplitAlongX(ref log, ids);
@@ -926,7 +926,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             {
                 _config.DeleteLabelToProcess(SelectedLabel);
                 LabelsToProcess = [.. _config.LabelsToProcess];
-                SelectedLabel = _config.LabelsToProcess.First();
+                SelectedLabel = _config.LabelsToProcess[0];
             }
         }
 
@@ -1294,6 +1294,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             foreach (var part in Parts)
             {
                 partsList.AppendFormat(
+                    CultureInfo.CurrentCulture,
                     "{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}",
                     sep,
                     part.Length,
@@ -1311,7 +1312,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
                 if (partSheet.Name.Contains("Сращ.(2)"))
                 {
-                    partsList.AppendFormat("{0}{0}{0}{0}{0}{0}{0}-{1}", sep, newLine);
+                    partsList.AppendFormat(CultureInfo.InvariantCulture, "{0}{0}{0}{0}{0}{0}{0}-{1}", sep, newLine);
                 }
 
             }

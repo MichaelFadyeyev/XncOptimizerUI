@@ -59,7 +59,7 @@ namespace XncOptimizerUI.Services
             _elOperations = GetElOperations();
             _sheetGoods = GetSheetGoods();
 
-            var format = _xncOperations.Count.ToString().Length;
+            var format = _xncOperations.Count.ToString(CultureInfo.InvariantCulture).Length;
 
             try
             {
@@ -71,7 +71,7 @@ namespace XncOptimizerUI.Services
 
                     if (operation.Attribute(Optimized) != null) continue;
 
-                    var groupCode = (i + 1).ToString().PadLeft(format, '0');
+                    var groupCode = (i + 1).ToString(CultureInfo.InvariantCulture).PadLeft(format, '0');
                     var partId = operation.GetPart()!.GetIdValue()!;
 
                     AddToPartOperations(groupCode, partId);
@@ -116,7 +116,7 @@ namespace XncOptimizerUI.Services
 
                 foreach (var operation in operations)
                 {
-                    var intId = int.Parse(operation.GetIdValue()!);
+                    var intId = int.Parse(operation.GetIdValue()!, CultureInfo.InvariantCulture);
                     if (intId > maxOpIndex) maxOpIndex = intId;
                 }
 
@@ -124,7 +124,7 @@ namespace XncOptimizerUI.Services
 
                 for (var i = 0; i < orderedXncOperations.Count; i++)
                 {
-                    orderedXncOperations[i].SetIdValue((maxOpIndex + i).ToString());
+                    orderedXncOperations[i].SetIdValue((maxOpIndex + i).ToString(CultureInfo.InvariantCulture));
                     _project!.Add(orderedXncOperations[i]);
                 }
 
@@ -173,7 +173,7 @@ namespace XncOptimizerUI.Services
                 {
                     var part = _csOperations[i - 1].GetParts().Last();
                     var oldId = part.GetIdValue()!;
-                    var newId = (partsCount + i).ToString();
+                    var newId = (partsCount + i).ToString(CultureInfo.InvariantCulture);
 
                     sheetOldNewIds.Add(oldId, newId);
                 }
@@ -203,7 +203,7 @@ namespace XncOptimizerUI.Services
                 {
                     var part = sortedParts[i - 1];
                     var oldId = part.GetIdValue()!;
-                    var newId = (i).ToString();
+                    var newId = i.ToString(CultureInfo.InvariantCulture);
 
                     part.SetIdValue(newId);
                     newGood.Add(part);
@@ -245,7 +245,7 @@ namespace XncOptimizerUI.Services
 
                     parts.Last().Remove();
 
-                    List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!))];
+                    List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!, CultureInfo.InvariantCulture))];
 
                     operation.GetParts().Remove();
                     orederedParts.Add(sheetPart);
@@ -381,7 +381,7 @@ namespace XncOptimizerUI.Services
                     dw.SetValue(dwStringValue);
                     jw!.SetValue(jwStringValue);
 
-                    var count = Int32.Parse(part.Attribute("count")!.Value);
+                    var count = int.Parse(part.Attribute("count")!.Value, CultureInfo.InvariantCulture);
                     var newCount = count / 2 + count % 2;
 
                     part.Attribute("count")!.SetValue(newCount);
@@ -411,7 +411,7 @@ namespace XncOptimizerUI.Services
                                     {
                                         var newBore = new XElement(bore);
                                         var y = bore.Attribute("y");
-                                        var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException());
+                                        var yValue = XmlConvert.ToDecimal(y?.Value ?? throw new ArgumentException("""XAttribute "y" not found or has no value"""));
 
                                         y.SetValue(XmlConvert.ToString(width - yValue));
                                         program.Add(newBore);
@@ -2959,9 +2959,9 @@ namespace XncOptimizerUI.Services
 
         #region GLOBAL_METHODES
 
-        public void OpenProject(string fullPath)
+        public void OpenProject(string path)
         {
-            _fullPath = fullPath;
+            _fullPath = path;
             _path = Path.GetDirectoryName(_fullPath) ?? string.Empty;
             _source = Path.GetFileName(_fullPath);
             _doc = XDocument.Load(_fullPath);
@@ -3033,7 +3033,7 @@ namespace XncOptimizerUI.Services
                 return _source.Replace(".project", $"{suffix}.project");
             }
 
-            var version = int.Parse(match.Groups[1].Value);
+            var version = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
 
             return numbered.Replace(_source, $"{suffix}({version + 1}).project");
         }
@@ -3044,7 +3044,7 @@ namespace XncOptimizerUI.Services
             {
                 Id = element.GetIdIntValue(),
                 Name = element.GetNameValue()!,
-                Count = int.Parse(element.Attribute("count")!.Value),
+                Count = int.Parse(element.Attribute("count")!.Value, CultureInfo.InvariantCulture),
                 Length = element.GetLengthDecimalValue(),
                 Width = element.GetWidthDecimalValue(),
                 ConsiderTexture = element.GetTxtBoolValue(),
@@ -3314,10 +3314,10 @@ namespace XncOptimizerUI.Services
             {
                 products.Add(new Product
                 {
-                    Id = int.Parse(good.GetIdValue()!),
+                    Id = int.Parse(good.GetIdValue()!, CultureInfo.InvariantCulture),
                     Name = good.GetNameValue() ?? string.Empty,
                     Code = good.GetCodeValue() ?? string.Empty,
-                    Count = int.Parse(good.Attribute("count")?.Value ?? "0"),
+                    Count = int.Parse(good.Attribute("count")?.Value ?? "0", CultureInfo.InvariantCulture),
                 });
             }
 
@@ -3341,7 +3341,7 @@ namespace XncOptimizerUI.Services
                     .Select(x => CreatePart(x))
                     .ToList();
 
-                var goodId = int.Parse(currentGood.GetIdValue()!);
+                var goodId = int.Parse(currentGood.GetIdValue()!, CultureInfo.InvariantCulture);
 
                 currentParts.ForEach(part => part.GoodId = goodId);
                 parts.AddRange(currentParts);

@@ -387,7 +387,7 @@ namespace XncOptimizerUI.MVVM.Views
 
             if (part.ConsiderTexture)
             {
-                var programTurn = _viewModel.SelectedXncPrograms.FirstOrDefault()?.Turn ?? 0;
+                var programTurn = _viewModel.SelectedXncPrograms.Count > 0 ? _viewModel.SelectedXncPrograms[0].Turn : 0;
                 DrawTextureIndicator(originX, originY, faceWidth, faceHeight, programTurn);
             }
 

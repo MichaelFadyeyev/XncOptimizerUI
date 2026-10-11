@@ -27,7 +27,7 @@ namespace XncOptimizerUI.Extensions
         public static void SetCodeValue(this XElement element, string value) => element.Attribute("code")!.Value = value;
         public static XAttribute? GetId(this XElement element) => element.Attribute("id");
         public static string? GetIdValue(this XElement element) => element.Attribute("id")?.Value;
-        public static int GetIdIntValue(this XElement element) => int.Parse(element.Attribute("id")!.Value);
+        public static int GetIdIntValue(this XElement element) => int.Parse(element.Attribute("id")!.Value, CultureInfo.InvariantCulture);
         public static void SetIdValue(this XElement element, string value) => element.Attribute("id")!.Value = value;
         public static XAttribute? GetTypeName(this XElement element) => element.Attribute("typeName");
         public static string? GetTypeNameValue(this XElement element) => element.Attribute("typeName")?.Value;
@@ -72,7 +72,7 @@ namespace XncOptimizerUI.Extensions
         {
             var encodedId = element.Attribute(edgeAttribute)?.Value;
 
-            return encodedId == null ? null : int.Parse(encodedId.Split('#')[1]);
+            return encodedId == null ? null : int.Parse(encodedId.Split('#')[1], CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -92,23 +92,23 @@ namespace XncOptimizerUI.Extensions
         public static int GetOperationMaterialIdIntValue(this XElement element)
         {
             return
-                int.Parse(element.Element("material")!.Attribute("id")!.Value);
+                int.Parse(element.Element("material")!.Attribute("id")!.Value, CultureInfo.InvariantCulture);
         }
 
         public static XElement? GetMat(this XElement element) => element.Element("material");
 
         public static string? GetLengthValue(this XElement element) => element.Attribute("l")?.Value;
         public static decimal GetLengthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("l")?.Value ?? "0");
-        public static void SetLengthValue(this XElement element, decimal value) => element.SetAttributeValue("l", value.ToString());
-        public static void SetDLengthValue(this XElement element, decimal value) => element.SetAttributeValue("dl", value.ToString());
+        public static void SetLengthValue(this XElement element, decimal value) => element.SetAttributeValue("l", XmlConvert.ToString(value));
+        public static void SetDLengthValue(this XElement element, decimal value) => element.SetAttributeValue("dl", XmlConvert.ToString(value));
 
 
         public static string? GetWidthValue(this XElement element) => element.Attribute("w")?.Value;
         public static decimal GetWidthDecimalValue(this XElement element) => XmlConvert.ToDecimal(element.Attribute("w")?.Value ?? "0");
-        public static void SetWidthValue(this XElement element, decimal value) => element.SetAttributeValue("w", value.ToString());
-        public static void SetDWidthValue(this XElement element, decimal value) => element.SetAttributeValue("dw", value.ToString());
-        public static void SetJLengthValue(this XElement element, decimal value) => element.SetAttributeValue("jl", value.ToString());
-        public static void SetJWidthValue(this XElement element, decimal value) => element.SetAttributeValue("jw", value.ToString());
+        public static void SetWidthValue(this XElement element, decimal value) => element.SetAttributeValue("w", XmlConvert.ToString(value));
+        public static void SetDWidthValue(this XElement element, decimal value) => element.SetAttributeValue("dw", XmlConvert.ToString(value));
+        public static void SetJLengthValue(this XElement element, decimal value) => element.SetAttributeValue("jl", XmlConvert.ToString(value));
+        public static void SetJWidthValue(this XElement element, decimal value) => element.SetAttributeValue("jw", XmlConvert.ToString(value));
 
 
         public static bool GetTxtBoolValue(this XElement element) => XmlConvert.ToBoolean(element.Attribute("txt")?.Value ?? "false");

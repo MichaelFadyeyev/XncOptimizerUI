@@ -3,8 +3,6 @@
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
 		<AssemblyName>$(MSBuildProjectName)-0.003.1.01</AssemblyName>
 		<ApplicationIcon>xnc_logo.ico</ApplicationIcon>
