@@ -67,7 +67,7 @@ namespace XncOptimizerUI
         }
 
         /// <summary>Every project service works on the one shared <see cref="ProjectDocument"/>.</summary>
-        private static void AddProjectServices(ServiceCollection services)
+        internal static void AddProjectServices(IServiceCollection services)
         {
             services.AddSingleton<ProjectDocument>();
             services.AddSingleton<IProjectSession>(sp => sp.GetRequiredService<ProjectDocument>());
