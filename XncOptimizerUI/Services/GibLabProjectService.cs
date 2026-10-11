@@ -1517,7 +1517,7 @@ namespace XncOptimizerUI.Services
                 {
                     var segTag = elements[j].Name.LocalName;
 
-                    if (segTag != "ml" && segTag != "mac")
+                    if (segTag is not ("ml" or "mac" or "ma"))
                     {
                         break;
                     }
@@ -2314,7 +2314,7 @@ namespace XncOptimizerUI.Services
                 {
                     var segTag = elements[j].Name.LocalName;
 
-                    if (segTag != "ml" && segTag != "mac")
+                    if (segTag is not ("ml" or "mac" or "ma"))
                     {
                         break;
                     }
@@ -2775,8 +2775,8 @@ namespace XncOptimizerUI.Services
             {
                 var tag = element.Name.LocalName;
 
-                // <tool> is the declaration; <var> @name is a variable, not a tool; <ml>/<mac> carry no name.
-                if (tag is "tool" or "var" or "ml" or "mac")
+                // <tool> is the declaration; <var> @name is a variable, not a tool; <ml>/<mac>/<ma> carry no name.
+                if (tag is "tool" or "var" or "ml" or "mac" or "ma")
                 {
                     continue;
                 }

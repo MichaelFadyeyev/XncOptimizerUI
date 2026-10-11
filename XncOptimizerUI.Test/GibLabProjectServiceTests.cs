@@ -479,6 +479,73 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        /// <summary>A two-segment contour (straight <c>ml</c> then radius arc <c>ma</c>) after a straight pass of the same tool.</summary>
+        private const string LineThenRadiusArcProgram = """
+            <program dx="200" dy="100" dz="18">
+              <tool name="Mill6" d="6" />
+              <ms x="0" y="10" dp="5" c="0" name="Mill6" />
+              <ml x="100" y="10" dp="5" />
+              <ms x="0" y="20" dp="5" c="0" name="Mill6" />
+              <ml x="100" y="20" dp="5" />
+              <ma x="110" y="30" r="10" dir="true" dp="5" />
+            </program>
+            """;
+
+        /// <summary>Writes a minimal project with one XNC operation for part 1 and opens it.</summary>
+        private GibLabProjectService OpenSingleProgramProject(string program)
+        {
+            var path = Path.Combine(TempDirectory, "single-program.project");
+            new XDocument(new XElement("project",
+                new XElement("operation",
+                    new XAttribute("typeId", "XNC"),
+                    new XAttribute("id", "1"),
+                    new XAttribute("program", program),
+                    new XElement("part", new XAttribute("id", "1"))))).Save(path);
+
+            var service = CreateService();
+            service.OpenProject(path);
+
+            return service;
+        }
+
+        [Test]
+        public void OptimizeMillTraversal_ContourEndingWithRadiusArc_IsNotTreatedAsStraightPass()
+        {
+            var service = OpenSingleProgramProject(LineThenRadiusArcProgram);
+            var log = string.Empty;
+
+            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 1, Name = "panel" }]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False, "the ml+ma contour is not a straight pass, so no pair is left to reorder");
+                Assert.That(log, Does.Contain("No mill passes reordered (ignored 1)"));
+            });
+        }
+
+        [Test]
+        public void ConvertMillsToGrooves_ContourEndingWithRadiusArc_IsLeftUntouched()
+        {
+            var service = OpenSingleProgramProject(LineThenRadiusArcProgram);
+            var log = string.Empty;
+
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(log, Does.Contain("1 mill(s) -> groove(s), 0 tool(s) removed, 1 ignored"),
+                    "only the straight one-segment pass converts; the ml+ma contour is ignored");
+                Assert.That(ReadProgramOf(service.FullPath).Elements("ma"), Has.Exactly(1).Items);
+                Assert.That(ReadProgramOf(service.FullPath).Elements("ml"), Has.Exactly(1).Items,
+                    "the ma's own contour keeps its ms + ml");
+            });
+        }
+
+        private static XElement ReadProgramOf(string path) =>
+            XDocument.Parse(XDocument.Load(path).Descendants("operation").Single().Attribute("program")!.Value).Root!;
+
         [Test]
         public void PrepForSplitAlongX_FindsXncProgramsByPartIdNotByName()
         {
