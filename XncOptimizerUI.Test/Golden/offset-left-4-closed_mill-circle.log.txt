@@ -1,0 +1,6 @@
+result: True
+output: td-mill-circle_off.project
+---
+Mill offset: "panel-1" (id=2): 1 mill(s) offset, 0 ignored, 0 skipped
+***
+Mill path offset complete: offset 1 closed mill(s) by 4 mm L, ignored 0, skipped 0, across 1 part(s). Stored to: <temp>\td-mill-circle_off.project

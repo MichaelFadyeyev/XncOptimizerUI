@@ -1,0 +1,13 @@
+result: True
+output: td-clean-outside_cln.project
+---
+Clean: "mixed" (id=2), XNC id=10: removed <bf x="-5" y="100" dp="10" name="Bore8" />
+Clean: "mixed" (id=2), XNC id=10: removed <bf x="-3" y="200" dp="10" name="Bore8" />
+Clean: "mixed" (id=2), XNC id=10: removed <bf x="-4" y="300" dp="10" name="Bore8" />
+Clean: "mixed" (id=2), XNC id=10: removed <bl y="-10" z="9" dp="20" name="Bore8" />
+Clean: "mixed" (id=2), XNC id=10: removed <bl y="300" z="25" dp="20" name="Bore8" />
+Clean: "mixed" (id=2): 5 removed (5 bore(s), 0 groove(s), 0 mill(s)), 0 tool(s) removed, 0 unresolved
+Clean: "one-outside-bore" (id=3), XNC id=11: removed <bf x="-20" y="100" dp="10" name="Bore8" />
+Clean: "one-outside-bore" (id=3): 1 removed (1 bore(s), 0 groove(s), 0 mill(s)), 0 tool(s) removed, 0 unresolved
+***
+Outside operations cleaning complete: removed 6 (6 bore(s), 0 groove(s), 0 mill(s)), 0 tool(s) removed, unresolved 0, across 2 part(s). Stored to: <temp>\td-clean-outside_cln.project

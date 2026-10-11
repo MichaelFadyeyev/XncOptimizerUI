@@ -1,0 +1,6 @@
+result: True
+output: td-mill-circle_bm.project
+---
+Mills->Bores: "panel-1" (id=2): 1 mill(s) -> bore(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+***
+Bore/Mill conversion complete: converted 1, ignored 0, 1 tool(s) added, 1 tool(s) removed across 1 part(s). Stored to: <temp>\td-mill-circle_bm.project

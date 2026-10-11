@@ -1,0 +1,8 @@
+result: False
+output: (none)
+---
+Mills->Grooves: "512.07.05.ПАН-640" (id=3): 0 mill(s) -> groove(s), 0 tool(s) removed, 3 ignored
+Mills->Grooves: "512.08.01.ПАН-640" (id=5): 0 mill(s) -> groove(s), 0 tool(s) removed, 2 ignored
+Mills->Grooves: "512.08.02.ПАН-600" (id=6): 0 mill(s) -> groove(s), 0 tool(s) removed, 2 ignored
+***
+No mills converted (ignored 7).

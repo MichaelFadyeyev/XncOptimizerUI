@@ -1,0 +1,18 @@
+result: True
+output: td-clean-outside_cln.project
+---
+Clean: "mixed" (id=2), XNC id=10: removed <gr x1="0" y1="-5" x2="dx" y2="-5" dp="5" t="4" c="0" p="0" name="Cut4" />
+Clean: "mixed" (id=2), XNC id=10: removed <gr x1="0" y1="-1" x2="dx" y2="-1" dp="5" t="4" c="2" p="0" name="Cut4" />
+Clean: "mixed" (id=2), XNC id=10: removed <gr x1="1100" y1="0" x2="1300" y2="0" z="9" dp="5" t="4" c="0" p="3" name="Cut4" />
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="-20" y="100" dp="5" in="0" out="1" fwd="true" c="0" name="Mill10" /> + 1 segment(s)
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="0" y="100" dp="5" in="0" out="1" fwd="true" c="1" name="Mill10" /> + 1 segment(s)
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="-100" y="100" dp="5" in="0" out="1" fwd="true" c="3" name="Mill10" /> + 4 segment(s)
+Clean: "mixed" (id=2), XNC id=10: removed <mr x="-25" y="450" dp="5" in="0" out="1" fwd="true" l="50" w="50" a="0" r="0" c="3" name="Mill10" />
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="1000" y="100" dp="5" in="0" out="1" fwd="true" c="1" name="Mill10" /> + 4 segment(s)
+Clean: "mixed" (id=2), XNC id=10: removed <mr x="-100" y="300" dp="5" in="0" out="1" sxy="tool.dia/2" fwd="true" l="50" w="50" a="0" r="0" c="3" name="Mill6" />
+Clean: "mixed" (id=2), XNC id=10: removed <me x="1100" y="300" dp="5" in="0" out="1" fwd="true" l="40" w="20" a="30" c="0" name="Mill6" />
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="-50" y="-50" dp="5" in="0" out="1" fwd="true" c="0" name="Mill10" /> + 4 segment(s)
+Clean: "mixed" (id=2), XNC id=10: removed <ms x="1010" y="200" dp="5" in="0" out="1" fwd="true" c="0" name="Mill10" /> + 1 segment(s)
+Clean: "mixed" (id=2): 12 removed (0 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, 0 unresolved
+***
+Outside operations cleaning complete: removed 12 (0 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, unresolved 0, across 1 part(s). Stored to: <temp>\td-clean-outside_cln.project

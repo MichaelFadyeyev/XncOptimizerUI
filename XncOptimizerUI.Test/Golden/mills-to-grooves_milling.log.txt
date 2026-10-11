@@ -1,0 +1,6 @@
+result: False
+output: (none)
+---
+Mills->Grooves: "panel-1" (id=2): 0 mill(s) -> groove(s), 0 tool(s) removed, 2 ignored
+***
+No mills converted (ignored 2).

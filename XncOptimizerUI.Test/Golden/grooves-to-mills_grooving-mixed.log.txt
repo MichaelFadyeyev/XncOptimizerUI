@@ -1,0 +1,6 @@
+result: True
+output: td-grooving-mixed_gm.project
+---
+Grooves->Mills: "panel-1" (id=2): 1 groove(s) -> mill(s), 1 tool(s) added, 0 tool(s) removed, 1 ignored
+***
+Groove/Mill conversion complete: converted 1, ignored 1, 1 tool(s) added, 0 tool(s) removed across 1 part(s). Stored to: <temp>\td-grooving-mixed_gm.project

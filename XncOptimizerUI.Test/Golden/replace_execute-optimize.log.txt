@@ -1,0 +1,10 @@
+result: True
+output: td-execute-optimize_ren.project
+---
+XNC replaced: "301.08.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
+XNC replaced: "302.07.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
+XNC replaced: "302.08.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
+XNC replaced: "305.07.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
+XNC replaced: "305.08.03.підріз.47=ПАН-ВРХ" <- "301.07.03.підріз.47=ПАН-ВРХ" (1 face(s))
+***
+Stored to: <temp>\td-execute-optimize_ren.project

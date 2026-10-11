@@ -1,0 +1,6 @@
+result: True
+output: td-milling-pocket_gm.project
+---
+Mills->Grooves: "panel-1" (id=2): 2 mill(s) -> groove(s), 0 tool(s) removed, 3 ignored
+***
+Groove/Mill conversion complete: converted 2, ignored 3, 1 tool(s) added, 0 tool(s) removed across 1 part(s). Stored to: <temp>\td-milling-pocket_gm.project

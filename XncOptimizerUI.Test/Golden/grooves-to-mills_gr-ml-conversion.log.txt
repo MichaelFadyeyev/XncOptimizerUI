@@ -1,0 +1,14 @@
+result: True
+output: td-gr-ml-conversion_gm.project
+---
+Grooves->Mills: "512.07.01.ПАН-640" (id=1): 16 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.07.02.ПАН-600" (id=2): 15 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.07.05.ПАН-640" (id=3): 16 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.07.06.ПАН-640" (id=4): 15 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.08.01.ПАН-640" (id=5): 16 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.08.02.ПАН-600" (id=6): 15 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.08.05.ПАН-640" (id=7): 16 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.08.06.ПАН-600" (id=8): 15 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+Grooves->Mills: "512.08.07.ПАН-600" (id=9): 12 groove(s) -> mill(s), 1 tool(s) added, 1 tool(s) removed, 0 ignored
+***
+Groove/Mill conversion complete: converted 136, ignored 0, 9 tool(s) added, 9 tool(s) removed across 9 part(s). Stored to: <temp>\td-gr-ml-conversion_gm.project

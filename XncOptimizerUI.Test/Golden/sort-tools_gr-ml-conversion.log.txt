@@ -1,0 +1,14 @@
+result: True
+output: td-gr-ml-conversion_to.project
+---
+Tool order: "512.07.01.ПАН-640" (id=1): sorted 2 program(s), 0 skipped
+Tool order: "512.07.02.ПАН-600" (id=2): sorted 2 program(s), 0 skipped
+Tool order: "512.07.05.ПАН-640" (id=3): sorted 2 program(s), 0 skipped
+Tool order: "512.07.06.ПАН-640" (id=4): sorted 2 program(s), 0 skipped
+Tool order: "512.08.01.ПАН-640" (id=5): sorted 2 program(s), 0 skipped
+Tool order: "512.08.02.ПАН-600" (id=6): sorted 2 program(s), 0 skipped
+Tool order: "512.08.05.ПАН-640" (id=7): sorted 2 program(s), 0 skipped
+Tool order: "512.08.06.ПАН-600" (id=8): sorted 2 program(s), 0 skipped
+Tool order: "512.08.07.ПАН-600" (id=9): sorted 2 program(s), 0 skipped
+***
+Tool declaration sorting complete: sorted 18 program(s), skipped 0. Stored to: <temp>\td-gr-ml-conversion_to.project

@@ -5,6 +5,7 @@ using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services;
+using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
 {
@@ -2217,14 +2218,6 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.That(service.UpdateVariable(ref log, operationId, 9, XncVariableAttribute.Comment, "x"), Is.False);
             Assert.That(log, Does.Contain("variable not found in the program."));
-        }
-
-        /// <summary>Minimal fixed clock; .NET 9 ships no in-box fake TimeProvider.</summary>
-        private sealed class FakeTimeProvider(DateTimeOffset now) : TimeProvider
-        {
-            public override DateTimeOffset GetUtcNow() => now;
-
-            public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
         }
     }
 }
