@@ -431,7 +431,7 @@ namespace XncOptimizerUI.Services
 
             AppendDescription("specified parts prep for split along X");
 
-            var result = GetNewFileName();
+            var result = GetSplitFileName();
 
             _fullPath = Path.Combine(_path, result);
             _doc!.Save(_fullPath);
@@ -2981,6 +2981,8 @@ namespace XncOptimizerUI.Services
         }
 
         private string GetNewFileName() => GetSuffixedFileName("_opt");
+
+        private string GetSplitFileName() => GetSuffixedFileName("_spl");
 
         private string GetRenamedFileName() => GetSuffixedFileName("_ren");
 

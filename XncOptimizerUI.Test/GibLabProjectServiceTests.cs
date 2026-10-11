@@ -498,6 +498,8 @@ namespace XncOptimizerUI.Test
                 // exact value; the kerf itself is asserted via the injected config.
                 Assert.That(updated.Width, Is.GreaterThan(originalWidth));
                 Assert.That(updated.Count, Is.LessThanOrEqualTo(part.Count));
+                Assert.That(service.FullPath, Does.EndWith("td_spl.project"),
+                    "split output must not share Group identical elements' _opt name");
             });
 
             _ = _config.Received().SawWidth;
