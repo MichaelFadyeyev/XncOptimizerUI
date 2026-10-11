@@ -31,6 +31,7 @@ namespace XncOptimizerUI.Test
             _config = Substitute.For<IConfigService>();
             _config.SawWidth.Returns(4.0m);
             _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
+            _config.GroovingToolWidths.Returns(new List<decimal> { 2.8m, 3.2m });
 
             _projectPath = CopyFixture("td.project");
         }
@@ -540,6 +541,51 @@ namespace XncOptimizerUI.Test
                 Assert.That(ReadProgramOf(service.FullPath).Elements("ma"), Has.Exactly(1).Items);
                 Assert.That(ReadProgramOf(service.FullPath).Elements("ml"), Has.Exactly(1).Items,
                     "the ma's own contour keeps its ms + ml");
+            });
+        }
+
+        private const string ShallowStraightMillProgram = """
+            <program dx="200" dy="100" dz="18">
+              <tool name="Mill6" d="6" />
+              <ms x="0" y="50" dp="5" c="0" name="Mill6" />
+              <ml x="200" y="50" dp="5" />
+            </program>
+            """;
+
+        [Test]
+        public void ConvertMillsToGrooves_CutsWithFirstConfiguredGroovingWidth()
+        {
+            _config.GroovingToolWidths.Returns(new List<decimal> { 3.2m, 2.8m });
+            var service = OpenSingleProgramProject(ShallowStraightMillProgram);
+            var log = string.Empty;
+
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+
+            var program = ReadProgramOf(service.FullPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(program.Elements("tool").Select(t => (string?)t.Attribute("name")), Is.EqualTo(new[] { "Cut3.2" }));
+                Assert.That((string?)program.Element("gr")!.Attribute("name"), Is.EqualTo("Cut3.2"));
+            });
+        }
+
+        [Test]
+        public void ConvertMillsToGrooves_WithoutConfiguredGroovingWidth_IsCancelled()
+        {
+            _config.GroovingToolWidths.Returns(new List<decimal>());
+            var service = OpenSingleProgramProject(ShallowStraightMillProgram);
+            var log = string.Empty;
+
+            var result = service.ConvertGroovesAndMills(
+                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No grooving tools configured (AppOptions.GroovingToolWidths is empty)."));
             });
         }
 

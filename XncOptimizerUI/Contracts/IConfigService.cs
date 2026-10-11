@@ -6,6 +6,9 @@ namespace XncOptimizerUI.Contracts
 
         IReadOnlyList<decimal> MillingToolDiams { get; }
 
+        /// <summary>Grooving cutter widths; the first one cuts the grooves made by mills -> grooves conversion.</summary>
+        IReadOnlyList<decimal> GroovingToolWidths { get; }
+
         IReadOnlyList<string> LabelsToProcess { get; }
 
         /// <summary>Part rotation never flips an edge groove's TCL (<c>c</c>) - GibLab's behavior.</summary>

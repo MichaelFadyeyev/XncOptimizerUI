@@ -232,6 +232,7 @@ namespace XncOptimizerUI.Test
             var config = Substitute.For<IConfigService>();
             config.SawWidth.Returns(4.0m);
             config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
+            config.GroovingToolWidths.Returns(new List<decimal> { 2.8m, 3.2m });
 
             return config;
         }

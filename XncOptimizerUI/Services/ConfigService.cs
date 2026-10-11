@@ -87,6 +87,11 @@ namespace XncOptimizerUI.Services
             get { return _options.MillingToolDiams; }
         }
 
+        public IReadOnlyList<decimal> GroovingToolWidths
+        {
+            get { return _options.GroovingToolWidths; }
+        }
+
         public IReadOnlyList<string> LabelsToProcess
         {
             get { return _options.LabelsToProcess; }

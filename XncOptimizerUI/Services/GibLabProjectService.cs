@@ -558,6 +558,16 @@ namespace XncOptimizerUI.Services
                 return false;
             }
 
+            var groovingToolWidths = _config.GroovingToolWidths ?? [];
+
+            if (direction == GrooveMillDirection.MillsToGrooves && groovingToolWidths.Count == 0)
+            {
+                log += "***\nNo grooving tools configured (AppOptions.GroovingToolWidths is empty). Mills->Grooves conversion cancelled.";
+                return false;
+            }
+
+            var groovingToolDiameter = direction == GrooveMillDirection.MillsToGrooves ? (double)groovingToolWidths[0] : 0d;
+
             var xncOperations = GetXncOperations();
 
             var totalConverted = 0;
@@ -597,7 +607,7 @@ namespace XncOptimizerUI.Services
 
                         var (converted, ignored, toolsAdded, toolsRemoved) = direction == GrooveMillDirection.GroovesToMills
                             ? ConvertGroovesToMills(program, millingToolDiameters)
-                            : ConvertMillsToGrooves(program, processPockets);
+                            : ConvertMillsToGrooves(program, processPockets, groovingToolDiameter);
 
                         if (converted > 0)
                         {
@@ -1742,9 +1752,6 @@ namespace XncOptimizerUI.Services
         private const double AxisEpsilon = 1e-6;
         private const double DiameterEpsilon = 1e-6;
 
-        /// <summary>Diameter of the grooving cutter a mill is turned back into a groove with.</summary>
-        private const double GroovingToolDiameter = 2.8;
-
         // --- Bore <-> Mill conversion ---------------------------------------------------------
         // A face bore wider than BoreMillMinDiameter is milled out with a fixed 6 mm cutter
         // ("Mill6"): a closed contour of four quarter arcs (<ms> at the circle's top, then
@@ -2266,7 +2273,8 @@ namespace XncOptimizerUI.Services
             return (converted, ignored, addedToolNames.Count, toolsRemoved);
         }
 
-        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToGrooves(XElement program, bool processPockets)
+        private static (int converted, int ignored, int toolsAdded, int toolsRemoved) ConvertMillsToGrooves(
+            XElement program, bool processPockets, double groovingToolDiameter)
         {
             var symbols = SeedProgramSymbols(program);
             var toolsByName = ReadToolDiameters(program);
@@ -2288,7 +2296,7 @@ namespace XncOptimizerUI.Services
                 if (tag == "mr")
                 {
                     if (TryConvertRectanglePocketToGroove(
-                            elements[i], processPockets, symbols, dx, dy, dz,
+                            elements[i], processPockets, symbols, dx, dy, dz, groovingToolDiameter,
                             toolsByName, addedToolNames, originalToolNames))
                     {
                         converted++;
@@ -2328,7 +2336,7 @@ namespace XncOptimizerUI.Services
                     && ParsePositionCode(ms.GetCValue()) == ToolPosition.Pocket
                     && segments.Count >= 3
                     && segments.All(s => s.Name.LocalName == "ml")
-                    && TryConvertContourPocketToGroove(ms, segments, symbols, dx, dy, dz,
+                    && TryConvertContourPocketToGroove(ms, segments, symbols, dx, dy, dz, groovingToolDiameter,
                            toolsByName, addedToolNames, originalToolNames))
                 {
                     converted++;
@@ -2383,7 +2391,7 @@ namespace XncOptimizerUI.Services
                 // The groove is cut by a fixed-diameter grooving cutter (multiple passes when the
                 // slot is wider); the mill's own tool is only used for the slot width `t`.
                 var grooveToolName = EnsureConversionTool(
-                    ms, GroovingToolDiameter, "Cut", toolsByName, addedToolNames);
+                    ms, groovingToolDiameter, "Cut", toolsByName, addedToolNames);
 
                 // Any endpoint that lies outside the part is pulled onto the boundary line;
                 // on-edge / interior endpoints keep their value. Only the axis the mill runs
@@ -2445,6 +2453,7 @@ namespace XncOptimizerUI.Services
             double dx,
             double dy,
             double dz,
+            double groovingToolDiameter,
             Dictionary<string, double> toolsByName,
             HashSet<string> addedToolNames,
             HashSet<string> originalToolNames)
@@ -2487,7 +2496,7 @@ namespace XncOptimizerUI.Services
             EmitPocketGroove(mr,
                 cx - length / 2d, cx + length / 2d, cy - breadth / 2d, cy + breadth / 2d,
                 mr.GetDpValue() ?? "0", mr.GetCommentValue(), mr.GetNameValue(),
-                dx, dy, toolsByName, addedToolNames, originalToolNames);
+                dx, dy, groovingToolDiameter, toolsByName, addedToolNames, originalToolNames);
 
             mr.Remove();
 
@@ -2507,6 +2516,7 @@ namespace XncOptimizerUI.Services
             double dx,
             double dy,
             double dz,
+            double groovingToolDiameter,
             Dictionary<string, double> toolsByName,
             HashSet<string> addedToolNames,
             HashSet<string> originalToolNames)
@@ -2565,7 +2575,7 @@ namespace XncOptimizerUI.Services
 
             EmitPocketGroove(ms, minX, maxX, minY, maxY,
                 ms.GetDpValue() ?? "0", ms.GetCommentValue(), ms.GetNameValue(),
-                dx, dy, toolsByName, addedToolNames, originalToolNames);
+                dx, dy, groovingToolDiameter, toolsByName, addedToolNames, originalToolNames);
 
             foreach (var seg in segments)
             {
@@ -2595,6 +2605,7 @@ namespace XncOptimizerUI.Services
             string? pocketToolName,
             double dx,
             double dy,
+            double groovingToolDiameter,
             Dictionary<string, double> toolsByName,
             HashSet<string> addedToolNames,
             HashSet<string> originalToolNames)
@@ -2620,7 +2631,7 @@ namespace XncOptimizerUI.Services
             }
 
             var grooveToolName = EnsureConversionTool(
-                anchor, GroovingToolDiameter, "Cut", toolsByName, addedToolNames);
+                anchor, groovingToolDiameter, "Cut", toolsByName, addedToolNames);
 
             var gr = new XElement("gr",
                 new XAttribute("x1", XmlConvert.ToString(x1)),
