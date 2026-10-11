@@ -9,7 +9,7 @@ using XncOptimizerUI.Services;
 namespace XncOptimizerUI.Test
 {
     /// <summary>
-    /// <see cref="GibLabProjectService.CleanOutsideOperations"/> on <c>TestData/td-clean-outside.project</c>
+    /// <see cref="IXncBatchOperations.CleanOutsideOperations"/> on <c>TestData/td-clean-outside.project</c>
     /// (1000 x 600 x 18 parts). Part 2 ("mixed") holds inside, outside and edge-case bores, grooves
     /// and mills; part 3 has one outside face bore; part 4 has nothing outside.
     /// </summary>
@@ -23,14 +23,13 @@ namespace XncOptimizerUI.Test
         [SetUp]
         public void SetUp() => _projectPath = CopyFixture(Fixture);
 
-        private (GibLabProjectService Service, bool Result, string Log) Clean(OutsideOperationKinds kinds, params int[] partIds)
+        private (ProjectServices Service, bool Result, string Log) Clean(OutsideOperationKinds kinds, params int[] partIds)
         {
-            var service = new GibLabProjectService(Substitute.For<IConfigService>(), TimeProvider.System);
-            service.OpenProject(_projectPath);
+            var service = TestProject.Create(Substitute.For<IConfigService>(), TimeProvider.System);
+            service.Session.Open(_projectPath);
 
             var log = string.Empty;
-            var result = service.CleanOutsideOperations(
-                ref log, partIds.Select(id => new Part { Id = id, Name = $"part-{id}" }).ToList(), kinds);
+            var result = service.Batch.CleanOutsideOperations(partIds.Select(id => new Part { Id = id, Name = $"part-{id}" }).ToList(), kinds).Into(ref log);
 
             return (service, result, log);
         }
@@ -54,12 +53,12 @@ namespace XncOptimizerUI.Test
         public void CleanOutsideOperations_AllKinds_RemovesOnlyElementsThatNeverReachThePart()
         {
             var (service, result, log) = Clean(OutsideOperationKinds.All, 2);
-            var program = ReadSavedProgram(service.FullPath, 2);
+            var program = ReadSavedProgram(service.Session.FullPath, 2);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("td-clean-outside_cln.project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("td-clean-outside_cln.project"));
                 Assert.That(log, Does.Contain("removed 17 (5 bore(s), 3 groove(s), 9 mill(s)), 1 tool(s) removed, unresolved 0, across 1 part(s)"));
 
                 // Kept: inside bore, bore centred on the left side, middle top-edge bore, array whose third hole is inside
@@ -119,7 +118,7 @@ namespace XncOptimizerUI.Test
         public void CleanOutsideOperations_OnlySelectedKinds_LeavesOtherKindsUntouched()
         {
             var (service, result, log) = Clean(OutsideOperationKinds.Bores, 2);
-            var program = ReadSavedProgram(service.FullPath, 2);
+            var program = ReadSavedProgram(service.Session.FullPath, 2);
 
             Assert.Multiple(() =>
             {
@@ -141,8 +140,8 @@ namespace XncOptimizerUI.Test
                 Assert.That(log, Does.Contain("removed 18 (6 bore(s), 3 groove(s), 9 mill(s))"));
                 Assert.That(log, Does.Contain("across 2 part(s)"));
                 Assert.That(log, Does.Not.Contain("(id=4)"), "a part with nothing outside is not reported");
-                Assert.That(ReadSavedProgram(service.FullPath, 3).Elements("bf").Select(b => b.Attribute("x")!.Value), Is.EqualTo(new[] { "100" }));
-                Assert.That(XDocument.Load(service.FullPath).Root!.Attribute("description")!.Value,
+                Assert.That(ReadSavedProgram(service.Session.FullPath, 3).Elements("bf").Select(b => b.Attribute("x")!.Value), Is.EqualTo(new[] { "100" }));
+                Assert.That(XDocument.Load(service.Session.FullPath).Root!.Attribute("description")!.Value,
                     Does.Contain("cleaned outside bores, grooves, mills"));
             });
         }
@@ -176,15 +175,15 @@ namespace XncOptimizerUI.Test
         public void CleanOutsideOperations_RerunOnCleanedFile_NumbersTheOutput()
         {
             var (service, _, _) = Clean(OutsideOperationKinds.Bores, 2);
-            service.OpenProject(service.FullPath);
+            service.Session.Open(service.Session.FullPath);
 
             var log = string.Empty;
-            var result = service.CleanOutsideOperations(ref log, [new Part { Id = 2, Name = "part-2" }], OutsideOperationKinds.All);
+            var result = service.Batch.CleanOutsideOperations([new Part { Id = 2, Name = "part-2" }], OutsideOperationKinds.All).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("td-clean-outside_cln(1).project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("td-clean-outside_cln(1).project"));
             });
         }
     }

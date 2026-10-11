@@ -10,13 +10,13 @@ using XncOptimizerUI.Test.Fakes;
 namespace XncOptimizerUI.Test
 {
     /// <summary>
-    /// These were impossible before DI: GibLabProjectService popped modal
+    /// Real project services on fixture copies. These were impossible before DI: the service popped modal
     /// MessageBox dialogs from inside its algorithms, so a headless test host hung
     /// rather than failed, and SawWidth was read from a static ConfigService that
     /// touched the developer's real %AppData% file.
     /// </summary>
     [TestFixture]
-    public class GibLabProjectServiceTests : TempFixtureTestBase
+    public class ProjectServicesTests : TempFixtureTestBase
     {
         private string _projectPath = string.Empty;
         private IConfigService _config = null!;
@@ -36,18 +36,18 @@ namespace XncOptimizerUI.Test
             _projectPath = CopyFixture("td.project");
         }
 
-        private GibLabProjectService CreateService() => new(_config, _clock);
+        private ProjectServices CreateService() => TestProject.Create(_config, _clock);
 
         /// <summary>
         /// Opens the fixture and reads in the order the service requires: ReadParts
         /// resolves banding names and sheet ids against the caches that ReadBands and
         /// ReadSheets populate, so calling it first throws.
         /// </summary>
-        private static GibLabProjectService OpenAndRead(GibLabProjectService service, string path)
+        private static ProjectServices OpenAndRead(ProjectServices service, string path)
         {
-            service.OpenProject(path);
-            service.ReadBands();
-            service.ReadSheets();
+            service.Session.Open(path);
+            service.Reader.ReadBands();
+            service.Reader.ReadSheets();
 
             return service;
         }
@@ -57,12 +57,12 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var parts = service.ReadParts();
+            var parts = service.Reader.ReadParts();
 
             Assert.Multiple(() =>
             {
-                Assert.That(service.FullPath, Is.EqualTo(_projectPath));
-                Assert.That(service.ReadSheets(), Is.Not.Empty);
+                Assert.That(service.Session.FullPath, Is.EqualTo(_projectPath));
+                Assert.That(service.Reader.ReadSheets(), Is.Not.Empty);
                 Assert.That(parts, Is.Not.Empty);
                 Assert.That(parts.Select(p => p.Id), Is.Unique);
             });
@@ -76,7 +76,7 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
 
             // The point of the test: this call used to block on MessageBox.Show.
-            var result = service.GroupIdenticalElements(ref log);
+            var result = service.Restructuring.GroupIdenticalElements().Into(ref log);
 
             Assert.That(log, Is.Not.Empty, "the service must report through the log, not a dialog");
 
@@ -85,8 +85,8 @@ namespace XncOptimizerUI.Test
                 Assert.Multiple(() =>
                 {
                     Assert.That(log, Does.Contain("Stored to:"));
-                    Assert.That(service.FullPath, Does.EndWith("_opt.project"));
-                    Assert.That(File.Exists(service.FullPath), Is.True);
+                    Assert.That(service.Session.FullPath, Does.EndWith("_opt.project"));
+                    Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 });
             }
             else
@@ -102,16 +102,16 @@ namespace XncOptimizerUI.Test
 
             var log = string.Empty;
 
-            if (!service.GroupIdenticalElements(ref log))
+            if (!service.Restructuring.GroupIdenticalElements().Into(ref log))
             {
                 Assert.Ignore("The fixture is already optimized; the second-pass case cannot be exercised.");
             }
 
             // Re-open the file the first pass produced and optimize it again.
-            var second = OpenAndRead(CreateService(), service.FullPath);
+            var second = OpenAndRead(CreateService(), service.Session.FullPath);
 
             var secondLog = string.Empty;
-            var result = second.GroupIdenticalElements(ref secondLog);
+            var result = second.Restructuring.GroupIdenticalElements().Into(ref secondLog);
 
             Assert.Multiple(() =>
             {
@@ -134,9 +134,9 @@ namespace XncOptimizerUI.Test
 
             var service = OpenAndRead(CreateService(), path);
             var log = string.Empty;
-            Assert.That(service.GroupIdenticalElements(ref log), Is.True, log);
+            Assert.That(service.Restructuring.GroupIdenticalElements().Into(ref log), Is.True, log);
 
-            var names = XDocument.Load(service.FullPath).Descendants("part")
+            var names = XDocument.Load(service.Session.FullPath).Descendants("part")
                 .Select(p => (string?)p.Attribute("name"))
                 .ToList();
 
@@ -153,9 +153,9 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), CopyFixture("td-execute-optimize.project"));
             var log = string.Empty;
-            Assert.That(service.GroupIdenticalElements(ref log), Is.True, log);
+            Assert.That(service.Restructuring.GroupIdenticalElements().Into(ref log), Is.True, log);
 
-            var cutOperations = XDocument.Load(service.FullPath).Root!.Elements("operation")
+            var cutOperations = XDocument.Load(service.Session.FullPath).Root!.Elements("operation")
                 .Where(o => (string?)o.Attribute("typeId") == "CS")
                 .ToList();
 
@@ -178,7 +178,7 @@ namespace XncOptimizerUI.Test
             var service = OpenAndRead(CreateService(), path);
             var log = string.Empty;
 
-            var result = service.GroupIdenticalElements(ref log);
+            var result = service.Restructuring.GroupIdenticalElements().Into(ref log);
 
             var bytesAfter = File.ReadAllBytes(path);
 
@@ -187,7 +187,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(result, Is.True);
                 Assert.That(bytesAfter, Is.EqualTo(bytesBefore),
                     "GroupIdenticalElements must save the grouped result to a new _opt file, never overwrite the source it read");
-                Assert.That(service.FullPath, Does.EndWith("_opt.project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("_opt.project"));
             });
         }
 
@@ -199,13 +199,13 @@ namespace XncOptimizerUI.Test
             var path = CopyFixture("td-turn-discordance.project");
             var service = OpenAndRead(CreateService(), path);
 
-            Assert.That(service.GetPartsWithXncTurnDiscordance(), Is.EqualTo(new[] { "panel-A" }));
+            Assert.That(service.Reader.GetPartsWithXncTurnDiscordance(), Is.EqualTo(new[] { "panel-A" }));
         }
 
         [Test]
         public void GetPartsWithXncTurnDiscordance_WithNoProjectOpen_ReturnsEmpty()
         {
-            Assert.That(CreateService().GetPartsWithXncTurnDiscordance(), Is.Empty);
+            Assert.That(CreateService().Reader.GetPartsWithXncTurnDiscordance(), Is.Empty);
         }
 
         [Test]
@@ -213,10 +213,10 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var sourcePart = service.ReadParts().First();
+            var sourcePart = service.Reader.ReadParts().First();
             var log = string.Empty;
 
-            var result = service.ReplaceXncPrograms(ref log, sourcePart, []);
+            var result = service.Restructuring.ReplaceXncPrograms(sourcePart, []).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -230,10 +230,10 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var part = service.ReadParts().First();
+            var part = service.Reader.ReadParts().First();
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.False,
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.False,
                 "an unmodified part is not a change and should not be written");
         }
 
@@ -242,19 +242,19 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var part = service.ReadParts().First();
+            var part = service.Reader.ReadParts().First();
             var newLength = part.Length + 25m;
             part.Length = newLength;
 
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.True);
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.True);
 
-            service.SaveProject();
+            service.Session.Save();
 
             var reopened = OpenAndRead(CreateService(), _projectPath);
 
-            Assert.That(reopened.ReadParts().First(p => p.Id == part.Id).Length, Is.EqualTo(newLength));
+            Assert.That(reopened.Reader.ReadParts().First(p => p.Id == part.Id).Length, Is.EqualTo(newLength));
         }
 
         /// <summary>
@@ -267,12 +267,12 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var part = service.ReadParts().First();
+            var part = service.Reader.ReadParts().First();
             part.Length += 0.5m;
             part.Width += 0.25m;
 
             var log = string.Empty;
-            service.UpdatePart(ref log, part);
+            service.Editor.UpdatePart(part).Into(ref log);
 
             var saved = SaveAndLoadProductPart(service, part.Id);
 
@@ -295,8 +295,8 @@ namespace XncOptimizerUI.Test
             part.Name = newPartName;
 
             var log = string.Empty;
-            service.UpdatePart(ref log, part);
-            service.SaveProject();
+            service.Editor.UpdatePart(part).Into(ref log);
+            service.Session.Save();
 
             Assert.Multiple(() =>
             {
@@ -313,8 +313,8 @@ namespace XncOptimizerUI.Test
             part.Name = newPartName;
 
             var log = string.Empty;
-            service.UpdatePart(ref log, part);
-            service.SaveProject();
+            service.Editor.UpdatePart(part).Into(ref log);
+            service.Session.Save();
 
             Assert.Multiple(() =>
             {
@@ -324,10 +324,10 @@ namespace XncOptimizerUI.Test
         }
 
         /// <summary>Sets <c>typeName</c> of every XNC operation of the first machined part in the fixture copy, then opens it.</summary>
-        private (GibLabProjectService Service, Part Part) OpenWithXncTypeName(string xncTypeName)
+        private (ProjectServices Service, Part Part) OpenWithXncTypeName(string xncTypeName)
         {
             var reader = OpenAndRead(CreateService(), _projectPath);
-            var partId = reader.ReadParts().First(p => reader.GetXncProgramsCount(p.Id) > 0).Id;
+            var partId = reader.Reader.ReadParts().First(p => reader.Reader.GetXncProgramsCount(p.Id) > 0).Id;
 
             var doc = XDocument.Load(_projectPath);
             foreach (var operation in XncOperationsOf(doc, partId))
@@ -338,7 +338,7 @@ namespace XncOptimizerUI.Test
 
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            return (service, service.ReadParts().Single(p => p.Id == partId));
+            return (service, service.Reader.ReadParts().Single(p => p.Id == partId));
         }
 
         private IEnumerable<string?> XncTypeNamesOf(int partId) =>
@@ -355,7 +355,7 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            Assert.That(service.ReadParts().First().ConsiderTexture, Is.True,
+            Assert.That(service.Reader.ReadParts().First().ConsiderTexture, Is.True,
                 "td.project parts are declared with txt=\"true\"");
         }
 
@@ -364,25 +364,25 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var part = service.ReadParts().First();
+            var part = service.Reader.ReadParts().First();
             var newTexture = !part.ConsiderTexture;
             part.ConsiderTexture = newTexture;
 
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.True);
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.True);
 
-            service.SaveProject();
+            service.Session.Save();
 
             var reopened = OpenAndRead(CreateService(), _projectPath);
 
-            Assert.That(reopened.ReadParts().First(p => p.Id == part.Id).ConsiderTexture, Is.EqualTo(newTexture));
+            Assert.That(reopened.Reader.ReadParts().First(p => p.Id == part.Id).ConsiderTexture, Is.EqualTo(newTexture));
         }
 
         /// <summary>Saves, then returns the raw <c>&lt;part&gt;</c> of the product good with <paramref name="partId"/>.</summary>
-        private XElement SaveAndLoadProductPart(GibLabProjectService service, int partId)
+        private XElement SaveAndLoadProductPart(ProjectServices service, int partId)
         {
-            service.SaveProject();
+            service.Session.Save();
 
             return XDocument.Load(_projectPath).Root!.Elements("good")
                 .Where(g => (string?)g.Attribute("typeId") == "product")
@@ -402,14 +402,14 @@ namespace XncOptimizerUI.Test
         {
             // td.project part 2: l=2301, jl=2297, ell=op#1 (t=2), elr=op#2 (t=2), op#2 used only on elr.
             var service = OpenAndRead(CreateService(), _projectPath);
-            var part = service.ReadParts().Single(p => p.Id == 2);
-            var band3 = service.ReadBands().Single(b => b.Id == 3);
+            var part = service.Reader.ReadParts().Single(p => p.Id == 2);
+            var band3 = service.Reader.ReadBands().Single(b => b.Id == 3);
 
             part.RightBandingId = 3; // t=1
 
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.True);
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.True);
 
             var saved = SaveAndLoadProductPart(service, 2);
 
@@ -428,7 +428,7 @@ namespace XncOptimizerUI.Test
             });
 
             var reopened = OpenAndRead(CreateService(), _projectPath);
-            Assert.That(reopened.ReadParts().Single(p => p.Id == 2).RightBandingId, Is.EqualTo(3));
+            Assert.That(reopened.Reader.ReadParts().Single(p => p.Id == 2).RightBandingId, Is.EqualTo(3));
         }
 
         [Test]
@@ -436,13 +436,13 @@ namespace XncOptimizerUI.Test
         {
             // td.project part 1: w=263, jw=261, elt=op#1 (t=2), no elb.
             var service = OpenAndRead(CreateService(), _projectPath);
-            var part = service.ReadParts().Single(p => p.Id == 1);
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
 
             part.TopBandingId = null;
 
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.True);
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.True);
 
             var saved = SaveAndLoadProductPart(service, 1);
 
@@ -462,13 +462,13 @@ namespace XncOptimizerUI.Test
         {
             // td.project part 1: w=263, elt=op#1 (t=2), no elb; op#3 (t=1) doesn't list part 1.
             var service = OpenAndRead(CreateService(), _projectPath);
-            var part = service.ReadParts().Single(p => p.Id == 1);
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
 
             part.BottomBandingId = 3;
 
             var log = string.Empty;
 
-            Assert.That(service.UpdatePart(ref log, part), Is.True);
+            Assert.That(service.Editor.UpdatePart(part).Into(ref log), Is.True);
 
             var saved = SaveAndLoadProductPart(service, 1);
 
@@ -485,12 +485,12 @@ namespace XncOptimizerUI.Test
         public void UpdatePart_WithUnknownBand_LogsAndLeavesEdgeUntouched()
         {
             var service = OpenAndRead(CreateService(), _projectPath);
-            var part = service.ReadParts().Single(p => p.Id == 1);
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
 
             part.TopBandingId = 999_999;
 
             var log = string.Empty;
-            service.UpdatePart(ref log, part);
+            service.Editor.UpdatePart(part).Into(ref log);
 
             var saved = SaveAndLoadProductPart(service, 1);
 
@@ -514,7 +514,7 @@ namespace XncOptimizerUI.Test
             """;
 
         /// <summary>Writes a minimal project with one XNC operation for part 1 and opens it.</summary>
-        private GibLabProjectService OpenSingleProgramProject(string program)
+        private ProjectServices OpenSingleProgramProject(string program)
         {
             var path = Path.Combine(TempDirectory, "single-program.project");
             new XDocument(new XElement("project",
@@ -525,7 +525,7 @@ namespace XncOptimizerUI.Test
                     new XElement("part", new XAttribute("id", "1"))))).Save(path);
 
             var service = CreateService();
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             return service;
         }
@@ -536,7 +536,7 @@ namespace XncOptimizerUI.Test
             var service = OpenSingleProgramProject(LineThenRadiusArcProgram);
             var log = string.Empty;
 
-            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 1, Name = "panel" }]);
+            var result = service.Batch.OptimizeMillTraversal([new Part { Id = 1, Name = "panel" }]).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -551,16 +551,15 @@ namespace XncOptimizerUI.Test
             var service = OpenSingleProgramProject(LineThenRadiusArcProgram);
             var log = string.Empty;
 
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True, log);
                 Assert.That(log, Does.Contain("1 mill(s) -> groove(s), 0 tool(s) removed, 1 ignored"),
                     "only the straight one-segment pass converts; the ml+ma contour is ignored");
-                Assert.That(ReadProgramOf(service.FullPath).Elements("ma"), Has.Exactly(1).Items);
-                Assert.That(ReadProgramOf(service.FullPath).Elements("ml"), Has.Exactly(1).Items,
+                Assert.That(ReadProgramOf(service.Session.FullPath).Elements("ma"), Has.Exactly(1).Items);
+                Assert.That(ReadProgramOf(service.Session.FullPath).Elements("ml"), Has.Exactly(1).Items,
                     "the ma's own contour keeps its ms + ml");
             });
         }
@@ -580,10 +579,9 @@ namespace XncOptimizerUI.Test
             var service = OpenSingleProgramProject(ShallowStraightMillProgram);
             var log = string.Empty;
 
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
-            var program = ReadProgramOf(service.FullPath);
+            var program = ReadProgramOf(service.Session.FullPath);
 
             Assert.Multiple(() =>
             {
@@ -600,8 +598,7 @@ namespace XncOptimizerUI.Test
             var service = OpenSingleProgramProject(ShallowStraightMillProgram);
             var log = string.Empty;
 
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 1, Name = "panel" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -620,9 +617,9 @@ namespace XncOptimizerUI.Test
             var (service, part) = OpenWithXncTypeName("unrelated operation name");
             var log = string.Empty;
 
-            service.PrepForSplitAlongX(ref log, [part.Id.ToString(CultureInfo.InvariantCulture)]);
+            service.Restructuring.PrepForSplitAlongX([part.Id.ToString(CultureInfo.InvariantCulture)]).Into(ref log);
 
-            var operation = XncOperationsOf(XDocument.Load(service.FullPath), part.Id).First();
+            var operation = XncOperationsOf(XDocument.Load(service.Session.FullPath), part.Id).First();
             var program = XDocument.Parse(operation.Attribute("program")!.Value).Root!;
             var expectedWidth = part.Width * 2 + 4.0m;
 
@@ -635,13 +632,13 @@ namespace XncOptimizerUI.Test
         {
             var service = OpenAndRead(CreateService(), _projectPath);
 
-            var part = service.ReadParts().First();
+            var part = service.Reader.ReadParts().First();
             var originalWidth = part.Width;
             var log = string.Empty;
 
-            service.PrepForSplitAlongX(ref log, [part.Id.ToString(CultureInfo.InvariantCulture)]);
+            service.Restructuring.PrepForSplitAlongX([part.Id.ToString(CultureInfo.InvariantCulture)]).Into(ref log);
 
-            var updated = service.ReadParts().First(p => p.Id == part.Id);
+            var updated = service.Reader.ReadParts().First(p => p.Id == part.Id);
 
             Assert.Multiple(() =>
             {
@@ -649,7 +646,7 @@ namespace XncOptimizerUI.Test
                 // exact value; the kerf itself is asserted via the injected config.
                 Assert.That(updated.Width, Is.GreaterThan(originalWidth));
                 Assert.That(updated.Count, Is.LessThanOrEqualTo(part.Count));
-                Assert.That(service.FullPath, Does.EndWith("td_spl.project"),
+                Assert.That(service.Session.FullPath, Does.EndWith("td_spl.project"),
                     "split output must not share Group identical elements' _opt name");
             });
 
@@ -660,23 +657,22 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_GroovesToMills_ConvertsGrooveAddsBoreToolAndDropsOrphan()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-grooving.project"));
+            service.Session.Open(CopyFixture("td-grooving.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("converted 1"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));
                 Assert.That(log, Does.Contain("1 tool(s) removed"));
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -712,14 +708,13 @@ namespace XncOptimizerUI.Test
                 .Replace("&lt;tool name=&quot;Cut3.2&quot; d=&quot;3.2&quot;/&gt;",
                     "&lt;tool name=&quot;Bore10&quot; d=&quot;10&quot;/&gt;&lt;tool name=&quot;Cut3.2&quot; d=&quot;3.2&quot;/&gt;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }],
-                GrooveMillDirection.GroovesToMills, processPockets: false), Is.True);
+            Assert.That(service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }],
+                GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log), Is.True);
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -734,11 +729,10 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_GroovesToMills_KeepsToolStillUsedByAnUnconvertedGroove()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-grooving-mixed.project"));
+            service.Session.Open(CopyFixture("td-grooving-mixed.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -747,7 +741,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(log, Does.Contain("0 tool(s) removed"));
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -763,22 +757,21 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_MillsToGrooves_ConvertsShallowSingleSegmentMill()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-milling-shallow.project"));
+            service.Session.Open(CopyFixture("td-milling-shallow.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("_gm.project"));
                 Assert.That(log, Does.Contain("converted 1"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
                 Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Mill6
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.That(program.MillingContours, Is.Empty);
 
@@ -810,14 +803,13 @@ namespace XncOptimizerUI.Test
                 .Replace("&lt;tool name=&quot;Mill6&quot; d=&quot;6&quot;/&gt;",
                     "&lt;tool name=&quot;Bore2.8&quot; d=&quot;2.8&quot;/&gt;&lt;tool name=&quot;Mill6&quot; d=&quot;6&quot;/&gt;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }],
-                GrooveMillDirection.MillsToGrooves, processPockets: false), Is.True);
+            Assert.That(service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }],
+                GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log), Is.True);
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -832,19 +824,18 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_MillsToGrooves_IgnoresThroughMillAndRectangle()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-milling.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-milling.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mills converted"));
                 Assert.That(log, Does.Contain("ignored 2")); // through-mill contour + <mr>
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore), "nothing converted => nothing saved");
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore), "nothing converted => nothing saved");
             });
         }
 
@@ -852,23 +843,22 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_MillsToGrooves_WithProcessPockets_ConvertsAxisParallelRectangularPockets()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-milling-pocket.project"));
+            service.Session.Open(CopyFixture("td-milling-pocket.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: true);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: true).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("converted 2"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
                 Assert.That(log, Does.Contain("ignored 3"));         // rotated + frame + through-depth
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -906,46 +896,44 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_MillsToGrooves_WithoutProcessPockets_LeavesRectanglesAlone()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-milling-pocket.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-milling-pocket.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mills converted"));
                 Assert.That(log, Does.Contain("ignored 5"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(2).Single().MillingRectangles, Has.Count.EqualTo(5));
+            Assert.That(service.Reader.ReadXncPrograms(2).Single().MillingRectangles, Has.Count.EqualTo(5));
         }
 
         [Test]
         public void ConvertGroovesAndMills_MillsToGrooves_WithProcessPockets_ConvertsRectangularContourPockets()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-pocket-to-groove.project"));
+            service.Session.Open(CopyFixture("td-pocket-to-groove.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: true);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: true).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("converted 2"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Cut2.8
                 Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Mill6
                 Assert.That(log, Does.Contain("ignored 0"));
             });
 
-            var program = service.ReadXncPrograms(1).Single();
+            var program = service.Reader.ReadXncPrograms(1).Single();
 
             Assert.Multiple(() =>
             {
@@ -987,44 +975,42 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_MillsToGrooves_WithoutProcessPockets_LeavesContourPocketsAlone()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-pocket-to-groove.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-pocket-to-groove.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 1, Name = "402.07.01.ПАН-640" }], GrooveMillDirection.MillsToGrooves, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mills converted"));
                 Assert.That(log, Does.Contain("ignored 2"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(1).Single().MillingContours, Has.Count.EqualTo(2));
+            Assert.That(service.Reader.ReadXncPrograms(1).Single().MillingContours, Has.Count.EqualTo(2));
         }
 
         [Test]
         public void ConvertGroovesAndMills_GroovesToMills_IgnoresSecondaryPassGroove()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-grooving-secondary-pass.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-grooving-secondary-pass.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No grooves converted"));
                 Assert.That(log, Does.Contain("ignored 1"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+            Assert.That(service.Reader.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
                 "a p!=0 (secondary-pass) groove must be left untouched");
         }
 
@@ -1032,22 +1018,21 @@ namespace XncOptimizerUI.Test
         public void ConvertGroovesAndMills_GroovesToMills_IgnoresDiagonalGroove()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-grooving-diagonal.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-grooving-diagonal.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No grooves converted"));
                 Assert.That(log, Does.Contain("ignored 1"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+            Assert.That(service.Reader.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
                 "a diagonal groove must be left untouched");
         }
 
@@ -1057,22 +1042,21 @@ namespace XncOptimizerUI.Test
             var service = CreateService();
             // t=10 groove, but the shop only has Ø6 and Ø20 cutters -> milled out as a pocket.
             _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 20.0m });
-            service.OpenProject(CopyFixture("td-grooving.project"));
+            service.Session.Open(CopyFixture("td-grooving.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_gm.project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("_gm.project"));
                 Assert.That(log, Does.Contain("converted 1"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Mill6
                 Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Cut3.2
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -1104,15 +1088,14 @@ namespace XncOptimizerUI.Test
         {
             var service = CreateService();
             _config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 20.0m });
-            service.OpenProject(CopyFixture("td-grooving-interior.project"));
+            service.Session.Open(CopyFixture("td-grooving-interior.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.That(result, Is.True);
 
-            var rect = service.ReadXncPrograms(2).Single().MillingRectangles.Single();
+            var rect = service.Reader.ReadXncPrograms(2).Single().MillingRectangles.Single();
 
             Assert.Multiple(() =>
             {
@@ -1130,22 +1113,21 @@ namespace XncOptimizerUI.Test
             var service = CreateService();
             // Only a Ø20 cutter available; the t=10 groove cannot be milled cleanly.
             _config.MillingToolDiams.Returns(new List<decimal> { 20.0m });
-            service.OpenProject(CopyFixture("td-grooving.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-grooving.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No grooves converted"));
                 Assert.That(log, Does.Contain("ignored 1"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
+            Assert.That(service.Reader.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1),
                 "a groove with no fitting cutter must be left untouched");
         }
 
@@ -1154,31 +1136,30 @@ namespace XncOptimizerUI.Test
         {
             var service = CreateService();
             _config.MillingToolDiams.Returns(new List<decimal>());
-            service.OpenProject(CopyFixture("td-grooving.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-grooving.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([new Part { Id = 2, Name = "panel-1" }], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No milling tools configured"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
 
-            Assert.That(service.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1));
+            Assert.That(service.Reader.ReadXncPrograms(2).Single().Groovings, Has.Count.EqualTo(1));
         }
 
         [Test]
         public void ConvertGroovesAndMills_WithNoParts_ReturnsFalseAndLogs()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-grooving.project"));
+            service.Session.Open(CopyFixture("td-grooving.project"));
 
             var log = string.Empty;
-            var result = service.ConvertGroovesAndMills(ref log, [], GrooveMillDirection.GroovesToMills, processPockets: false);
+            var result = service.Batch.ConvertGroovesAndMills([], GrooveMillDirection.GroovesToMills, processPockets: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -1191,22 +1172,22 @@ namespace XncOptimizerUI.Test
         public void OptimizeMillTraversal_ReordersParallelPassesIntoSerpentineOrder()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-mills-optimization.project"));
+            service.Session.Open(CopyFixture("td-mills-optimization.project"));
 
             var log = string.Empty;
-            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 1, Name = "as-is" }]);
+            var result = service.Batch.OptimizeMillTraversal([new Part { Id = 1, Name = "as-is" }]).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_mo.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_mo.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("reordered 3 pass(es)"));
                 Assert.That(log, Does.Contain("Stored to:"));
             });
 
-            var optimised = service.ReadXncPrograms(1).Single();
-            var oracle = service.ReadXncPrograms(2).Single(); // the hand-authored "optimized" part
+            var optimised = service.Reader.ReadXncPrograms(1).Single();
+            var oracle = service.Reader.ReadXncPrograms(2).Single(); // the hand-authored "optimized" part
 
             Assert.That(optimised.MillingContours, Has.Count.EqualTo(6));
 
@@ -1239,17 +1220,17 @@ namespace XncOptimizerUI.Test
         public void OptimizeMillTraversal_AlreadyOptimised_ReturnsFalseAndSavesNothing()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-mills-optimization.project"));
-            var pathBefore = service.FullPath;
+            service.Session.Open(CopyFixture("td-mills-optimization.project"));
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.OptimizeMillTraversal(ref log, [new Part { Id = 2, Name = "optimized" }]);
+            var result = service.Batch.OptimizeMillTraversal([new Part { Id = 2, Name = "optimized" }]).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mill passes reordered"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore), "nothing reordered => nothing saved");
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore), "nothing reordered => nothing saved");
             });
         }
 
@@ -1257,10 +1238,10 @@ namespace XncOptimizerUI.Test
         public void OptimizeMillTraversal_WithNoParts_ReturnsFalseAndLogs()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-mills-optimization.project"));
+            service.Session.Open(CopyFixture("td-mills-optimization.project"));
 
             var log = string.Empty;
-            var result = service.OptimizeMillTraversal(ref log, []);
+            var result = service.Batch.OptimizeMillTraversal([]).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -1273,22 +1254,22 @@ namespace XncOptimizerUI.Test
         public void SortToolDeclarations_MovesToolsToProgramStart_OrderedByKindThenDiameter()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-programs.project"));
-            var before = service.ReadXncPrograms(1).Single(p => p.Side);
+            service.Session.Open(CopyFixture("td-programs.project"));
+            var before = service.Reader.ReadXncPrograms(1).Single(p => p.Side);
 
             var log = string.Empty;
-            var result = service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
+            var result = service.Batch.SortToolDeclarations([new Part { Id = 1, Name = "panel" }]).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_to.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_to.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("sorted 2 program(s), 0 skipped"));
                 Assert.That(log, Does.Contain("Stored to:"));
             });
 
-            var programs = service.ReadXncPrograms(1);
+            var programs = service.Reader.ReadXncPrograms(1);
             var front = programs.Single(p => p.Side);
             var back = programs.Single(p => !p.Side);
 
@@ -1309,20 +1290,20 @@ namespace XncOptimizerUI.Test
         public void SortToolDeclarations_AlreadySorted_ReturnsFalseAndSavesNothing()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-programs.project"));
+            service.Session.Open(CopyFixture("td-programs.project"));
 
             var log = string.Empty;
-            service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
-            var sortedPath = service.FullPath;
+            service.Batch.SortToolDeclarations([new Part { Id = 1, Name = "panel" }]).Into(ref log);
+            var sortedPath = service.Session.FullPath;
 
             log = string.Empty;
-            var result = service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
+            var result = service.Batch.SortToolDeclarations([new Part { Id = 1, Name = "panel" }]).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No tool declarations reordered (skipped 0 program(s))."));
-                Assert.That(service.FullPath, Is.EqualTo(sortedPath), "nothing reordered => nothing saved");
+                Assert.That(service.Session.FullPath, Is.EqualTo(sortedPath), "nothing reordered => nothing saved");
             });
         }
 
@@ -1330,10 +1311,10 @@ namespace XncOptimizerUI.Test
         public void SortToolDeclarations_WithNoParts_ReturnsFalseAndLogs()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-programs.project"));
+            service.Session.Open(CopyFixture("td-programs.project"));
 
             var log = string.Empty;
-            var result = service.SortToolDeclarations(ref log, []);
+            var result = service.Batch.SortToolDeclarations([]).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -1346,23 +1327,22 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_BoresToMills_LargeBoreBecomesClosedFourArcContour()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bores-large.project"));
+            service.Session.Open(CopyFixture("td-bores-large.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_bm.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("_bm.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("converted 1"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Mill6
                 Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Bore40
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -1410,15 +1390,14 @@ namespace XncOptimizerUI.Test
                 .Replace("&lt;tool name=&quot;Bore40&quot; d=&quot;40&quot;/&gt;",
                     "&lt;tool name=&quot;Mill6&quot; d=&quot;6&quot;/&gt;&lt;tool name=&quot;Bore40&quot; d=&quot;40&quot;/&gt;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false), Is.True);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log), Is.True);
 
             Assert.That(log, Does.Contain("0 tool(s) added"));
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
             Assert.That(program.Tools.Count(t => t.Name == "Mill6"), Is.EqualTo(1));
         }
 
@@ -1426,11 +1405,10 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_BoresToMills_CustomVariableAsBoreDepth()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bore-depth-variable.project"));
+            service.Session.Open(CopyFixture("td-bore-depth-variable.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 1, Name = "312.09.02.ПАН-1" }], BoreMillDirection.BoresToMills, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 1, Name = "312.09.02.ПАН-1" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -1438,7 +1416,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(log, Does.Contain("converted 1"));
             });
 
-            var program = service.ReadXncPrograms(1).Single();
+            var program = service.Reader.ReadXncPrograms(1).Single();
             var contour = program.MillingContours.Single();
 
             Assert.Multiple(() =>
@@ -1469,13 +1447,12 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_BoresToMills_UseEllipse_BlindBoreBecomesEllipticalPocket()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bores-large.project")); // Bore40 dp="12", dz="19" => blind
+            service.Session.Open(CopyFixture("td-bores-large.project")); // Bore40 dp="12", dz="19" => blind
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: true), Is.True);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: true).Into(ref log), Is.True);
 
-            var saved = File.ReadAllText(service.FullPath);
+            var saved = File.ReadAllText(service.Session.FullPath);
 
             Assert.Multiple(() =>
             {
@@ -1489,7 +1466,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(saved, Does.Not.Contain("Bore40"), "the orphaned bore tool is dropped");
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
             Assert.That(program.Bores.Select(b => b.ToolName), Is.EqualTo(new[] { "Bore8" }));
         }
 
@@ -1501,13 +1478,12 @@ namespace XncOptimizerUI.Test
             // Push the large bore's depth through the panel (dz="19").
             var xml = File.ReadAllText(path).Replace("dp=&quot;12&quot;", "dp=&quot;19&quot;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: true), Is.True);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: true).Into(ref log), Is.True);
 
-            var saved = File.ReadAllText(service.FullPath);
+            var saved = File.ReadAllText(service.Session.FullPath);
 
             Assert.Multiple(() =>
             {
@@ -1524,18 +1500,17 @@ namespace XncOptimizerUI.Test
             var path = CopyFixture("td-bores-large.project");
             var xml = File.ReadAllText(path).Replace("d=&quot;40&quot;", "d=&quot;30&quot;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
-            var pathBefore = service.FullPath;
+            service.Session.Open(path);
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No bores converted"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
         }
 
@@ -1543,22 +1518,21 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_MillsToBores_ClosedArcContourBecomesFaceBore()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-mill-circle.project"));
+            service.Session.Open(CopyFixture("td-mill-circle.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("_bm.project"));
+                Assert.That(service.Session.FullPath, Does.EndWith("_bm.project"));
                 Assert.That(log, Does.Contain("converted 1"));
                 Assert.That(log, Does.Contain("1 tool(s) added"));   // Bore40
                 Assert.That(log, Does.Contain("1 tool(s) removed")); // orphaned Mill6
             });
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
 
             Assert.Multiple(() =>
             {
@@ -1585,15 +1559,14 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_MillsToBores_RoundEllipseBecomesFaceBore()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-mill-ellipse.project"));
+            service.Session.Open(CopyFixture("td-mill-ellipse.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log);
 
             Assert.That(result, Is.True);
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
             var bore = program.Bores.Single();
 
             Assert.Multiple(() =>
@@ -1616,18 +1589,17 @@ namespace XncOptimizerUI.Test
                 .Replace("&lt;mac x=&quot;270&quot; y=&quot;300&quot; cx=&quot;250&quot; cy=&quot;300&quot; dp=&quot;15&quot; dir=&quot;false&quot;/&gt;&lt;/program&gt;",
                     "&lt;mac x=&quot;265&quot; y=&quot;300&quot; cx=&quot;250&quot; cy=&quot;300&quot; dp=&quot;15&quot; dir=&quot;false&quot;/&gt;&lt;/program&gt;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
-            var pathBefore = service.FullPath;
+            service.Session.Open(path);
+            var pathBefore = service.Session.FullPath;
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mills converted"));
-                Assert.That(service.FullPath, Is.EqualTo(pathBefore));
+                Assert.That(service.Session.FullPath, Is.EqualTo(pathBefore));
             });
         }
 
@@ -1640,11 +1612,10 @@ namespace XncOptimizerUI.Test
                 .Replace("&lt;mac x=&quot;270&quot; y=&quot;300&quot; cx=&quot;250&quot; cy=&quot;300&quot; dp=&quot;15&quot; dir=&quot;false&quot;/&gt;&lt;/program&gt;",
                     "&lt;ml x=&quot;270&quot; y=&quot;300&quot; dp=&quot;15&quot;/&gt;&lt;/program&gt;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false), Is.False);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log), Is.False);
         }
 
         [Test]
@@ -1657,29 +1628,26 @@ namespace XncOptimizerUI.Test
                 .Replace("x=&quot;270&quot;", "x=&quot;265&quot;")
                 .Replace("x=&quot;230&quot;", "x=&quot;235&quot;");
             File.WriteAllText(path, xml);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false), Is.False);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log), Is.False);
         }
 
         [Test]
         public void ConvertBoresAndMills_RoundTrip_RestoresBoreCentreDiameterAndDepth()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bores-large.project"));
+            service.Session.Open(CopyFixture("td-bores-large.project"));
 
             var log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false), Is.True);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log), Is.True);
 
-            service.OpenProject(service.FullPath);
+            service.Session.Open(service.Session.FullPath);
             log = string.Empty;
-            Assert.That(service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false), Is.True);
+            Assert.That(service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "panel-1" }], BoreMillDirection.MillsToBores, useEllipse: false).Into(ref log), Is.True);
 
-            var program = service.ReadXncPrograms(2).Single();
+            var program = service.Reader.ReadXncPrograms(2).Single();
             var restored = program.Bores.Single(b => b.ToolName == "Bore40");
 
             Assert.Multiple(() =>
@@ -1698,19 +1666,17 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_MillsToBores_RichFixture_EllipsesAndArcContoursBecomeBores()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-br-ml-conversion.project"));
+            service.Session.Open(CopyFixture("td-br-ml-conversion.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log,
-                [new Part { Id = 2, Name = "Mill-Ellipse" }, new Part { Id = 5, Name = "Mill-Path" }],
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 2, Name = "Mill-Ellipse" }, new Part { Id = 5, Name = "Mill-Path" }],
                 BoreMillDirection.MillsToBores,
-                useEllipse: false);
+                useEllipse: false).Into(ref log);
 
             Assert.That(result, Is.True);
 
-            var ellipsePart = service.ReadXncPrograms(2).SelectMany(p => p.Bores).ToList();
-            var pathPart = service.ReadXncPrograms(5).SelectMany(p => p.Bores).ToList();
+            var ellipsePart = service.Reader.ReadXncPrograms(2).SelectMany(p => p.Bores).ToList();
+            var pathPart = service.Reader.ReadXncPrograms(5).SelectMany(p => p.Bores).ToList();
 
             Assert.Multiple(() =>
             {
@@ -1720,11 +1686,11 @@ namespace XncOptimizerUI.Test
                 // Two <mac> circles on the front face + one <ma> circle on the back.
                 Assert.That(pathPart, Has.Count.EqualTo(3));
                 Assert.That(pathPart, Is.All.Matches<XncBore>(b => b.ToolName == "Bore40"));
-                Assert.That(service.ReadXncPrograms(2).SelectMany(p => p.MillingContours), Is.Empty);
-                Assert.That(service.ReadXncPrograms(5).SelectMany(p => p.MillingContours), Is.Empty);
+                Assert.That(service.Reader.ReadXncPrograms(2).SelectMany(p => p.MillingContours), Is.Empty);
+                Assert.That(service.Reader.ReadXncPrograms(5).SelectMany(p => p.MillingContours), Is.Empty);
             });
 
-            var backEllipse = service.ReadXncPrograms(2).Single(p => !p.Side).Bores.Single();
+            var backEllipse = service.Reader.ReadXncPrograms(2).Single(p => !p.Side).Bores.Single();
             Assert.Multiple(() =>
             {
                 Assert.That(backEllipse.X, Is.EqualTo(300d));  // dx/2
@@ -1737,15 +1703,14 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_BoresToMills_RichFixture_EveryLargeBoreBecomesAFourArcContour()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-br-ml-conversion.project"));
+            service.Session.Open(CopyFixture("td-br-ml-conversion.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(
-                ref log, [new Part { Id = 3, Name = "Bore" }], BoreMillDirection.BoresToMills, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([new Part { Id = 3, Name = "Bore" }], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log);
 
             Assert.That(result, Is.True);
 
-            var contours = service.ReadXncPrograms(3).SelectMany(p => p.MillingContours).ToList();
+            var contours = service.Reader.ReadXncPrograms(3).SelectMany(p => p.MillingContours).ToList();
 
             Assert.Multiple(() =>
             {
@@ -1755,7 +1720,7 @@ namespace XncOptimizerUI.Test
                 // dz=18: the dp=20 bore is through (c="2" Left: tool inside the counter-clockwise hole), the two dp=15 bores are blind (c="3" Pocket).
                 Assert.That(contours.Count(c => c.Position == ToolPosition.Left), Is.EqualTo(1));
                 Assert.That(contours.Count(c => c.Position == ToolPosition.Pocket), Is.EqualTo(2));
-                Assert.That(service.ReadXncPrograms(3).SelectMany(p => p.Bores), Is.Empty);
+                Assert.That(service.Reader.ReadXncPrograms(3).SelectMany(p => p.Bores), Is.Empty);
             });
         }
 
@@ -1763,10 +1728,10 @@ namespace XncOptimizerUI.Test
         public void ConvertBoresAndMills_WithNoParts_ReturnsFalseAndLogs()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bores-large.project"));
+            service.Session.Open(CopyFixture("td-bores-large.project"));
 
             var log = string.Empty;
-            var result = service.ConvertBoresAndMills(ref log, [], BoreMillDirection.BoresToMills, useEllipse: false);
+            var result = service.Batch.ConvertBoresAndMills([], BoreMillDirection.BoresToMills, useEllipse: false).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -1780,19 +1745,18 @@ namespace XncOptimizerUI.Test
         private const string MillOffsetFixture = "td-mill-offset.project";
 
         /// <summary>Offsets the given parts of the mill-offset fixture; returns the service, result and log.</summary>
-        private (GibLabProjectService Service, bool Result, string Log) OffsetMills(
+        private (ProjectServices Service, bool Result, string Log) OffsetMills(
             double offset, MillOffsetSide side, params int[] partIds) =>
             OffsetMills(offset, side, MillPathKinds.All, partIds);
 
-        private (GibLabProjectService Service, bool Result, string Log) OffsetMills(
+        private (ProjectServices Service, bool Result, string Log) OffsetMills(
             double offset, MillOffsetSide side, MillPathKinds kinds, params int[] partIds)
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture(MillOffsetFixture));
+            service.Session.Open(CopyFixture(MillOffsetFixture));
 
             var log = string.Empty;
-            var result = service.OffsetMillPaths(
-                ref log, partIds.Select(id => new Part { Id = id, Name = $"part-{id}" }).ToList(), offset, side, kinds);
+            var result = service.Batch.OffsetMillPaths(partIds.Select(id => new Part { Id = id, Name = $"part-{id}" }).ToList(), offset, side, kinds).Into(ref log);
 
             return (service, result, log);
         }
@@ -1809,11 +1773,11 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(result, Is.True);
                 Assert.That(log, Does.Contain("offset 5 open mill(s) by 3 mm R, ignored 0, skipped 8"));
-                Assert.That(ReadSavedProgram(service.FullPath, 2).Element("ms")!.Attribute("y")!.Value, Is.EqualTo("303"));
-                Assert.That(Points(ReadSavedProgram(service.FullPath, 6)),
+                Assert.That(ReadSavedProgram(service.Session.FullPath, 2).Element("ms")!.Attribute("y")!.Value, Is.EqualTo("303"));
+                Assert.That(Points(ReadSavedProgram(service.Session.FullPath, 6)),
                     Is.EqualTo(new[] { "100,100", "300,100", "300,200", "100,200", "100,100" }), "closed contour untouched");
-                Assert.That(ReadSavedProgram(service.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("100"), "rectangle untouched");
-                Assert.That(ReadSavedProgram(service.FullPath, 12).Element("me")!.Attribute("l")!.Value, Is.EqualTo("20"), "ellipse untouched");
+                Assert.That(ReadSavedProgram(service.Session.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("100"), "rectangle untouched");
+                Assert.That(ReadSavedProgram(service.Session.FullPath, 12).Element("me")!.Attribute("l")!.Value, Is.EqualTo("20"), "ellipse untouched");
             });
         }
 
@@ -1826,10 +1790,10 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(result, Is.True);
                 Assert.That(log, Does.Contain("offset 7 closed mill(s) by 3 mm R, ignored 1, skipped 5"));
-                Assert.That(OpenMillParts.Select(id => ReadSavedProgram(service.FullPath, id).Element("ms")!.Attribute("y")!.Value),
+                Assert.That(OpenMillParts.Select(id => ReadSavedProgram(service.Session.FullPath, id).Element("ms")!.Attribute("y")!.Value),
                     Is.EqualTo(new[] { "300", "300", "100", "100", "100" }), "open paths untouched");
-                Assert.That(Points(ReadSavedProgram(service.FullPath, 6))[0], Is.EqualTo("97,97"));
-                Assert.That(ReadSavedProgram(service.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("94"), "fwd=\"true\" <mr> travels clockwise, right = inside");
+                Assert.That(Points(ReadSavedProgram(service.Session.FullPath, 6))[0], Is.EqualTo("97,97"));
+                Assert.That(ReadSavedProgram(service.Session.FullPath, 10).Element("mr")!.Attribute("l")!.Value, Is.EqualTo("94"), "fwd=\"true\" <mr> travels clockwise, right = inside");
             });
         }
 
@@ -1884,7 +1848,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var program = ReadSavedProgram(service.FullPath, partId);
+            var program = ReadSavedProgram(service.Session.FullPath, partId);
             var ms = program.Element("ms")!;
             var ml = program.Element("ml")!;
 
@@ -1907,7 +1871,7 @@ namespace XncOptimizerUI.Test
 
             // (-10,100) -> (510,620) at 45 deg; right of travel is up-left. The entry slides along
             // x=-10 (left edge overshoot), the end along y=620 (top edge overshoot): 3*sqrt(2) each.
-            Assert.That(Points(ReadSavedProgram(service.FullPath, 4)),
+            Assert.That(Points(ReadSavedProgram(service.Session.FullPath, 4)),
                 Is.EqualTo(new[] { "-10,104.2426", "505.7574,620" }));
         }
 
@@ -1917,7 +1881,7 @@ namespace XncOptimizerUI.Test
             var (service, result, _) = OffsetMills(3, MillOffsetSide.Right, 5);
 
             Assert.That(result, Is.True);
-            Assert.That(Points(ReadSavedProgram(service.FullPath, 5)),
+            Assert.That(Points(ReadSavedProgram(service.Session.FullPath, 5)),
                 Is.EqualTo(new[] { "100,103", "197,103", "197,200" }));
         }
 
@@ -1930,7 +1894,7 @@ namespace XncOptimizerUI.Test
             var (service, result, _) = OffsetMills(3, side, partId);
 
             Assert.That(result, Is.True);
-            Assert.That(Points(ReadSavedProgram(service.FullPath, partId)), Is.EqualTo(expected));
+            Assert.That(Points(ReadSavedProgram(service.Session.FullPath, partId)), Is.EqualTo(expected));
         }
 
         [Test]
@@ -1940,7 +1904,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var program = ReadSavedProgram(service.FullPath, 8);
+            var program = ReadSavedProgram(service.Session.FullPath, 8);
 
             Assert.Multiple(() =>
             {
@@ -1959,7 +1923,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var program = ReadSavedProgram(service.FullPath, 9);
+            var program = ReadSavedProgram(service.Session.FullPath, 9);
 
             // dir="true" is a clockwise sweep, so its centre (420,100) lies right of travel.
             Assert.Multiple(() =>
@@ -1979,7 +1943,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var mr = ReadSavedProgram(service.FullPath, partId).Element("mr")!;
+            var mr = ReadSavedProgram(service.Session.FullPath, partId).Element("mr")!;
 
             Assert.Multiple(() =>
             {
@@ -1999,7 +1963,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var me = ReadSavedProgram(service.FullPath, 12).Element("me")!;
+            var me = ReadSavedProgram(service.Session.FullPath, 12).Element("me")!;
 
             Assert.Multiple(() =>
             {
@@ -2015,7 +1979,7 @@ namespace XncOptimizerUI.Test
 
             Assert.That(result, Is.True);
 
-            var program = ReadSavedProgram(service.FullPath, 14);
+            var program = ReadSavedProgram(service.Session.FullPath, 14);
             var names = program.Elements().Select(e => e.Name.LocalName).ToArray();
             var join = program.Element("mac")!;
 
@@ -2037,7 +2001,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("No mill paths offset (ignored 1, skipped 0)."));
-                Assert.That(service.FullPath, Does.EndWith(MillOffsetFixture));
+                Assert.That(service.Session.FullPath, Does.EndWith(MillOffsetFixture));
                 Assert.That(Directory.GetFiles(TempDirectory, "*_off*.project"), Is.Empty);
             });
         }
@@ -2050,8 +2014,8 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True);
-                Assert.That(service.FullPath, Does.EndWith("td-mill-offset_off.project"));
-                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(service.Session.FullPath, Does.EndWith("td-mill-offset_off.project"));
+                Assert.That(File.Exists(service.Session.FullPath), Is.True);
                 Assert.That(log, Does.Contain("offset 12 open and closed mill(s) by 3 mm R, ignored 1, skipped 0"));
                 Assert.That(log, Does.Contain("Mill offset: \"part-13\" (id=13): 0 mill(s) offset, 1 ignored, 0 skipped"));
             });
@@ -2061,16 +2025,15 @@ namespace XncOptimizerUI.Test
         public void OffsetMillPaths_RightThenLeft_RestoresTheOriginalContour()
         {
             var (service, _, _) = OffsetMills(3, MillOffsetSide.Right, 6);
-            service.OpenProject(service.FullPath); // as the UI does after every operation
+            service.Session.Open(service.Session.FullPath); // as the UI does after every operation
 
             var log = string.Empty;
-            Assert.That(service.OffsetMillPaths(
-                ref log, [new Part { Id = 6, Name = "closed-rect" }], 3, MillOffsetSide.Left, MillPathKinds.All), Is.True);
+            Assert.That(service.Batch.OffsetMillPaths([new Part { Id = 6, Name = "closed-rect" }], 3, MillOffsetSide.Left, MillPathKinds.All).Into(ref log), Is.True);
 
             Assert.Multiple(() =>
             {
-                Assert.That(service.FullPath, Does.EndWith("td-mill-offset_off(1).project"));
-                Assert.That(Points(ReadSavedProgram(service.FullPath, 6)),
+                Assert.That(service.Session.FullPath, Does.EndWith("td-mill-offset_off(1).project"));
+                Assert.That(Points(ReadSavedProgram(service.Session.FullPath, 6)),
                     Is.EqualTo(new[] { "100,100", "300,100", "300,200", "100,200", "100,100" }));
             });
         }
@@ -2103,13 +2066,13 @@ namespace XncOptimizerUI.Test
         // --- Bore attribute editing (td-bores-large: part 2, bf bores, dx=1000 dy=600 dz=19;
         //     td-bl-65-bore: part 2, <bl y="65" dp="30" m="true">, dx=500 dy=200 dz=18) ---
 
-        private (GibLabProjectService Service, string Path, int OperationId) OpenForBoreEdit(string fixture)
+        private (ProjectServices Service, string Path, int OperationId) OpenForBoreEdit(string fixture)
         {
             var service = CreateService();
             var path = CopyFixture(fixture);
-            service.OpenProject(path);
+            service.Session.Open(path);
 
-            return (service, path, service.ReadXncPrograms(2).Single().OperationId);
+            return (service, path, service.Reader.ReadXncPrograms(2).Single().OperationId);
         }
 
         private static XElement SavedBoreElement(string path, int boreIndex) =>
@@ -2123,10 +2086,10 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            var result = service.UpdateBore(ref log, operationId, 0, BoreAttribute.X, " dx-32 ");
-            service.SaveProject();
+            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, " dx-32 ").Into(ref log);
+            service.Session.Save();
 
-            var bore = service.ReadXncPrograms(2).Single().Bores[0];
+            var bore = service.Reader.ReadXncPrograms(2).Single().Bores[0];
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.True, log);
@@ -2142,9 +2105,9 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            Assert.That(service.UpdateBore(ref log, operationId, 0, BoreAttribute.Depth, "dz"), Is.True, log);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "dz").Into(ref log), Is.True, log);
 
-            var bore = service.ReadXncPrograms(2).Single().Bores[0];
+            var bore = service.Reader.ReadXncPrograms(2).Single().Bores[0];
             Assert.That((bore.Depth, bore.Through, bore.DepthText), Is.EqualTo((19d, true, "dz")));
         }
 
@@ -2153,14 +2116,14 @@ namespace XncOptimizerUI.Test
         {
             var service = CreateService();
             var path = CopyFixture("td-bore-depth-variable.project");
-            service.OpenProject(path);
-            var operationId = service.ReadXncPrograms(1).Single().OperationId;
+            service.Session.Open(path);
+            var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            var result = service.UpdateBore(ref log, operationId, 0, BoreAttribute.X, "dx/2-10");
-            service.SaveProject();
+            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "dx/2-10").Into(ref log);
+            service.Session.Save();
 
-            var bore = service.ReadXncPrograms(1).Single().Bores[0];
+            var bore = service.Reader.ReadXncPrograms(1).Single().Bores[0];
             var saved = ReadSavedProgram(path, 1).Element("bf")!;
             Assert.Multiple(() =>
             {
@@ -2175,13 +2138,13 @@ namespace XncOptimizerUI.Test
         public void UpdateBore_Depth_AcceptsProgramVariable()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bore-depth-variable.project"));
-            var operationId = service.ReadXncPrograms(1).Single().OperationId;
+            service.Session.Open(CopyFixture("td-bore-depth-variable.project"));
+            var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            Assert.That(service.UpdateBore(ref log, operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10"), Is.True, log);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10").Into(ref log), Is.True, log);
 
-            var bore = service.ReadXncPrograms(1).Single().Bores[0];
+            var bore = service.Reader.ReadXncPrograms(1).Single().Bores[0];
             Assert.That((bore.Depth, bore.Through, bore.DepthText), Is.EqualTo((10d, false, "throughBoreDepth-10")));
         }
 
@@ -2189,17 +2152,17 @@ namespace XncOptimizerUI.Test
         public void UpdateBore_RejectsUndeclaredVariable()
         {
             var service = CreateService();
-            service.OpenProject(CopyFixture("td-bore-depth-variable.project"));
-            var operationId = service.ReadXncPrograms(1).Single().OperationId;
+            service.Session.Open(CopyFixture("td-bore-depth-variable.project"));
+            var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            var result = service.UpdateBore(ref log, operationId, 0, BoreAttribute.Depth, "blindBoreDepth");
+            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "blindBoreDepth").Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("Unknown variable 'blindBoreDepth'"));
-                Assert.That(service.ReadXncPrograms(1).Single().Bores[0].DepthText, Is.EqualTo("throughBoreDepth"));
+                Assert.That(service.Reader.ReadXncPrograms(1).Single().Bores[0].DepthText, Is.EqualTo("throughBoreDepth"));
             });
         }
 
@@ -2209,8 +2172,8 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForBoreEdit("td-bl-65-bore.project");
 
             var log = string.Empty;
-            var result = service.UpdateBore(ref log, operationId, 0, BoreAttribute.Z, "6");
-            service.SaveProject();
+            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.Z, "6").Into(ref log);
+            service.Session.Save();
 
             var element = SavedBoreElement(path, 0);
             Assert.Multiple(() =>
@@ -2218,7 +2181,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(result, Is.True, log);
                 Assert.That(element.Attribute("z")!.Value, Is.EqualTo("6"));
                 Assert.That(element.Attribute("m"), Is.Null);
-                Assert.That(service.ReadXncPrograms(2).Single().Bores[0].Z, Is.EqualTo(6));
+                Assert.That(service.Reader.ReadXncPrograms(2).Single().Bores[0].Z, Is.EqualTo(6));
             });
         }
 
@@ -2229,16 +2192,16 @@ namespace XncOptimizerUI.Test
         public void UpdateBore_InvalidExpression_RejectedAndProgramUnchanged(string expression)
         {
             var (service, _, operationId) = OpenForBoreEdit("td-bores-large.project");
-            var before = service.ReadXncPrograms(2).Single().Bores[0].XText;
+            var before = service.Reader.ReadXncPrograms(2).Single().Bores[0].XText;
 
             var log = string.Empty;
-            var result = service.UpdateBore(ref log, operationId, 0, BoreAttribute.X, expression);
+            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, expression).Into(ref log);
 
             Assert.Multiple(() =>
             {
                 Assert.That(result, Is.False);
                 Assert.That(log, Does.Contain("invalid x"));
-                Assert.That(service.ReadXncPrograms(2).Single().Bores[0].XText, Is.EqualTo(before));
+                Assert.That(service.Reader.ReadXncPrograms(2).Single().Bores[0].XText, Is.EqualTo(before));
             });
         }
 
@@ -2248,7 +2211,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            Assert.That(service.UpdateBore(ref log, operationId, 0, BoreAttribute.Depth, "dz-dz"), Is.False);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "dz-dz").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("Depth must be greater than 0"));
         }
 
@@ -2258,7 +2221,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bl-65-bore.project");
 
             var log = string.Empty;
-            Assert.That(service.UpdateBore(ref log, operationId, 0, BoreAttribute.X, "10"), Is.False);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "10").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("<bl> has no editable 'x' attribute"));
         }
 
@@ -2270,8 +2233,8 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.Multiple(() =>
             {
-                Assert.That(service.UpdateBore(ref log, 999, 0, BoreAttribute.X, "10"), Is.False);
-                Assert.That(service.UpdateBore(ref log, operationId, 99, BoreAttribute.X, "10"), Is.False);
+                Assert.That(service.Editor.UpdateBore(999, 0, BoreAttribute.X, "10").Into(ref log), Is.False);
+                Assert.That(service.Editor.UpdateBore(operationId, 99, BoreAttribute.X, "10").Into(ref log), Is.False);
                 Assert.That(log, Does.Contain("XNC operation not found."));
                 Assert.That(log, Does.Contain("bore not found in the program."));
             });
@@ -2281,7 +2244,7 @@ namespace XncOptimizerUI.Test
         //     <var throughBoreDepth double dz+2.00>, <bf dp="throughBoreDepth">; extended here with
         //     <var half double throughBoreDepth/2> and <var label string "throughBoreDepth mark">) ---
 
-        private (GibLabProjectService Service, string Path, int OperationId) OpenForVariableEdit()
+        private (ProjectServices Service, string Path, int OperationId) OpenForVariableEdit()
         {
             var path = CopyFixture("td-bore-depth-variable.project");
             File.WriteAllText(path, File.ReadAllText(path).Replace(
@@ -2290,9 +2253,9 @@ namespace XncOptimizerUI.Test
                 + "&lt;var name=&quot;label&quot; type=&quot;string&quot; expr=&quot;throughBoreDepth mark&quot;/&gt;&lt;bf "));
 
             var service = CreateService();
-            service.OpenProject(path);
+            service.Session.Open(path);
 
-            return (service, path, service.ReadXncPrograms(1).Single().OperationId);
+            return (service, path, service.Reader.ReadXncPrograms(1).Single().OperationId);
         }
 
         private static XElement SavedVariable(string path, int index) =>
@@ -2303,7 +2266,7 @@ namespace XncOptimizerUI.Test
         {
             var (service, _, _) = OpenForVariableEdit();
 
-            var program = service.ReadXncPrograms(1).Single();
+            var program = service.Reader.ReadXncPrograms(1).Single();
 
             Assert.Multiple(() =>
             {
@@ -2324,8 +2287,8 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            var result = service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Name, " holeDepth ");
-            service.SaveProject();
+            var result = service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Name, " holeDepth ").Into(ref log);
+            service.Session.Save();
 
             var program = ReadSavedProgram(path, 1);
             Assert.Multiple(() =>
@@ -2335,7 +2298,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(SavedVariable(path, 1).Attribute("expr")!.Value, Is.EqualTo("holeDepth/2"));
                 Assert.That(SavedVariable(path, 2).Attribute("expr")!.Value, Is.EqualTo("throughBoreDepth mark"));
                 Assert.That(program.Element("bf")!.Attribute("dp")!.Value, Is.EqualTo("holeDepth"));
-                Assert.That(service.ReadXncPrograms(1).Single().Bores.Single().Depth, Is.EqualTo(20));
+                Assert.That(service.Reader.ReadXncPrograms(1).Single().Bores.Single().Depth, Is.EqualTo(20));
             });
         }
 
@@ -2350,7 +2313,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            Assert.That(service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Name, name), Is.False);
+            Assert.That(service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Name, name).Into(ref log), Is.False);
             Assert.That(log, Does.Contain(reason));
         }
 
@@ -2360,10 +2323,10 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            Assert.That(service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Expr, " dz+4 "), Is.True, log);
-            service.SaveProject();
+            Assert.That(service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Expr, " dz+4 ").Into(ref log), Is.True, log);
+            service.Session.Save();
 
-            var program = service.ReadXncPrograms(1).Single();
+            var program = service.Reader.ReadXncPrograms(1).Single();
             Assert.Multiple(() =>
             {
                 Assert.That(SavedVariable(path, 0).Attribute("expr")!.Value, Is.EqualTo("dz+4"));
@@ -2380,7 +2343,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            var result = service.UpdateVariable(ref log, operationId, index, XncVariableAttribute.Expr, expr);
+            var result = service.Editor.UpdateVariable(operationId, index, XncVariableAttribute.Expr, expr).Into(ref log);
 
             Assert.That(result, Is.EqualTo(reason is null), log);
             if (reason is not null)
@@ -2397,8 +2360,8 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.Multiple(() =>
             {
-                Assert.That(service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Type, "int"), Is.True, log);
-                Assert.That(service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Expr, "dz/4"), Is.False);
+                Assert.That(service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Type, "int").Into(ref log), Is.True, log);
+                Assert.That(service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Expr, "dz/4").Into(ref log), Is.False);
                 Assert.That(log, Does.Contain("must be whole"));
             });
         }
@@ -2409,7 +2372,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            var result = service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Type, "string");
+            var result = service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Type, "string").Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -2426,11 +2389,11 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.Multiple(() =>
             {
-                Assert.That(service.UpdateVariable(ref log, operationId, 2, XncVariableAttribute.Type, "bool"), Is.False);
+                Assert.That(service.Editor.UpdateVariable(operationId, 2, XncVariableAttribute.Type, "bool").Into(ref log), Is.False);
                 Assert.That(log, Does.Contain("must be true or false"));
-                Assert.That(service.UpdateVariable(ref log, operationId, 2, XncVariableAttribute.Expr, "True"), Is.True, log);
-                Assert.That(service.UpdateVariable(ref log, operationId, 2, XncVariableAttribute.Type, "bool"), Is.True, log);
-                Assert.That(service.UpdateVariable(ref log, operationId, 2, XncVariableAttribute.Type, "float"), Is.False);
+                Assert.That(service.Editor.UpdateVariable(operationId, 2, XncVariableAttribute.Expr, "True").Into(ref log), Is.True, log);
+                Assert.That(service.Editor.UpdateVariable(operationId, 2, XncVariableAttribute.Type, "bool").Into(ref log), Is.True, log);
+                Assert.That(service.Editor.UpdateVariable(operationId, 2, XncVariableAttribute.Type, "float").Into(ref log), Is.False);
                 Assert.That(log, Does.Contain("unknown type \"float\""));
             });
         }
@@ -2441,12 +2404,12 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            service.UpdateVariable(ref log, operationId, 1, XncVariableAttribute.Comment, "Половина");
-            service.SaveProject();
+            service.Editor.UpdateVariable(operationId, 1, XncVariableAttribute.Comment, "Половина").Into(ref log);
+            service.Session.Save();
             var set = SavedVariable(path, 1).Attribute("comment")?.Value;
 
-            service.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Comment, string.Empty);
-            service.SaveProject();
+            service.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Comment, string.Empty).Into(ref log);
+            service.Session.Save();
 
             Assert.Multiple(() =>
             {
@@ -2461,7 +2424,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForVariableEdit();
 
             var log = string.Empty;
-            Assert.That(service.UpdateVariable(ref log, operationId, 9, XncVariableAttribute.Comment, "x"), Is.False);
+            Assert.That(service.Editor.UpdateVariable(operationId, 9, XncVariableAttribute.Comment, "x").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("variable not found in the program."));
         }
     }

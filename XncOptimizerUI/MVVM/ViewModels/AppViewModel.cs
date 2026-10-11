@@ -22,7 +22,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private readonly string _assembly;
         private readonly DispatcherTimer _boundsNormalizeTimer;
-        private readonly IProjectService _projectService;
+        private readonly ProjectServices _project;
         private readonly IConfigService _config;
         private readonly IDialogService _dialogs;
 
@@ -68,14 +68,14 @@ namespace XncOptimizerUI.MVVM.ViewModels
         private bool _isSyncingRotation;
 
         public AppViewModel(
-            IProjectService projectService,
+            ProjectServices project,
             IConfigService config,
             IDialogService dialogs,
             string assembly,
             ObservableCollection<string> labelsToProcess,
             string selectedLabel)
         {
-            _projectService = projectService;
+            _project = project;
             _config = config;
             _dialogs = dialogs;
             _assembly = assembly;
@@ -389,7 +389,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         partial void OnSourcePartChanged(PartVM? value)
         {
-            _sourceXncCount = value == null ? 0 : _projectService.GetXncProgramsCount(value.Id);
+            _sourceXncCount = value == null ? 0 : _project.Reader.GetXncProgramsCount(value.Id);
         }
 
         [ObservableProperty]
@@ -494,12 +494,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             if (SelectedPart != null)
             {
-                var log = Log;
-                _ = _projectService.UpdatePart(ref log, SelectedPart.Part);
-                Log = log;
+                Log += _project.Editor.UpdatePart(SelectedPart.Part).LogText;
             }
 
-            _projectService.SaveProject();
+            _project.Session.Save();
 
             Log += $"Saved file: {FullPath} at {DateTime.Now.ToLocalTime()}\n";
         }
@@ -513,23 +511,9 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
             SelectedPart = null;
 
-            var success = _projectService.GroupIdenticalElements(ref log);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(_project.Restructuring.GroupIdenticalElements);
         }
 
         [RelayCommand]
@@ -541,19 +525,12 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-
             var ids = Parts
                 .Where(p => p.Name.Contains(SelectedLabel))
                 .Select(p => p.Id.ToString(CultureInfo.InvariantCulture))
-                .ToArray() ?? [];
+                .ToArray();
 
-            _projectService.PrepForSplitAlongX(ref log, ids);
-
-            Log = log;
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Restructuring.PrepForSplitAlongX(ids));
         }
 
         [RelayCommand]
@@ -636,22 +613,10 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.ReplaceXncPrograms(ref log, SourcePart.Part, targets);
-
-            Log = log;
-
-            if (!success)
+            if (RunSavingOperation(() => _project.Restructuring.ReplaceXncPrograms(SourcePart.Part, targets)))
             {
-                WarnFromLogDelta(logStart);
-                return;
+                SourcePart = null;
             }
-
-            SourcePart = null;
-            LoadProject(_projectService.FullPath);
-            ReadItems();
         }
 
         [RelayCommand]
@@ -674,21 +639,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection, ProcessPockets);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection, ProcessPockets));
         }
 
         [RelayCommand]
@@ -711,21 +662,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.ConvertBoresAndMills(ref log, parts, BoreMillDirection, ConvertBoresToEllipses);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.ConvertBoresAndMills(parts, BoreMillDirection, ConvertBoresToEllipses));
         }
 
         [RelayCommand]
@@ -748,21 +685,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.OptimizeMillTraversal(ref log, parts);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.OptimizeMillTraversal(parts));
         }
 
         [RelayCommand]
@@ -787,21 +710,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.SortToolDeclarations(ref log, parts);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.SortToolDeclarations(parts));
         }
 
         [RelayCommand]
@@ -839,21 +748,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.OffsetMillPaths(ref log, parts, (double)offset, MillOffsetSide, kinds);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.OffsetMillPaths(parts, (double)offset, MillOffsetSide, kinds));
         }
 
         /// <summary>
@@ -890,21 +785,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return;
             }
 
-            var log = Log;
-            var logStart = log.Length;
-
-            var success = _projectService.CleanOutsideOperations(ref log, parts, kinds);
-
-            Log = log;
-
-            if (!success)
-            {
-                WarnFromLogDelta(logStart);
-                return;
-            }
-
-            LoadProject(_projectService.FullPath);
-            ReadItems();
+            RunSavingOperation(() => _project.Batch.CleanOutsideOperations(parts, kinds));
         }
 
         [RelayCommand]
@@ -937,7 +818,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SelectedBand = null;
             SourcePart = null;
 
-            _projectService.CloseProject();
+            _project.Session.Close();
 
             Log = string.Empty;
             FullPath = string.Empty;
@@ -1119,7 +1000,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private void LoadProject(string fullPath, bool firstTimeOpen = default)
         {
-            _projectService.OpenProject(fullPath);
+            _project.Session.Open(fullPath);
 
             if (firstTimeOpen)
             {
@@ -1136,21 +1017,21 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
         private void ReadItems()
         {
-            var bands = _projectService.ReadBands().Select(b => new BandVM(b));
+            var bands = _project.Reader.ReadBands().Select(b => new BandVM(b));
             Bands = new ObservableCollection<BandVM>(bands);
             BandOptions = [BandOptionVM.None, .. Bands.Select(BandOptionVM.From)];
 
-            var sheets = _projectService.ReadSheets().Select(s => new SheetVM(s));
+            var sheets = _project.Reader.ReadSheets().Select(s => new SheetVM(s));
             Sheets = new ObservableCollection<SheetVM>(sheets);
 
-            var products = _projectService.ReadProducts().Select(p => new ProductVM(p));
+            var products = _project.Reader.ReadProducts().Select(p => new ProductVM(p));
             Products = new ObservableCollection<ProductVM>(products);
 
             SelectedPart = null;
             _applyPartsFilter = false;
 
             var previousParts = _allParts;
-            _allParts = [.. _projectService.ReadParts().Select(p => new PartVM(p))];
+            _allParts = [.. _project.Reader.ReadParts().Select(p => new PartVM(p))];
 
             for (var i = 0; i < _allParts.Count; i++)
             {
@@ -1219,15 +1100,15 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         private void SavePartEdits(PartVM part)
         {
-            var log = Log;
+            var result = _project.Editor.UpdatePart(part.Part);
 
-            if (_projectService.UpdatePart(ref log, part.Part))
+            Log += result.LogText;
+
+            if (result.Changed)
             {
-                _projectService.SaveProject();
-                log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
+                _project.Session.Save();
+                Log += $"Updates saved: {DateTime.Now.ToLocalTime()}\n";
             }
-
-            Log = log;
         }
 
         /// <summary>
@@ -1235,14 +1116,34 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// popping its own dialog, so the text it just appended is what the user
         /// needs to see.
         /// </summary>
-        private void WarnFromLogDelta(int logStart)
+        private void WarnAbout(OperationResult result)
         {
-            var message = Log[logStart..].Replace("***\n", string.Empty).Trim();
-
-            if (!string.IsNullOrWhiteSpace(message))
+            if (!string.IsNullOrWhiteSpace(result.MessageText))
             {
-                _dialogs.ShowWarning(message);
+                _dialogs.ShowWarning(result.MessageText);
             }
+        }
+
+        /// <summary>
+        /// Runs an operation that saves its result as a new file: logs it, then opens the saved file,
+        /// or - when it changed nothing - shows its messages as a warning. Returns whether it changed the project.
+        /// </summary>
+        private bool RunSavingOperation(Func<OperationResult> operation)
+        {
+            var result = operation();
+
+            Log += result.LogText;
+
+            if (!result.Changed)
+            {
+                WarnAbout(result);
+                return false;
+            }
+
+            LoadProject(_project.Session.FullPath);
+            ReadItems();
+
+            return true;
         }
 
         /// <summary>
@@ -1252,7 +1153,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         private void WarnOnXncTurnDiscordance()
         {
-            var parts = _projectService.GetPartsWithXncTurnDiscordance();
+            var parts = _project.Reader.GetPartsWithXncTurnDiscordance();
 
             if (parts.Count == 0)
             {
@@ -1463,7 +1364,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SaveProgramEdit(
                 SelectedXncPrograms.FirstOrDefault(p => p.Bores.Contains(row.Bore))?.OperationId,
                 $"Bore #{row.Number} {attribute.XmlName()} = \"{expression}\"",
-                (ref string log, int operationId) => _projectService.UpdateBore(ref log, operationId, row.Bore.Index, attribute, expression),
+                operationId => _project.Editor.UpdateBore(operationId, row.Bore.Index, attribute, expression),
                 RefreshSelectedPartBoresInPlace);
 
         /// <summary>
@@ -1475,17 +1376,15 @@ namespace XncOptimizerUI.MVVM.ViewModels
             SaveProgramEdit(
                 SelectedXncPrograms.FirstOrDefault(p => p.DeclaredVariables.Contains(row.Variable))?.OperationId,
                 $"Variable #{row.Number} {attribute.XmlName()} = \"{value}\"",
-                (ref string log, int operationId) => _projectService.UpdateVariable(ref log, operationId, row.Variable.Index, attribute, value),
+                operationId => _project.Editor.UpdateVariable(operationId, row.Variable.Index, attribute, value),
                 RefreshSelectedPartAfterVariableEdit);
-
-        private delegate bool ProgramEdit(ref string log, int operationId);
 
         /// <summary>
         /// Applies <paramref name="edit"/> to the program of XNC operation <paramref name="operationId"/>
-        /// of the selected part (together with any pending grid edit of the part), saves the file
-        /// in place, logs <paramref name="description"/> and runs <paramref name="refresh"/>.
+        /// of the selected part, saves the file in place (see <see cref="SaveSelectedPartEdit"/>) and
+        /// runs <paramref name="refresh"/>.
         /// </summary>
-        private bool SaveProgramEdit(int? operationId, string description, ProgramEdit edit, Action<PartVM> refresh)
+        private bool SaveProgramEdit(int? operationId, string description, Func<int, OperationResult> edit, Action<PartVM> refresh)
         {
             var part = SelectedPart;
 
@@ -1494,34 +1393,45 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return false;
             }
 
-            var log = Log;
-            _projectService.UpdatePart(ref log, part.Part);
-
-            if (!edit(ref log, operationId.Value))
+            if (!SaveSelectedPartEdit(part, () => edit(operationId.Value), description))
             {
-                Log = log;
                 return false;
             }
 
-            log += SaveEditedProgram(description);
-            Log = log;
             refresh(part);
 
             return true;
         }
 
-        /// <summary>Saves the document after a program edit; returns the log line describing the outcome.</summary>
-        private string SaveEditedProgram(string description)
+        /// <summary>
+        /// Applies an in-place <paramref name="edit"/> of the selected part, together with any pending grid
+        /// edit of the part, and saves the file in place; logs <paramref name="description"/> with the save
+        /// outcome. Returns <c>false</c> when the edit changed nothing.
+        /// </summary>
+        private bool SaveSelectedPartEdit(PartVM part, Func<OperationResult> edit, string description)
         {
+            Log += _project.Editor.UpdatePart(part.Part).LogText;
+
+            var result = edit();
+
+            Log += result.LogText;
+
+            if (!result.Changed)
+            {
+                return false;
+            }
+
             try
             {
-                _projectService.SaveProject();
-                return $"{description} saved: {DateTime.Now.ToLocalTime()}\n";
+                _project.Session.Save();
+                Log += $"{description}, saved: {DateTime.Now.ToLocalTime()}\n";
             }
             catch (Exception e)
             {
-                return $"***\n{description}, but saving failed: {e.Message}\n";
+                Log += $"***\n{description}, but saving failed: {e.Message}\n";
             }
+
+            return true;
         }
 
         /// <summary>
@@ -1533,7 +1443,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         private void RefreshSelectedPartBoresInPlace(PartVM part)
         {
-            var programs = _projectService.ReadXncPrograms(part.Id);
+            var programs = _project.Reader.ReadXncPrograms(part.Id);
             var bores = programs.SelectMany(program => program.Bores.Select(bore => (Bore: bore, Program: program))).ToList();
 
             if (bores.Count != SelectedPartBores.Count)
@@ -1849,7 +1759,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
 
             try
             {
-                return (_projectService.ReadXncPrograms(part.Id), null);
+                return (_project.Reader.ReadXncPrograms(part.Id), null);
             }
             catch (Exception e)
             {
@@ -1897,36 +1807,17 @@ namespace XncOptimizerUI.MVVM.ViewModels
                 return false;
             }
 
-            var log = Log;
-            _projectService.UpdatePart(ref log, part.Part);
+            var rotated = SaveSelectedPartEdit(
+                part,
+                () => _project.Editor.RotatePart(part.Id, (int)target, flipEdgeGrooveTcl: !NeverFlipTclOnTurn),
+                $"Part \"{part.Name}\" rotated to {(int)target * 90}°");
 
-            if (!_projectService.RotatePart(ref log, part.Id, (int)target, flipEdgeGrooveTcl: !NeverFlipTclOnTurn))
+            if (rotated)
             {
-                Log = log;
-                return false;
+                RefreshSelectedPartMachining(part);
             }
 
-            log += SaveRotatedPart(part, target);
-            Log = log;
-            RefreshSelectedPartMachining(part);
-
-            return true;
-        }
-
-        /// <summary>Saves the rotated document; returns the log line describing the outcome.</summary>
-        private string SaveRotatedPart(PartVM part, PartTurn target)
-        {
-            var degrees = (int)target * 90;
-
-            try
-            {
-                _projectService.SaveProject();
-                return $"Part \"{part.Name}\" rotated to {degrees}°, saved: {DateTime.Now.ToLocalTime()}\n";
-            }
-            catch (Exception e)
-            {
-                return $"***\nPart \"{part.Name}\" rotated to {degrees}°, but saving failed: {e.Message}\n";
-            }
+            return rotated;
         }
 
         private void SyncSelectedPartRotation(PartTurn value)

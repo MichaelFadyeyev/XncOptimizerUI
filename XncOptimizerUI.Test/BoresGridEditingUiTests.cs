@@ -17,9 +17,9 @@ namespace XncOptimizerUI.Test
         private const int YColumn = 4;
         private const int DepthColumn = 6;
 
-        [TestCase(LeaveBy.Enter, DepthColumn, "5", "5", "Bore #1 dp = \"5\" saved")]
-        [TestCase(LeaveBy.ClickOutside, XColumn, "dx-32", "dx-32", "Bore #1 x = \"dx-32\" saved")]
-        [TestCase(LeaveBy.FocusOutside, YColumn, "dy-7", "dy-7", "Bore #1 y = \"dy-7\" saved")]
+        [TestCase(LeaveBy.Enter, DepthColumn, "5", "5", "Bore #1 dp = \"5\", saved")]
+        [TestCase(LeaveBy.ClickOutside, XColumn, "dx-32", "dx-32", "Bore #1 x = \"dx-32\", saved")]
+        [TestCase(LeaveBy.FocusOutside, YColumn, "dy-7", "dy-7", "Bore #1 y = \"dy-7\", saved")]
         [TestCase(LeaveBy.ClickOutside, XColumn, "2*-3", "150", null)]
         public void LeavingEditedCell_SavesValidDraftOrRevertsInvalidOne(
             LeaveBy leave, int column, string typed, string expectedInput, string? expectedLog)

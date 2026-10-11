@@ -9,7 +9,7 @@ namespace XncOptimizerUI.Test
 {
     /// <summary>
     /// Characterization ("golden file") tests: every document-changing operation of
-    /// <see cref="GibLabProjectService"/> runs on a fixture, and the saved <c>.project</c>
+    /// <see cref="ProjectServices"/> runs on a fixture, and the saved <c>.project</c>
     /// plus the log are compared with the snapshots in <c>Golden/Operations/</c>. They lock in
     /// the exact output while the service is refactored; a difference means behaviour changed.
     /// See <see cref="GoldenSnapshot"/> for creating and accepting snapshots.
@@ -25,7 +25,7 @@ namespace XncOptimizerUI.Test
             new FakeTimeProvider(new DateTimeOffset(2026, 8, 30, 13, 45, 0, TimeSpan.Zero));
 
         /// <summary>One operation run against an opened service; <c>parts</c> are all parts of the fixture.</summary>
-        public delegate bool Operation(GibLabProjectService service, ref string log, List<Part> parts);
+        public delegate bool Operation(ProjectServices service, ref string log, List<Part> parts);
 
         /// <param name="ReadsParts">False for fixtures without sheet goods (ReadParts throws there); the operation then gets no parts.</param>
         public sealed record GoldenCase(string Name, string Fixture, Operation Run, bool ReadsParts = true)
@@ -59,8 +59,8 @@ namespace XncOptimizerUI.Test
         private static IEnumerable<GoldenCase> AllCases()
         {
             // Group identical elements
-            yield return new("group_td", "td.project", (GibLabProjectService s, ref string log, List<Part> _) => s.GroupIdenticalElements(ref log));
-            yield return new("group_execute-optimize", "td-execute-optimize.project", (GibLabProjectService s, ref string log, List<Part> _) => s.GroupIdenticalElements(ref log));
+            yield return new("group_td", "td.project", (ProjectServices s, ref string log, List<Part> _) => s.Restructuring.GroupIdenticalElements().Into(ref log));
+            yield return new("group_execute-optimize", "td-execute-optimize.project", (ProjectServices s, ref string log, List<Part> _) => s.Restructuring.GroupIdenticalElements().Into(ref log));
 
             // Prep for split along X
             yield return new("split-first-part_execute-optimize", "td-execute-optimize.project", SplitFirstPart);
@@ -76,7 +76,7 @@ namespace XncOptimizerUI.Test
             })
             {
                 yield return new($"grooves-to-mills_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection.GroovesToMills, false));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.GroovesToMills, false).Into(ref log));
             }
 
             // Mills -> grooves, with and without pockets
@@ -87,58 +87,58 @@ namespace XncOptimizerUI.Test
             })
             {
                 yield return new($"mills-to-grooves_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection.MillsToGrooves, false));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.MillsToGrooves, false).Into(ref log));
                 yield return new($"mills-to-grooves-pockets_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection.MillsToGrooves, true));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.MillsToGrooves, true).Into(ref log));
             }
 
             // Bores -> mills, as contours and as ellipses
             foreach (var fixture in new[] { "td-bores-large.project", "td-br-ml-conversion.project", "td-bore-depth-variable.project" })
             {
                 yield return new($"bores-to-mills_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertBoresAndMills(ref log, parts, BoreMillDirection.BoresToMills, false));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertBoresAndMills(parts, BoreMillDirection.BoresToMills, false).Into(ref log));
                 yield return new($"bores-to-ellipses_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertBoresAndMills(ref log, parts, BoreMillDirection.BoresToMills, true));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertBoresAndMills(parts, BoreMillDirection.BoresToMills, true).Into(ref log));
             }
 
             // Mills -> bores
             foreach (var fixture in new[] { "td-br-ml-conversion.project", "td-mill-circle.project", "td-mill-ellipse.project" })
             {
                 yield return new($"mills-to-bores_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.ConvertBoresAndMills(ref log, parts, BoreMillDirection.MillsToBores, false));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.ConvertBoresAndMills(parts, BoreMillDirection.MillsToBores, false).Into(ref log));
             }
 
             // Mill traversal
             foreach (var fixture in new[] { "td-mills-optimization.project", "td-milling.project" })
             {
                 yield return new($"traversal_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.OptimizeMillTraversal(ref log, parts));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.OptimizeMillTraversal(parts).Into(ref log));
             }
 
             // Tool declaration sort
             foreach (var fixture in new[] { "td-programs.project", "td-gr-ml-conversion.project", "td-mill-offset.project" })
             {
                 yield return new($"sort-tools_{Stem(fixture)}", fixture,
-                    (GibLabProjectService s, ref string log, List<Part> parts) => s.SortToolDeclarations(ref log, parts));
+                    (ProjectServices s, ref string log, List<Part> parts) => s.Batch.SortToolDeclarations(parts).Into(ref log));
             }
 
             // Mill path offset
             yield return new("offset-right-3-all_mill-offset", "td-mill-offset.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.OffsetMillPaths(ref log, parts, 3, MillOffsetSide.Right, MillPathKinds.All));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.OffsetMillPaths(parts, 3, MillOffsetSide.Right, MillPathKinds.All).Into(ref log));
             yield return new("offset-left-2-all_mill-offset", "td-mill-offset.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.OffsetMillPaths(ref log, parts, 2, MillOffsetSide.Left, MillPathKinds.All));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.OffsetMillPaths(parts, 2, MillOffsetSide.Left, MillPathKinds.All).Into(ref log));
             yield return new("offset-right-1.5-open_mill-offset", "td-mill-offset.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.OffsetMillPaths(ref log, parts, 1.5, MillOffsetSide.Right, MillPathKinds.Open));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.OffsetMillPaths(parts, 1.5, MillOffsetSide.Right, MillPathKinds.Open).Into(ref log));
             yield return new("offset-left-4-closed_mill-circle", "td-mill-circle.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.OffsetMillPaths(ref log, parts, 4, MillOffsetSide.Left, MillPathKinds.Closed));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.OffsetMillPaths(parts, 4, MillOffsetSide.Left, MillPathKinds.Closed).Into(ref log));
 
             // Clean outside operations
             yield return new("clean-all_clean-outside", "td-clean-outside.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.CleanOutsideOperations(ref log, parts, OutsideOperationKinds.All));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.CleanOutsideOperations(parts, OutsideOperationKinds.All).Into(ref log));
             yield return new("clean-bores_clean-outside", "td-clean-outside.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.CleanOutsideOperations(ref log, parts, OutsideOperationKinds.Bores));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.CleanOutsideOperations(parts, OutsideOperationKinds.Bores).Into(ref log));
             yield return new("clean-grooves-mills_clean-outside", "td-clean-outside.project",
-                (GibLabProjectService s, ref string log, List<Part> parts) => s.CleanOutsideOperations(ref log, parts, OutsideOperationKinds.Grooves | OutsideOperationKinds.Mills));
+                (ProjectServices s, ref string log, List<Part> parts) => s.Batch.CleanOutsideOperations(parts, OutsideOperationKinds.Grooves | OutsideOperationKinds.Mills).Into(ref log));
 
             // Part rotation (saved in place, as the view model does)
             foreach (var turn in new[] { 1, 2, 3 })
@@ -153,53 +153,53 @@ namespace XncOptimizerUI.Test
 
             // In-cell program edits (saved in place)
             yield return new("edit-bore-x_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.UpdateBore(ref log, operationId, 0, BoreAttribute.X, "dx/2-10")));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "dx/2-10").Into(ref log)));
             yield return new("edit-bore-depth_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.UpdateBore(ref log, operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10")));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10").Into(ref log)));
             yield return new("edit-variable-name_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Name, "holeDepth")));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Name, "holeDepth").Into(ref log)));
             yield return new("edit-variable-expr_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.UpdateVariable(ref log, operationId, 0, XncVariableAttribute.Expr, "dz+4")));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Expr, "dz+4").Into(ref log)));
         }
 
-        private static bool SplitFirstPart(GibLabProjectService service, ref string log, List<Part> parts)
+        private static bool SplitFirstPart(ProjectServices service, ref string log, List<Part> parts)
         {
-            service.PrepForSplitAlongX(ref log, [parts[0].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+            service.Restructuring.PrepForSplitAlongX([parts[0].Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]).Into(ref log);
 
             return true;
         }
 
         /// <summary>Source: first part with an XNC program; targets: every other part of the same size.</summary>
-        private static bool ReplaceFromFirstProgrammedPart(GibLabProjectService service, ref string log, List<Part> parts)
+        private static bool ReplaceFromFirstProgrammedPart(ProjectServices service, ref string log, List<Part> parts)
         {
-            var source = parts.First(p => service.GetXncProgramsCount(p.Id) > 0);
+            var source = parts.First(p => service.Reader.GetXncProgramsCount(p.Id) > 0);
             var targets = parts
                 .Where(p => p.Id != source.Id && p.Length == source.Length && p.Width == source.Width)
                 .ToList();
 
-            return service.ReplaceXncPrograms(ref log, source, targets);
+            return service.Restructuring.ReplaceXncPrograms(source, targets).Into(ref log);
         }
 
         private static Operation RotateAndSave(int partId, int turn, bool flipEdgeGrooveTcl) =>
-            (GibLabProjectService service, ref string log, List<Part> _) =>
+            (ProjectServices service, ref string log, List<Part> _) =>
             {
-                var result = service.RotatePart(ref log, partId, turn, flipEdgeGrooveTcl);
-                service.SaveProject();
+                var result = service.Editor.RotatePart(partId, turn, flipEdgeGrooveTcl).Into(ref log);
+                service.Session.Save();
 
                 return result;
             };
 
-        private delegate bool ProgramEdit(GibLabProjectService service, ref string log, int operationId);
+        private delegate bool ProgramEdit(ProjectServices service, ref string log, int operationId);
 
         private static Operation EditFirstProgram(ProgramEdit edit) =>
-            (GibLabProjectService service, ref string log, List<Part> parts) =>
+            (ProjectServices service, ref string log, List<Part> parts) =>
             {
                 var operationId = parts
-                    .SelectMany(p => service.ReadXncPrograms(p.Id))
+                    .SelectMany(p => service.Reader.ReadXncPrograms(p.Id))
                     .First()
                     .OperationId;
                 var result = edit(service, ref log, operationId);
-                service.SaveProject();
+                service.Session.Save();
 
                 return result;
             };
@@ -213,18 +213,18 @@ namespace XncOptimizerUI.Test
             var sourcePath = CopyFixture(goldenCase.Fixture);
             var sourceStamp = File.GetLastWriteTimeUtc(sourcePath);
 
-            var service = new GibLabProjectService(CreateConfig(), _clock);
-            service.OpenProject(sourcePath);
-            service.ReadBands();
-            service.ReadSheets();
-            var parts = goldenCase.ReadsParts ? service.ReadParts().OrderBy(p => p.Id).ToList() : [];
+            var service = TestProject.Create(CreateConfig(), _clock);
+            service.Session.Open(sourcePath);
+            service.Reader.ReadBands();
+            service.Reader.ReadSheets();
+            var parts = goldenCase.ReadsParts ? service.Reader.ReadParts().OrderBy(p => p.Id).ToList() : [];
 
             var log = string.Empty;
             var result = goldenCase.Run(service, ref log, parts);
 
-            var written = service.FullPath != sourcePath || File.GetLastWriteTimeUtc(sourcePath) != sourceStamp;
+            var written = service.Session.FullPath != sourcePath || File.GetLastWriteTimeUtc(sourcePath) != sourceStamp;
 
-            return (result, log, written ? service.FullPath : null);
+            return (result, log, written ? service.Session.FullPath : null);
         }
 
         private static IConfigService CreateConfig()

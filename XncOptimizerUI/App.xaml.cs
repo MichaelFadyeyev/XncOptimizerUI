@@ -6,6 +6,8 @@ using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.MVVM.Views;
 using XncOptimizerUI.Services;
+using XncOptimizerUI.Services.Project;
+using XncOptimizerUI.Services.Xnc.Batch;
 
 namespace XncOptimizerUI
 {
@@ -47,10 +49,10 @@ namespace XncOptimizerUI
             services.AddSingleton(TimeProvider.System);
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IDialogService, DialogService>();
-            services.AddSingleton<IProjectService, GibLabProjectService>();
+            AddProjectServices(services);
             services.AddSingleton<AppViewModel>(serviceProvider =>
             {
-                var project = serviceProvider.GetRequiredService<IProjectService>();
+                var project = serviceProvider.GetRequiredService<ProjectServices>();
                 var config = serviceProvider.GetRequiredService<IConfigService>();
                 var dialog = serviceProvider.GetRequiredService<IDialogService>();
                 var assembly = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
@@ -62,6 +64,19 @@ namespace XncOptimizerUI
             services.AddSingleton<MainWindow>();
 
             return services;
+        }
+
+        /// <summary>Every project service works on the one shared <see cref="ProjectDocument"/>.</summary>
+        private static void AddProjectServices(ServiceCollection services)
+        {
+            services.AddSingleton<ProjectDocument>();
+            services.AddSingleton<IProjectSession>(sp => sp.GetRequiredService<ProjectDocument>());
+            services.AddSingleton<ProjectReader>();
+            services.AddSingleton<IProjectReader>(sp => sp.GetRequiredService<ProjectReader>());
+            services.AddSingleton<IProjectEditor, ProjectEditor>();
+            services.AddSingleton<IProjectRestructuring, ProjectRestructuring>();
+            services.AddSingleton<IXncBatchOperations, XncBatchOperations>();
+            services.AddSingleton<ProjectServices>();
         }
 
         protected override void OnExit(ExitEventArgs e)

@@ -35,7 +35,7 @@ namespace XncOptimizerUI.Test
         }
 
         private AppViewModel CreateViewModel() => new(
-            _projectService,
+            _projectService.Services,
             _config,
             _dialogs,
             "TestAssembly",
@@ -210,7 +210,7 @@ namespace XncOptimizerUI.Test
         /// Regression test for the bug where re-opening the file that was open before
         /// Execute Optimize ran (or any other file reusing the same part ids) got its
         /// first part silently renamed to match the just-produced "_opt" result.
-        /// Uses the real <see cref="GibLabProjectService"/> (not the fake) because the
+        /// Uses the real <see cref="ProjectServices"/> (not the fake) because the
         /// bug lives in the SelectedPart-autosave interaction between AppViewModel and
         /// the service's shared, mutable document state, which the fake doesn't model.
         /// </summary>
@@ -225,7 +225,7 @@ namespace XncOptimizerUI.Test
             config.LabelsToProcess.Returns(["поріз.2х40"]);
             config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
 
-            var realService = new GibLabProjectService(config, TimeProvider.System);
+            var realService = TestProject.Create(config, TimeProvider.System);
             var dialogs = Substitute.For<IDialogService>();
             dialogs.ShowOpenProjectDialog().Returns(sourcePath);
 
@@ -251,7 +251,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.GroupIdenticalElementsResult = false;
-            _projectService.LogToAppend = "***\nFile seems to be already optimized or contains no XNC.";
+            _projectService.ResultMessage = "File seems to be already optimized or contains no XNC.";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -270,7 +270,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(_projectService.Calls[^1], Is.EqualTo(nameof(FakeProjectService.GroupIdenticalElements)),
                     "nothing should run after the failed GroupIdenticalElements call");
-                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.Open)),
                     "a failed optimize should not reload the project");
             });
         }
@@ -280,7 +280,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.GroupIdenticalElementsResult = true;
-            _projectService.LogToAppend = "***\nStored to: C:\\out_opt.project";
+            _projectService.ResultMessage = "Stored to: C:\\out_opt.project";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -373,7 +373,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(1));
                 Assert.That(vm.Log, Does.Contain("Updates saved"));
             });
         }
@@ -390,7 +390,7 @@ namespace XncOptimizerUI.Test
             vm.SelectedPart = vm.Parts[0];
             vm.SelectedPart = vm.Parts[1];
 
-            Assert.That(_projectService.SaveProjectCount, Is.Zero);
+            Assert.That(_projectService.SaveCount, Is.Zero);
         }
 
         [Test]
@@ -430,7 +430,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(1));
                 Assert.That(vm.Log, Does.Contain("Updates saved"));
             });
         }
@@ -446,7 +446,7 @@ namespace XncOptimizerUI.Test
 
             vm.Parts[0].TopBandingId = null;
 
-            Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+            Assert.That(_projectService.SaveCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -460,7 +460,7 @@ namespace XncOptimizerUI.Test
 
             vm.Parts[1].ConsiderTexture = !vm.Parts[1].ConsiderTexture;
 
-            Assert.That(_projectService.SaveProjectCount, Is.EqualTo(1));
+            Assert.That(_projectService.SaveCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -730,7 +730,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg180));
                 Assert.That(vm.CanRotateSelectedPart, Is.True);
-                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.RotatePart)));
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.RotatePart)));
             });
         }
 
@@ -759,7 +759,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             vm.SelectedPartRotation = PartTurn.Deg90;
 
@@ -767,7 +767,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(_projectService.LastRotatePartId, Is.EqualTo(vm.SelectedPart!.Id));
                 Assert.That(_projectService.LastRotateTargetTurn, Is.EqualTo(1));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(800));
                 Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(400));
                 Assert.That(vm.SelectedPartTurnText, Is.EqualTo("90°"));
@@ -844,7 +844,7 @@ namespace XncOptimizerUI.Test
             var row = vm.SelectedPartBores[0];
             vm.SelectedBore = row;
             row.IsSelected = true;
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
             row.XInput = "dx-32";
@@ -854,14 +854,14 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(committed, Is.True);
                 Assert.That(_projectService.LastUpdateBore, Is.EqualTo((5, 0, BoreAttribute.X, "dx-32")));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.SelectedPartBores[0], Is.SameAs(row));
                 Assert.That(vm.SelectedBore, Is.SameAs(row));
                 Assert.That(row.X, Is.EqualTo("368"));
                 Assert.That(row.XInput, Is.EqualTo("dx-32"));
                 Assert.That(vm.CheckedBores, Is.EqualTo(new[] { row.Bore }));
                 Assert.That(vm.SelectedXncPrograms.Single().Bores[0].X, Is.EqualTo(368));
-                Assert.That(vm.Log, Does.Contain("Bore #1 x = \"dx-32\" saved"));
+                Assert.That(vm.Log, Does.Contain("Bore #1 x = \"dx-32\", saved"));
             });
         }
 
@@ -907,7 +907,7 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             var row = vm.SelectedPartVariables.Single();
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
             row.ExprInput = "dz+4";
@@ -917,11 +917,11 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(committed, Is.True);
                 Assert.That(_projectService.LastUpdateVariable, Is.EqualTo((5, 0, XncVariableAttribute.Expr, "dz+4")));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.SelectedPartVariables.Single(), Is.SameAs(row));
                 Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "23")));
                 Assert.That(vm.SelectedPartBores.Single().Depth, Is.EqualTo("23"));
-                Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\" saved"));
+                Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
             });
         }
 
@@ -935,7 +935,7 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             var row = vm.SelectedPartVariables.Single();
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
             row.TypeInput = "int";
@@ -943,7 +943,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(row.TryCommitCellEdit(), Is.False);
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore));
             });
         }
 
@@ -961,7 +961,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(row.HasErrors, Is.True);
                 Assert.That(row.GetErrors(nameof(BoreRowVM.XInput)).Cast<string>().Single(), Does.Contain("sign"));
                 Assert.That(row.TryCommitCellEdit(), Is.False);
-                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.UpdateBore)));
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.UpdateBore)));
             });
         }
 
@@ -994,7 +994,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(row.TryCommitCellEdit(), Is.True);
-                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(IProjectService.UpdateBore)));
+                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.UpdateBore)));
             });
         }
 
@@ -1004,7 +1004,7 @@ namespace XncOptimizerUI.Test
             var vm = OpenWithBores();
             _projectService.UpdateBoreResult = false;
             var row = vm.SelectedPartBores[0];
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
             row.DepthInput = "dz";
@@ -1014,7 +1014,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(row.TryCommitCellEdit(), Is.False);
                 Assert.That(row.HasErrors, Is.True);
                 Assert.That(row.Depth, Is.EqualTo("10"));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore));
             });
         }
 
@@ -1027,14 +1027,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var savesBefore = _projectService.SaveProjectCount;
+            var savesBefore = _projectService.SaveCount;
 
             vm.SelectedPartRotation = PartTurn.Deg270;
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg0));
-                Assert.That(_projectService.SaveProjectCount, Is.EqualTo(savesBefore));
+                Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore));
             });
         }
 
@@ -1111,7 +1111,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(_projectService.LastGrooveMillParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
                 Assert.That(_projectService.LastGrooveMillDirection, Is.EqualTo(GrooveMillDirection.MillsToGrooves));
                 Assert.That(_projectService.LastGrooveMillProcessPockets, Is.True);
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful conversion reloads the project");
             });
         }
@@ -1121,7 +1121,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.ConvertGroovesAndMillsResult = false;
-            _projectService.LogToAppend = "***\nNo grooves converted (ignored 2).";
+            _projectService.ResultMessage = "No grooves converted (ignored 2).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -1187,7 +1187,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(_projectService.LastBoreMillParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
                 Assert.That(_projectService.LastBoreMillDirection, Is.EqualTo(BoreMillDirection.MillsToBores));
                 Assert.That(_projectService.LastBoreMillUseEllipse, Is.True);
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful conversion reloads the project");
             });
         }
@@ -1209,7 +1209,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.ConvertBoresAndMillsResult = false;
-            _projectService.LogToAppend = "***\nNo bores converted (ignored 0).";
+            _projectService.ResultMessage = "No bores converted (ignored 0).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -1271,7 +1271,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OptimizeMillTraversal)));
                 Assert.That(_projectService.LastMillTraversalParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful optimization reloads the project");
             });
         }
@@ -1281,7 +1281,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.OptimizeMillTraversalResult = false;
-            _projectService.LogToAppend = "***\nNo mill passes reordered (ignored 0).";
+            _projectService.ResultMessage = "No mill passes reordered (ignored 0).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -1329,7 +1329,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.SortToolDeclarations)));
                 Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful sort reloads the project");
             });
         }
@@ -1373,7 +1373,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.SortToolDeclarationsResult = false;
-            _projectService.LogToAppend = "***\nNo tool declarations reordered (skipped 0 program(s)).";
+            _projectService.ResultMessage = "No tool declarations reordered (skipped 0 program(s)).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -1440,7 +1440,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(_projectService.LastMillOffset, Is.EqualTo(2.5d));
                 Assert.That(_projectService.LastMillOffsetSide, Is.EqualTo(MillOffsetSide.Left));
                 Assert.That(_projectService.LastMillOffsetKinds, Is.EqualTo(MillPathKinds.All));
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful offset reloads the project");
             });
         }
@@ -1489,7 +1489,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.Parts[1].Id }));
                 Assert.That(_projectService.LastCleanOutsideKinds, Is.EqualTo(OutsideOperationKinds.Bores | OutsideOperationKinds.Mills));
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful cleaning reloads the project");
             });
         }
@@ -1633,7 +1633,7 @@ namespace XncOptimizerUI.Test
         {
             SeedTwoParts();
             _projectService.OffsetMillPathsResult = false;
-            _projectService.LogToAppend = "***\nNo mill paths offset (ignored 2).";
+            _projectService.ResultMessage = "No mill paths offset (ignored 2).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -2264,7 +2264,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.CloseProject)));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Close)));
                 Assert.That(vm.FullPath, Is.Empty);
                 Assert.That(vm.Parts, Is.Empty);
                 Assert.That(vm.Bands, Is.Empty);

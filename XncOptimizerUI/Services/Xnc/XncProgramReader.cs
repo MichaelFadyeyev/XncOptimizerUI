@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net;
-using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -18,23 +16,7 @@ namespace XncOptimizerUI.Services.Xnc
         /// <exception cref="XncProgramFormatException">The <c>program</c> attribute is missing, not valid XML, or contains values that cannot be resolved.</exception>
         public static XncProgram Read(XElement xncOperation)
         {
-            var raw = xncOperation.GetProgramValue()
-                ?? throw new XncProgramFormatException("XNC operation has no 'program' attribute.");
-
-            XDocument document;
-            try
-            {
-                // The attribute value is entity-escaped once; LINQ-to-XML already decoded it
-                // when we read .Value. HtmlDecode is kept for parity with GibLabProjectService.
-                document = XDocument.Parse(WebUtility.HtmlDecode(raw));
-            }
-            catch (XmlException ex)
-            {
-                throw new XncProgramFormatException("The 'program' attribute is not valid XML.", ex);
-            }
-
-            var program = document.Element("program")
-                ?? throw new XncProgramFormatException("The 'program' document has no <program> root element.");
+            var program = XncProgramText.Root(XncProgramText.Load(xncOperation));
 
             return Parse(
                 program,

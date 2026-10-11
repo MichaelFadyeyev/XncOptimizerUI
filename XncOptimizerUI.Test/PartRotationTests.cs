@@ -9,7 +9,7 @@ using XncOptimizerUI.Services.Xnc;
 namespace XncOptimizerUI.Test
 {
     /// <summary>
-    /// <see cref="GibLabProjectService.RotatePart"/> / <see cref="XncProgramRotator"/> against
+    /// <see cref="IProjectEditor.RotatePart"/> / <see cref="XncProgramRotator"/> against
     /// <c>TestData/td-rotation.project</c>: part 2 (op 10 = every element kind on
     /// <c>dx=500 dy=200</c>, op 10 back side = one face bore), part 3 (op 12 <c>turn=0</c> and
     /// op 13 <c>turn=1</c>, the same bore in both frames - a discordant part).
@@ -100,7 +100,7 @@ namespace XncOptimizerUI.Test
         public void RotatePart_FullCircleInQuarterSteps_RestoresGeometry()
         {
             var service = Open(RotationFixture);
-            var before = Describe(service.ReadXncPrograms(RichPartId));
+            var before = Describe(service.Reader.ReadXncPrograms(RichPartId));
 
             foreach (var turn in new[] { 1, 2, 3, 0 })
             {
@@ -111,7 +111,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(Describe(service.ReadXncPrograms(RichPartId)), Is.EqualTo(before));
+                Assert.That(Describe(service.Reader.ReadXncPrograms(RichPartId)), Is.EqualTo(before));
                 Assert.That(program.Element("var")!.Attribute("expr")!.Value, Is.EqualTo("dx/2"));
                 Assert.That(Attrs(program.Elements("bf").ElementAt(1), "x", "y", "av"), Is.EqualTo("20,30,false"));
                 Assert.That(Attrs(program.Elements("bf").ElementAt(2), "x", "y", "av"), Is.EqualTo("20,30,true"));
@@ -124,7 +124,7 @@ namespace XncOptimizerUI.Test
             var service = Open(RotationFixture);
 
             Rotate(service, RichPartId, 3);
-            var programs = service.ReadXncPrograms(RichPartId);
+            var programs = service.Reader.ReadXncPrograms(RichPartId);
 
             Assert.Multiple(() =>
             {
@@ -246,8 +246,8 @@ namespace XncOptimizerUI.Test
             var service = Open(RotationFixture);
             var log = string.Empty;
 
-            service.RotatePart(ref log, RichPartId, 1, flipEdgeGrooveTcl: false);
-            service.SaveProject();
+            service.Editor.RotatePart(RichPartId, 1, flipEdgeGrooveTcl: false).Into(ref log);
+            service.Session.Save();
             var grooves = SavedProgram(service, 10).Elements("gr").ToList();
 
             Assert.Multiple(() =>
@@ -283,33 +283,33 @@ namespace XncOptimizerUI.Test
 
         #region Helpers
 
-        private GibLabProjectService Open(string fixture)
+        private ProjectServices Open(string fixture)
         {
             var path = CopyFixture(fixture);
 
-            var service = new GibLabProjectService(Substitute.For<IConfigService>(), TimeProvider.System);
-            service.OpenProject(path);
-            service.ReadBands();
-            service.ReadSheets();
+            var service = TestProject.Create(Substitute.For<IConfigService>(), TimeProvider.System);
+            service.Session.Open(path);
+            service.Reader.ReadBands();
+            service.Reader.ReadSheets();
 
             return service;
         }
 
         /// <summary>Rotates and saves in place, as the view model does.</summary>
-        private static (bool Result, string Log) Rotate(GibLabProjectService service, int partId, int turn)
+        private static (bool Result, string Log) Rotate(ProjectServices service, int partId, int turn)
         {
             var log = string.Empty;
-            var result = service.RotatePart(ref log, partId, turn, flipEdgeGrooveTcl: true);
-            service.SaveProject();
+            var result = service.Editor.RotatePart(partId, turn, flipEdgeGrooveTcl: true).Into(ref log);
+            service.Session.Save();
 
             return (result, log);
         }
 
-        private static XElement SavedOperation(GibLabProjectService service, int operationId) =>
-            XDocument.Load(service.FullPath).Descendants("operation")
+        private static XElement SavedOperation(ProjectServices service, int operationId) =>
+            XDocument.Load(service.Session.FullPath).Descendants("operation")
                 .Single(o => (string?)o.Attribute("typeId") == "XNC" && (string?)o.Attribute("id") == operationId.ToString(CultureInfo.InvariantCulture));
 
-        private static XElement SavedProgram(GibLabProjectService service, int operationId) =>
+        private static XElement SavedProgram(ProjectServices service, int operationId) =>
             XDocument.Parse(SavedOperation(service, operationId).Attribute("program")!.Value).Root!;
 
         private static string Attrs(XElement element, params string[] names) =>

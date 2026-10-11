@@ -5,26 +5,35 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 namespace XncOptimizerUI.Test.Fakes
 {
     /// <summary>
-    /// Hand-written stand-in for <see cref="IProjectService"/>.
-    /// A mocking library cannot express this interface: C# forbids passing a
-    /// method call such as Arg.Any&lt;string&gt;() in a <c>ref</c> position, so the
-    /// <c>ref string log</c> parameters cannot be matched. Writing it out also lets
-    /// the fake append to the log the way the real service does.
+    /// Hand-written stand-in for every project service role, recording each call and its
+    /// arguments; <see cref="Services"/> hands it to the view model. Operations return
+    /// <see cref="ResultMessage"/> as a highlighted log entry and the configured <c>*Result</c>
+    /// as <see cref="OperationResult.Changed"/>.
     /// </summary>
-    public class FakeProjectService : IProjectService
+    public class FakeProjectService : IProjectSession, IProjectReader, IProjectEditor, IProjectRestructuring, IXncBatchOperations
     {
+        public FakeProjectService()
+        {
+            Services = new ProjectServices(this, this, this, this, this);
+        }
+
+        /// <summary>This fake in every role.</summary>
+        public ProjectServices Services { get; }
+
         public List<Part> Parts { get; set; } = [];
         public List<Band> Bands { get; set; } = [];
         public List<Sheet> Sheets { get; set; } = [];
         public List<Product> Products { get; set; } = [];
         public IReadOnlyList<XncProgram> XncPrograms { get; set; } = [];
+        public IReadOnlyList<string> PartsWithXncTurnDiscordance { get; set; } = [];
 
         public string FullPath { get; set; } = string.Empty;
 
-        /// <summary>Text each operation appends to the log when called.</summary>
-        public string LogToAppend { get; set; } = string.Empty;
+        /// <summary>Message every operation reports (as a highlighted entry); <c>null</c> reports nothing.</summary>
+        public string? ResultMessage { get; set; }
 
         public bool GroupIdenticalElementsResult { get; set; } = true;
+        public bool PrepForSplitAlongXResult { get; set; } = true;
         public bool ReplaceXncProgramsResult { get; set; } = true;
         public bool ConvertGroovesAndMillsResult { get; set; } = true;
         public bool ConvertBoresAndMillsResult { get; set; } = true;
@@ -34,14 +43,23 @@ namespace XncOptimizerUI.Test.Fakes
         public bool CleanOutsideOperationsResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
         public bool RotatePartResult { get; set; } = true;
+        public bool UpdateVariableResult { get; set; } = true;
+        public bool UpdateBoreResult { get; set; } = true;
 
         /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="RotatePart"/>; <c>null</c> keeps them.</summary>
         public IReadOnlyList<XncProgram>? XncProgramsAfterRotate { get; set; }
 
+        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateVariable"/>; <c>null</c> keeps them.</summary>
+        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateVariable { get; set; }
+
+        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateBore"/>; <c>null</c> keeps them.</summary>
+        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateBore { get; set; }
+
         public List<string> Calls { get; } = [];
 
-        public int SaveProjectCount { get; private set; }
+        public int SaveCount { get; private set; }
         public Part? LastUpdatedPart { get; private set; }
+        public IReadOnlyCollection<string>? LastSplitPartIds { get; private set; }
         public IList<Part>? LastReplaceTargets { get; private set; }
         public IList<Part>? LastGrooveMillParts { get; private set; }
         public GrooveMillDirection? LastGrooveMillDirection { get; private set; }
@@ -55,229 +73,171 @@ namespace XncOptimizerUI.Test.Fakes
         public double? LastMillOffset { get; private set; }
         public MillOffsetSide? LastMillOffsetSide { get; private set; }
         public MillPathKinds? LastMillOffsetKinds { get; private set; }
+        public IList<Part>? LastCleanOutsideParts { get; private set; }
+        public OutsideOperationKinds? LastCleanOutsideKinds { get; private set; }
+        public int? LastRotatePartId { get; private set; }
+        public int? LastRotateTargetTurn { get; private set; }
+        public bool? LastRotateFlipEdgeGrooveTcl { get; private set; }
+        public (int OperationId, int VariableIndex, XncVariableAttribute Attribute, string Value)? LastUpdateVariable { get; private set; }
+        public (int OperationId, int BoreIndex, BoreAttribute Attribute, string Expression)? LastUpdateBore { get; private set; }
 
-        public void OpenProject(string path)
+        #region IProjectSession
+
+        public void Open(string path)
         {
-            Calls.Add(nameof(OpenProject));
+            Calls.Add(nameof(Open));
             FullPath = path;
         }
 
-        public void CloseProject() => Calls.Add(nameof(CloseProject));
+        public void Close() => Calls.Add(nameof(Close));
 
-        public bool GroupIdenticalElements(ref string log)
+        public void Save()
         {
-            Calls.Add(nameof(GroupIdenticalElements));
-            log += LogToAppend;
-
-            return GroupIdenticalElementsResult;
+            Calls.Add(nameof(Save));
+            SaveCount++;
         }
 
-        public void PrepForSplitAlongX(ref string log, string[] selectedPartsIds)
+        #endregion
+
+        #region IProjectReader
+
+        public List<Part> ReadParts() => Record(nameof(ReadParts), Parts);
+
+        public List<Band> ReadBands() => Record(nameof(ReadBands), Bands);
+
+        public List<Sheet> ReadSheets() => Record(nameof(ReadSheets), Sheets);
+
+        public List<Product> ReadProducts() => Record(nameof(ReadProducts), Products);
+
+        public int GetXncProgramsCount(int partId) => Record(nameof(GetXncProgramsCount), 0);
+
+        public IReadOnlyList<XncProgram> ReadXncPrograms(int partId) => Record(nameof(ReadXncPrograms), XncPrograms);
+
+        public IReadOnlyList<string> GetPartsWithXncTurnDiscordance() =>
+            Record(nameof(GetPartsWithXncTurnDiscordance), PartsWithXncTurnDiscordance);
+
+        #endregion
+
+        #region IProjectEditor
+
+        public OperationResult UpdatePart(Part part)
         {
-            Calls.Add(nameof(PrepForSplitAlongX));
-            log += LogToAppend;
-        }
-
-        public bool ReplaceXncPrograms(ref string log, Part sourcePart, IList<Part> targetParts)
-        {
-            Calls.Add(nameof(ReplaceXncPrograms));
-            LastReplaceTargets = targetParts;
-            log += LogToAppend;
-
-            return ReplaceXncProgramsResult;
-        }
-
-        public bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)
-        {
-            Calls.Add(nameof(ConvertGroovesAndMills));
-            LastGrooveMillParts = parts;
-            LastGrooveMillDirection = direction;
-            LastGrooveMillProcessPockets = processPockets;
-            log += LogToAppend;
-
-            return ConvertGroovesAndMillsResult;
-        }
-
-        public bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)
-        {
-            Calls.Add(nameof(ConvertBoresAndMills));
-            LastBoreMillParts = parts;
-            LastBoreMillDirection = direction;
-            LastBoreMillUseEllipse = useEllipse;
-            log += LogToAppend;
-
-            return ConvertBoresAndMillsResult;
-        }
-
-        public bool OptimizeMillTraversal(ref string log, IList<Part> parts)
-        {
-            Calls.Add(nameof(OptimizeMillTraversal));
-            LastMillTraversalParts = parts;
-            log += LogToAppend;
-
-            return OptimizeMillTraversalResult;
-        }
-
-        public bool SortToolDeclarations(ref string log, IList<Part> parts)
-        {
-            Calls.Add(nameof(SortToolDeclarations));
-            LastToolSortParts = parts;
-            log += LogToAppend;
-
-            return SortToolDeclarationsResult;
-        }
-
-        public bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)
-        {
-            Calls.Add(nameof(OffsetMillPaths));
-            LastMillOffsetParts = parts;
-            LastMillOffset = offset;
-            LastMillOffsetSide = side;
-            LastMillOffsetKinds = kinds;
-            log += LogToAppend;
-
-            return OffsetMillPathsResult;
-        }
-
-        public IList<Part>? LastCleanOutsideParts { get; private set; }
-        public OutsideOperationKinds? LastCleanOutsideKinds { get; private set; }
-
-        public bool CleanOutsideOperations(ref string log, IList<Part> parts, OutsideOperationKinds kinds)
-        {
-            Calls.Add(nameof(CleanOutsideOperations));
-            LastCleanOutsideParts = parts;
-            LastCleanOutsideKinds = kinds;
-            log += LogToAppend;
-
-            return CleanOutsideOperationsResult;
-        }
-
-        public int? LastRotatePartId { get; private set; }
-        public int? LastRotateTargetTurn { get; private set; }
-
-        public bool? LastRotateFlipEdgeGrooveTcl { get; private set; }
-
-        public bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl)
-        {
-            Calls.Add(nameof(RotatePart));
-            LastRotatePartId = partId;
-            LastRotateTargetTurn = targetTurn;
-            LastRotateFlipEdgeGrooveTcl = flipEdgeGrooveTcl;
-            log += LogToAppend;
-
-            if (RotatePartResult && XncProgramsAfterRotate is { } rotated)
-            {
-                XncPrograms = rotated;
-            }
-
-            return RotatePartResult;
-        }
-
-        public bool UpdateVariableResult { get; set; } = true;
-
-        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateVariable"/>; <c>null</c> keeps them.</summary>
-        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateVariable { get; set; }
-
-        public (int OperationId, int VariableIndex, XncVariableAttribute Attribute, string Value)? LastUpdateVariable { get; private set; }
-
-        public bool UpdateVariable(ref string log, int operationId, int variableIndex, XncVariableAttribute attribute, string value)
-        {
-            Calls.Add(nameof(UpdateVariable));
-            LastUpdateVariable = (operationId, variableIndex, attribute, value);
-            log += LogToAppend;
-
-            if (UpdateVariableResult && XncProgramsAfterUpdateVariable is { } updated)
-            {
-                XncPrograms = updated;
-            }
-
-            return UpdateVariableResult;
-        }
-
-        public bool UpdateBoreResult { get; set; } = true;
-
-        /// <summary>Programs <see cref="ReadXncPrograms"/> returns after a successful <see cref="UpdateBore"/>; <c>null</c> keeps them.</summary>
-        public IReadOnlyList<XncProgram>? XncProgramsAfterUpdateBore { get; set; }
-
-        public (int OperationId, int BoreIndex, BoreAttribute Attribute, string Expression)? LastUpdateBore { get; private set; }
-
-        public bool UpdateBore(ref string log, int operationId, int boreIndex, BoreAttribute attribute, string expression)
-        {
-            Calls.Add(nameof(UpdateBore));
-            LastUpdateBore = (operationId, boreIndex, attribute, expression);
-            log += LogToAppend;
-
-            if (UpdateBoreResult && XncProgramsAfterUpdateBore is { } updated)
-            {
-                XncPrograms = updated;
-            }
-
-            return UpdateBoreResult;
-        }
-
-        public int GetXncProgramsCount(int partId)
-        {
-            Calls.Add(nameof(GetXncProgramsCount));
-
-            return 0;
-        }
-
-        public IReadOnlyList<string> PartsWithXncTurnDiscordance { get; set; } = [];
-
-        public IReadOnlyList<string> GetPartsWithXncTurnDiscordance()
-        {
-            Calls.Add(nameof(GetPartsWithXncTurnDiscordance));
-
-            return PartsWithXncTurnDiscordance;
-        }
-
-        public IReadOnlyList<XncProgram> ReadXncPrograms(int partId)
-        {
-            Calls.Add(nameof(ReadXncPrograms));
-
-            return XncPrograms;
-        }
-
-        public void SaveProject()
-        {
-            Calls.Add(nameof(SaveProject));
-            SaveProjectCount++;
-        }
-
-        public bool UpdatePart(ref string log, Part part)
-        {
-            Calls.Add(nameof(UpdatePart));
             LastUpdatedPart = part;
 
-            return UpdatePartResult;
+            return new OperationResult(Record(nameof(UpdatePart), UpdatePartResult), []);
         }
 
-        public List<Part> ReadParts()
+        public OperationResult RotatePart(int partId, int targetTurn, bool flipEdgeGrooveTcl)
         {
-            Calls.Add(nameof(ReadParts));
+            (LastRotatePartId, LastRotateTargetTurn, LastRotateFlipEdgeGrooveTcl) = (partId, targetTurn, flipEdgeGrooveTcl);
 
-            return Parts;
+            return Result(nameof(RotatePart), RotatePartResult, XncProgramsAfterRotate);
         }
 
-        public List<Band> ReadBands()
+        public OperationResult UpdateBore(int operationId, int boreIndex, BoreAttribute attribute, string expression)
         {
-            Calls.Add(nameof(ReadBands));
+            LastUpdateBore = (operationId, boreIndex, attribute, expression);
 
-            return Bands;
+            return Result(nameof(UpdateBore), UpdateBoreResult, XncProgramsAfterUpdateBore);
         }
 
-        public List<Sheet> ReadSheets()
+        public OperationResult UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value)
         {
-            Calls.Add(nameof(ReadSheets));
+            LastUpdateVariable = (operationId, variableIndex, attribute, value);
 
-            return Sheets;
+            return Result(nameof(UpdateVariable), UpdateVariableResult, XncProgramsAfterUpdateVariable);
         }
 
-        public List<Product> ReadProducts()
+        #endregion
+
+        #region IProjectRestructuring
+
+        public OperationResult GroupIdenticalElements() => Result(nameof(GroupIdenticalElements), GroupIdenticalElementsResult);
+
+        public OperationResult PrepForSplitAlongX(IReadOnlyCollection<string> partIds)
         {
-            Calls.Add(nameof(ReadProducts));
+            LastSplitPartIds = partIds;
 
-            return Products;
+            return Result(nameof(PrepForSplitAlongX), PrepForSplitAlongXResult);
         }
+
+        public OperationResult ReplaceXncPrograms(Part sourcePart, IList<Part> targetParts)
+        {
+            LastReplaceTargets = targetParts;
+
+            return Result(nameof(ReplaceXncPrograms), ReplaceXncProgramsResult);
+        }
+
+        #endregion
+
+        #region IXncBatchOperations
+
+        public OperationResult ConvertGroovesAndMills(IList<Part> parts, GrooveMillDirection direction, bool processPockets)
+        {
+            (LastGrooveMillParts, LastGrooveMillDirection, LastGrooveMillProcessPockets) = (parts, direction, processPockets);
+
+            return Result(nameof(ConvertGroovesAndMills), ConvertGroovesAndMillsResult);
+        }
+
+        public OperationResult ConvertBoresAndMills(IList<Part> parts, BoreMillDirection direction, bool useEllipse)
+        {
+            (LastBoreMillParts, LastBoreMillDirection, LastBoreMillUseEllipse) = (parts, direction, useEllipse);
+
+            return Result(nameof(ConvertBoresAndMills), ConvertBoresAndMillsResult);
+        }
+
+        public OperationResult OptimizeMillTraversal(IList<Part> parts)
+        {
+            LastMillTraversalParts = parts;
+
+            return Result(nameof(OptimizeMillTraversal), OptimizeMillTraversalResult);
+        }
+
+        public OperationResult SortToolDeclarations(IList<Part> parts)
+        {
+            LastToolSortParts = parts;
+
+            return Result(nameof(SortToolDeclarations), SortToolDeclarationsResult);
+        }
+
+        public OperationResult OffsetMillPaths(IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)
+        {
+            (LastMillOffsetParts, LastMillOffset, LastMillOffsetSide, LastMillOffsetKinds) = (parts, offset, side, kinds);
+
+            return Result(nameof(OffsetMillPaths), OffsetMillPathsResult);
+        }
+
+        public OperationResult CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds)
+        {
+            (LastCleanOutsideParts, LastCleanOutsideKinds) = (parts, kinds);
+
+            return Result(nameof(CleanOutsideOperations), CleanOutsideOperationsResult);
+        }
+
+        #endregion
+
+        #region Methods
+
+        private T Record<T>(string call, T value)
+        {
+            Calls.Add(call);
+
+            return value;
+        }
+
+        /// <summary>Records the call; a changed result swaps in <paramref name="programsAfter"/> when given.</summary>
+        private OperationResult Result(string call, bool changed, IReadOnlyList<XncProgram>? programsAfter = null)
+        {
+            Calls.Add(call);
+
+            if (changed && programsAfter is { } programs)
+            {
+                XncPrograms = programs;
+            }
+
+            return new OperationResult(changed, ResultMessage is { } message ? [new LogEntry(LogLevel.Highlight, message)] : []);
+        }
+
+        #endregion
     }
 }

@@ -33,7 +33,7 @@ namespace XncOptimizerUI.Test
                 {
                     Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "22")));
                     Assert.That(vm.SelectedPartBores.Single().Depth, Is.EqualTo("22"));
-                    Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\" saved"));
+                    Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
                     Assert.That(FindDescendant<TextBox>(grid), Is.Null, "cell left edit mode");
                 });
             }
@@ -85,7 +85,7 @@ namespace XncOptimizerUI.Test
                 Assert.Multiple(() =>
                 {
                     Assert.That(row.Type, Is.EqualTo("int"));
-                    Assert.That(vm.Log, Does.Contain("Variable #1 type = \"int\" saved"));
+                    Assert.That(vm.Log, Does.Contain("Variable #1 type = \"int\", saved"));
                     Assert.That(FindDescendant<ComboBox>(grid), Is.Null, "cell left edit mode");
                 });
             }

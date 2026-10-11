@@ -13,7 +13,7 @@ namespace XncOptimizerUI.Test
 {
     /// <summary>
     /// Host for UI tests that drive a real program-table <see cref="DataGrid"/> (off-screen
-    /// window, STA) against a real <see cref="GibLabProjectService"/> on a copy of a
+    /// window, STA) against a real <see cref="ProjectServices"/> on a copy of a
     /// <c>TestData</c> fixture: application resources, a per-test temp dir, opening the project,
     /// showing the grid below an "outside" button, entering edit mode and leaving a cell.
     /// </summary>
@@ -51,7 +51,7 @@ namespace XncOptimizerUI.Test
             dialogs.ShowOpenProjectDialog().Returns(path);
 
             var vm = new AppViewModel(
-                new GibLabProjectService(config, TimeProvider.System), config, dialogs, "Test",
+                TestProject.Create(config, TimeProvider.System), config, dialogs, "Test",
                 new ObservableCollection<string>(["label"]), "label");
             vm.OpenFileCommand.Execute(null);
 
