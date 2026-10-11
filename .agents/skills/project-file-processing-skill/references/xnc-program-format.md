@@ -63,7 +63,7 @@ The attribute value is XML entity-escaped **once** (`&lt; &gt; &quot;`). LINQ-to
 un-escapes it automatically when you read `.Value`, so:
 
 ```csharp
-// mirrors Services/GibLabProjectService.cs (XDocument.Parse(WebUtility.HtmlDecode(...)) call sites)
+// mirrors Services/Xnc/XncProgramText.cs (Load / Root), the one decode path every reader and rewriter uses
 var xnc          = project.GetOperations().First(o => o.GetTypeIdValue() == "XNC");
 var programXml   = xnc.GetProgram()!.Value;             // already real XML text here
 var programInner = XDocument.Parse(programXml);         // 2nd parse
@@ -158,7 +158,7 @@ Only `int`/`double` vars become symbols (`XncProgramReader`, `XncProgramMath.See
 a `string`/`bool` var is listed (`XncProgram.DeclaredVariables`, `Value = null`) but never
 evaluated, so nothing numeric may reference it.
 
-**Editing (Variables table):** `IProjectService.UpdateVariable(ref log, operationId, variableIndex, attribute, value)`
+**Editing (Variables table):** `IProjectEditor.UpdateVariable(operationId, variableIndex, attribute, value)`
 rewrites one attribute of the `variableIndex`-th `<var>` (rules in `Services/Xnc/XncVariableRules.cs`):
 - `name` — a letter, then letters/digits/`_`/`.`; unique in the program (any case); not
   `dx`/`dy`/`dz`/`tool.dia`. Every whole-identifier reference in the program's expression
@@ -211,7 +211,7 @@ grooves run at `y=0`, `p=4` at `y=200`).
 | `bl` | **left** edge (`x = 0`), runs along Y | `x = 0` | `y` (along edge), `z` (through thickness) | 595 |
 | `br` | **right** edge (`x = dx`), runs along Y | `x = dx` | `y`, `z` | 570 |
 
-(Set confirmed by `Services/GibLabProjectService.cs` `ElementIsBore` and its mirror
+(Set confirmed by `Services/Xnc/XncTags.cs` `IsBore` and its mirror
 `switch`, where `bf/bl/br` flip `y` and `bt`↔`bb` swap tag.)
 
 Attributes:
@@ -249,7 +249,7 @@ centre coordinates = `bf` → `(x, y)`, `bl`/`br` → `(edgeConst, y, z)` with `
 (edge pinned to `0`/`dx`/`dy`, other axis + `z` read from the element) — confirmed against
 `td-2.project`, `td.project`, and `td-bores-displaying.project`.
 
-**Editing (bores table):** `IProjectService.UpdateBore(ref log, operationId, boreIndex, attribute, expression)`
+**Editing (bores table):** `IProjectEditor.UpdateBore(operationId, boreIndex, attribute, expression)`
 rewrites one attribute of the `boreIndex`-th bore element (document order among
 `bf`/`bt`/`bb`/`bl`/`br`) of the operation's program. Editable attributes per element:
 `bf` → `x`, `y`; `bt`/`bb` → `x`, `z`; `bl`/`br` → `y`, `z`; all → `dp` (the pinned edge
@@ -488,7 +488,7 @@ The `c` attribute selects centre-line/tool-position or pocket mode; it is distin
 
 ### 6.9 Rotating a program (`turn` rewrite)
 
-`IProjectService.RotatePart(ref log, partId, targetTurn)` (geometry in
+`IProjectEditor.RotatePart(partId, targetTurn, flipEdgeGrooveTcl)` (geometry in
 `Services/Xnc/XncProgramRotator.cs`) turns a part to an absolute `turn`. Every XNC operation of
 the part gets `turn = targetTurn`; its program is rotated by
 `k = (targetTurn − ownTurn) mod 4` clockwise quarter steps (operations already at the target are
@@ -559,10 +559,10 @@ The reader described above is implemented:
 | piece | location |
 |---|---|
 | Parsed models (read-only classes) | `MVVM/Models/Xnc/` — `XncProgram`, `XncTool`, `XncBore` + `BoreSurface`, `XncGrooving`, `XncMillingContour` + `XncMillingSegment`/`XncLineSegment`/`XncArcSegment`, `XncMillingRectangle`, `ToolPosition`, `XncPoint` |
-| Parser | `Services/Xnc/XncProgramReader.cs` — `XncProgramReader.Read(XElement xncOperation)`; two-layer parse mirroring `GibLabProjectService.cs:388-390`. Reads the operation-level `side` → `XncProgram.Side` and `turn` → `XncProgram.Turn` (0..3; `XncProgram.TurnDegrees` = ×90 clockwise) |
+| Parser | `Services/Xnc/XncProgramReader.cs` — `XncProgramReader.Read(XElement xncOperation)`; two-layer parse through `XncProgramText.Load`. Reads the operation-level `side` → `XncProgram.Side` and `turn` → `XncProgram.Turn` (0..3; `XncProgram.TurnDegrees` = ×90 clockwise) |
 | Expression evaluator | `Services/Xnc/XncExpressionEvaluator.cs` + `XncSymbolTable.cs` — recursive-descent `+ - * /`, parens, unary sign, dotted identifiers; case-insensitive symbols; no new dependency |
 | Attribute getters | `Extensions/XContainersExtensions.cs` `#region XNC program sub-document` |
-| Service entry point | `IProjectService.ReadXncPrograms(int partId)` → `GibLabProjectService` / `FakeProjectService` |
+| Service entry point | `IProjectReader.ReadXncPrograms(int partId)` → `ProjectReader` / `FakeProjectService` |
 | Error type | `Services/Xnc/XncProgramFormatException.cs` |
 | Tests | `XncOptimizerUI.Test/XncProgramReaderTests.cs` (against the fixture) and `XncExpressionEvaluatorTests.cs` |
 

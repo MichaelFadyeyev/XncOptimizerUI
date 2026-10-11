@@ -1,37 +1,79 @@
 # `.project` handling — .NET API map
 
 All paths relative to `XncOptimizerUI/`. The app is WPF/.NET 9, MVVM (CommunityToolkit.Mvvm).
-All `.project` I/O goes through **`GibLabProjectService`** (behind **`IProjectService`**), using
-**LINQ-to-XML** (`XDocument`/`XElement`) — never `XmlSerializer`. No CLI; the only entrypoint is
-`App.xaml.cs`.
+All `.project` I/O goes through the **project services** (`Contracts/`, implemented in
+`Services/Project/` and `Services/Xnc/Batch/`), using **LINQ-to-XML** (`XDocument`/`XElement`) -
+never `XmlSerializer`. No CLI; the only entrypoint is `App.xaml.cs`, which registers one shared
+`ProjectDocument` and every role over it (`App.AddProjectServices`); the view model receives them
+bundled as `ProjectServices(Session, Reader, Editor, Restructuring, Batch)`.
 
-## `IProjectService` (`Contracts/IProjectService.cs`)
+Every operation returns **`OperationResult(bool Changed, IReadOnlyList<LogEntry> Log)`**: `Changed`
+says whether the document was modified; `LogText` renders the log for the log box (highlighted
+entries after a `***` line), `MessageText` without separators (warning dialogs). A refused or failed
+operation leaves the document unchanged and explains why in the log.
+
+## `IProjectSession` (`Contracts/IProjectSession.cs`, implemented by `Services/Project/ProjectDocument.cs`)
 
 | member | notes |
 |---|---|
-| `void OpenProject(string path)` | `_doc = XDocument.Load(path)`, `_project = doc.Element("project")` |
-| `void CloseProject()` | nulls doc/project, clears caches |
-| `List<Band> ReadBands()` | **call before `ReadParts`** — fills the band cache |
-| `List<Sheet> ReadSheets()` | **call before `ReadParts`** — sheet-id resolution |
-| `List<Part> ReadParts()` | resolves banding names + sheet ids from the two caches above |
-| `bool UpdatePart(ref string log, Part part)` | writes the change and `SaveProject()` — **overwrites the input file** |
-| `void SaveProject()` | `_doc.Save(FullPath)` — in-place overwrite |
-| `bool GroupIdenticalElements(ref string log)` | de-dupe XNC ops within one file, renumber ids, collapse products; saves `*_opt.project` |
-| `void PrepForSplitAlongX(ref string log, string[] selectedPartsIds)` | uses `config.SawWidth` (`width = w*2 + SawWidth`) |
-| `bool ReplaceXncPrograms(ref string log, Part source, IList<Part> targets)` | copy `program`+`countBore` onto identical parts (face key `"{side}|{turn}"`); saves `*_ren.project` |
-| `bool ConvertGroovesAndMills(ref string log, IList<Part> parts, GrooveMillDirection direction, bool processPockets)` | see §Conversions; saves `*_gm.project` |
-| `bool ConvertBoresAndMills(ref string log, IList<Part> parts, BoreMillDirection direction, bool useEllipse)` | face bore (Ø>35) <-> round mill (fixed 6 mm `Mill6`); see §Conversions; saves `*_bm.project` |
-| `bool OptimizeMillTraversal(ref string log, IList<Part> parts)` | greedy nearest-neighbour re-sequence of straight axis-parallel passes; saves `*_mo.project` |
-| `bool RotatePart(ref string log, int partId, int targetTurn, bool flipEdgeGrooveTcl)` | set every XNC op of the part to absolute `turn` 0..3 and rotate its program from its own turn (`Services/Xnc/XncProgramRotator.cs`); `flipEdgeGrooveTcl=false` keeps edge-groove `c` as GibLab does; **saves nothing** — the caller `SaveProject()`s in place |
-| `int GetXncProgramsCount(int partId)` | count XNC ops for a part |
-| `IReadOnlyList<string> GetPartsWithXncTurnDiscordance()` | names of parts whose XNC operations disagree on `turn` (orientation vs. machine origin) |
-| `IReadOnlyList<XncProgram> ReadXncPrograms(int partId)` | parse every XNC program for a part (read-only model) |
-| `List<Product> ReadProducts()` | reads `<good typeId="product">` goods into `Product` |
-| `string FullPath { get; }` | current file path (moves after a transform saves a new file) |
+| `void Open(string path)` | `XDocument.Load(path)`, root must be `<project>` |
+| `void Close()` | forgets the document and its paths |
+| `void Save()` | in-place overwrite of `FullPath` |
+| `string FullPath { get; }` | current file path (moves when an operation saves a new file) |
 
-Batch transforms return `false` and save nothing when they changed nothing. Output filename
-helpers (regex suffix, collision -> `(1)`, `(2)`): `_opt`, `_ren`, `_gm`, `_mo`. Audit trail via
-`AppendDescription(text)` -> `project/@description`.
+`ProjectDocument` also offers the typed queries every service uses - `Operations(typeId)`,
+`Goods(typeId)` (type ids in `Services/Project/GibLabTypes.cs`), `XncOperations()`,
+`XncOperationsOf(partId)`, `ProductParts()` - plus `AppendDescription(text)` (-> `project/@description`)
+and `SaveAsSuffixed(suffix)` (output names in `Services/Project/ProjectFileNames.cs`: `_opt`, `_spl`,
+`_ren`, `_gm`, `_bm`, `_mo`, `_to`, `_off`, `_cln`; re-running on a suffixed file gives `(1)`, `(2)`, ...).
+
+## `IProjectReader` (`Services/Project/ProjectReader.cs`) - every read is self-contained
+
+| member | notes |
+|---|---|
+| `List<Band> ReadBands()` | one band per EL operation, named after its band good; external symbols A-Z by thickness |
+| `List<Sheet> ReadSheets()` | one sheet per CS operation |
+| `List<Product> ReadProducts()` | `<good typeId="product">` goods |
+| `List<Part> ReadParts()` | resolves band names and the sheet itself; throws `InvalidDataException` for a part on no sheet |
+| `int GetXncProgramsCount(int partId)` | XNC operations of a part |
+| `IReadOnlyList<XncProgram> ReadXncPrograms(int partId)` | parsed, read-only programs of a part |
+| `IReadOnlyList<string> GetPartsWithXncTurnDiscordance()` | parts whose XNC operations disagree on `turn` |
+
+## `IProjectEditor` (`Services/Project/ProjectEditor.cs`) - in place, **saves nothing** (the caller `Session.Save()`s)
+
+| member | notes |
+|---|---|
+| `UpdatePart(Part part)` | name/size/txt/bands back into `<part>` (`PartUpdater`): renames the part's XNC operations, syncs EL part lists, recalculates `jl`/`jw`; unchanged when nothing differs |
+| `RotatePart(int partId, int targetTurn, bool flipEdgeGrooveTcl)` | every XNC op of the part to absolute `turn` 0..3, program rotated from its own turn (`Services/Xnc/XncProgramRotator.cs`); `flipEdgeGrooveTcl=false` keeps edge-groove `c` as GibLab does |
+| `UpdateBore(int operationId, int boreIndex, BoreAttribute attribute, string expression)` | `Services/Xnc/XncProgramEdits.cs` |
+| `UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value)` | `Services/Xnc/XncProgramEdits.cs` |
+
+## `IProjectRestructuring` (`Services/Project/ProjectRestructuring.cs`) - saves a new file
+
+| member | notes |
+|---|---|
+| `GroupIdenticalElements()` | `IdenticalPartsGrouper`: group XNC ops with the same program on parts with the same band materials, renumber ids, collapse products; `*_opt.project` |
+| `PrepForSplitAlongX(IReadOnlyCollection<string> partIds)` | `SplitAlongXPreparer`: `width = w*2 + config.SawWidth`, count halved, bores mirrored; `*_spl.project` |
+| `ReplaceXncPrograms(Part source, IList<Part> targets)` | `XncProgramReplacer`: copy `program`+`countBore` onto identical parts (face key `"{side}|{turn}"`); `*_ren.project` |
+
+## `IXncBatchOperations` (`Services/Xnc/Batch/XncBatchOperations.cs`) - saves a new file
+
+Each method is an `IXncBatch<TStats>` spec (`Services/Xnc/Batch/*Batch.cs`: per-program rewrite + log
+texts) run by `XncBatchRunner`, which rewrites every program before writing any back (a failing program
+leaves the document untouched), logs each part, and saves nothing when nothing changed.
+
+| member | notes |
+|---|---|
+| `ConvertGroovesAndMills(IList<Part> parts, GrooveMillDirection direction, bool processPockets)` | `Conversions/GrooveMillConverter.cs`, see §Conversions; `*_gm.project` |
+| `ConvertBoresAndMills(IList<Part> parts, BoreMillDirection direction, bool useEllipse)` | `Conversions/BoreMillConverter.cs`: face bore (Ø>34) <-> round mill (fixed 6 mm `Mill6`); `*_bm.project` |
+| `OptimizeMillTraversal(IList<Part> parts)` | `MillTraversalOptimizer.cs`: greedy nearest-neighbour re-sequence of straight axis-parallel passes; `*_mo.project` |
+| `SortToolDeclarations(IList<Part> parts)` | `XncToolDeclarationSorter.cs`; `*_to.project` |
+| `OffsetMillPaths(IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)` | `MillPathOffsetter.cs`; `*_off.project` |
+| `CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds)` | `OutsideOperationDetector.cs`; `*_cln.project` |
+
+Program text is always read and written through `Services/Xnc/XncProgramText.cs` (keeps the
+`<?xml ...?>` declaration). Element names: `Services/Xnc/XncTags.cs`; tool name prefixes
+(`Bore`/`Cut`/`Mill`): `Services/Xnc/XncToolKinds.cs`.
 
 ## Accessor layer — `Extensions/XContainersExtensions.cs`
 
@@ -54,7 +96,7 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
 
 | file | role |
 |---|---|
-| `XncProgramReader.cs` | `static XncProgram Read(XElement xncOperation)` / `Parse(XElement program, bool side)`. Decodes `XDocument.Parse(WebUtility.HtmlDecode(raw))`, seeds `dx/dy/dz`, walks children, builds contours, resolves every coordinate. Unknown elements ignored. Throws `XncProgramFormatException`. |
+| `XncProgramReader.cs` | `static XncProgram Read(XElement xncOperation)` / `Parse(XElement program, bool side)`. Decodes via `XncProgramText.Load`, seeds `dx/dy/dz`, walks children, builds contours, resolves every coordinate. Unknown elements ignored. Throws `XncProgramFormatException`. |
 | `XncExpressionEvaluator.cs` | `Evaluate(expr, XncSymbolTable)` — recursive-descent `+ - * /`, parens, unary sign, dotted ids |
 | `XncSymbolTable.cs` | `Set` / `TryGet`, **case-insensitive**; predefined `dx, dy, dz, tool.dia` |
 | `XncProgramFormatException.cs` | parse-error type |
@@ -88,7 +130,7 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
 | `Product` | `Id, Name, Code, Count` — wraps `<good typeId="product">` |
 
 There is **no** `Program`/`Groove` domain class at the `.project` level — those stay
-raw `XElement` inside `GibLabProjectService`.
+raw `XElement` inside the project services.
 
 ## Config — `Configuration/AppOptions.cs`, `Services/ConfigService.cs`
 
@@ -98,16 +140,16 @@ public class AppOptions
     public decimal SawWidth { get; set; } = 4.0m;
     public List<string> LabelsToProcess { get; set; } = ["поріз.2х40"];
     public int LastLabelToProcessSelectedIndex { get; set; } = 0;
-    public List<decimal> GroovingToolWidths { get; set; } = [2.8m, 3.2m];   // NOT wired to anything
+    public List<decimal> GroovingToolWidths { get; set; } = [2.8m, 3.2m];   // the first one cuts mills -> grooves
     public List<decimal> MillingToolDiams { get; set; } = [6.0m, 10.0m, 20.0m];
 }
 ```
 
 Persisted JSON at `%AppData%/XncOptimizerUI/configuration.json`. `IConfigService` exposes
-`SawWidth`, `MillingToolDiams`, `LabelsToProcess`, `GetLastLabelToProcessSelected()`,
+`SawWidth`, `MillingToolDiams`, `GroovingToolWidths`, `LabelsToProcess`, `GetLastLabelToProcessSelected()`,
 `AddLabelToProcess`, `DeleteLabelToProcess`, `UpdateSawWidth`,
 `UpdateLastLabelToProcessSelectedIndex`. Consumers: `SawWidth` -> `PrepForSplitAlongX`;
-`MillingToolDiams` -> `ConvertGroovesAndMills` (empty => Grooves->Mills cancelled).
+`MillingToolDiams` / `GroovingToolWidths` -> `ConvertGroovesAndMills` (empty => that direction is cancelled).
 
 ## §Conversions — `ConvertGroovesAndMills` algorithm
 
@@ -126,7 +168,7 @@ Persisted JSON at `%AppData%/XncOptimizerUI/configuration.json`. `IConfigService
 6. drop `<tool>` declarations left unreferenced by the conversion (`toolsRemoved`).
 
 `GrooveMillDirection.MillsToGrooves`, per `<ms>`+segment run:
-- grooving cutter is **hard-coded 2.8 mm** (`Cut2.8`; `AppOptions.GroovingToolWidths` unused).
+- grooving cutter = the **first `AppOptions.GroovingToolWidths`** entry (default 2.8 mm -> `Cut2.8`).
 - convert only: exactly one straight axis-parallel `<ml>`, `max(entryDepth, segDepth) < dz`,
   not a pocket (`c != 3`), `<ms>@name` resolves to a known tool diameter (that diameter becomes
   the groove `t`). Running-axis endpoints **clamped** onto `[0,dx]`/`[0,dy]` (no overshoot).
@@ -135,12 +177,12 @@ Persisted JSON at `%AppData%/XncOptimizerUI/configuration.json`. `IConfigService
   (`c="3"`, >=3 `<ml>`, axis-parallel rectangle) -> groove along the longer side.
 - non-compliant / through / diagonal / `<mr>` (without `processPockets`) -> ignored, tallied.
 
-Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter = 2.8`.
+Constants: `GrooveMillConverter.AxisEpsilon = 1e-6`, `ConversionTools.DiameterEpsilon = 1e-6`.
 
-`ConvertBoresAndMills(ref log, parts, BoreMillDirection, useEllipse)` — face bores <-> round mills:
+`ConvertBoresAndMills(parts, BoreMillDirection, useEllipse)` — face bores <-> round mills:
 
-- **`BoresToMills`**, per `<bf>` whose `<tool>` diameter `> BoreMillMinDiameter` (35 mm): mill it
-  out with a fixed 6 mm cutter, `EnsureConversionTool(bf, 6.0, "Mill", ...)` -> `Mill6` (reused
+- **`BoresToMills`**, per `<bf>` whose `<tool>` diameter `> BoreMillConverter.MinDiameter` (34 mm): mill it
+  out with a fixed 6 mm cutter, `ConversionTools.Ensure(bf, 6.0, XncToolKinds.Mill, ...)` -> `Mill6` (reused
   if already declared at 6 mm). `dp` is carried across verbatim (string). Default form emits a
   closed contour: `<ms x=cx y=cy-r dp in="0" out="1" sxy="tool.dia/2" fwd="true" c=? name="Mill6"/>`
   (top of the circle) then four `<mac>` quarter arcs about `(cx, cy)` with `dir="false"`, ending
@@ -150,16 +192,16 @@ Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter
   and `dp < dz`) is a pocket, `c="3"`, in both forms. A through bore keeps the tool inside the
   hole: `c="2"` for the counter-clockwise contour, `c="1"` for the `<me>` (clockwise for
   `fwd="true"`, so right = inside) - see `xnc-program-format.md` §6.4. Edge
-  bores and Ø<=35 bores are untouched (not tallied). Orphaned `Bore*` tools dropped via
-  `RemoveUnreferencedTools`.
+  bores and Ø<=34 bores are untouched (not tallied). Orphaned `Bore*` tools dropped via
+  `ConversionTools.RemoveUnreferenced`.
 - **`MillsToBores`**: an `<me>` with `l == w` (Ø = `2*l`), or an `<ms>` + a run of >= 2 arc
   segments — `<mac>` (centre = `cx`/`cy`) or `<ma>` (centre reconstructed from chord + `r` + `dir`;
   half-circle case is centre = chord midpoint) — that share one centre and radius and whose last
-  end point returns to the entry. Ø must exceed 35 mm. Emits `<bf x=cx y=cy dp ac="1" av="false"
-  name="Bore<Ø>"/>` (depth = max of entry + segment depths), `EnsureConversionTool(anchor, Ø,
-  "Bore", ...)`. Non-compliant `<ms>`/`<me>` are tallied as ignored. Orphaned `Mill*` tools dropped.
-- Nothing converted ⇒ returns `false`, saves nothing. Constants: `BoreMillMinDiameter = 35.0`,
-  `BoreMillCutterDiameter = 6.0`, `BoreMillGeomTolerance = 1e-3`.
+  end point returns to the entry. Ø must exceed 34 mm. Emits `<bf x=cx y=cy dp ac="1" av="false"
+  name="Bore<Ø>"/>` (depth = max of entry + segment depths), `ConversionTools.Ensure(anchor, Ø,
+  XncToolKinds.Bore, ...)`. Non-compliant `<ms>`/`<me>` are tallied as ignored. Orphaned `Mill*` tools dropped.
+- Nothing converted ⇒ unchanged result, saves nothing. Constants: `BoreMillConverter.MinDiameter = 34.0`,
+  `BoreMillConverter.CutterDiameter = 6.0`, geometry tolerance `1e-3`.
 
 ## §Merge recipe — merging N `.project` files (not implemented; build with this)
 
@@ -172,7 +214,7 @@ Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter
    - `operation[CS]/material/@id` (-> sheet), `operation[EL]/material/@id` (-> band)
    - `operation/@tool1` (-> tool.cutting / tool.edgeline)
    - `part/@elt|@elb|@ell|@elr` — `"@operation#<id>"` token, rewrite the numeric tail
-   Model the whole renumber-and-remap on `GibLabProjectService.GroupIdenticalElements`, which
+   Model the whole renumber-and-remap on `Services/Project/IdenticalPartsGrouper.cs`, which
    already does exactly this within one file.
 3. Deduplicate infra goods by value: `tool.cutting`, `tool.edgeline`, `sheet`, `band`. Keep one
    instance, repoint merged operations/parts at its id.
@@ -183,22 +225,21 @@ Constants: `AxisEpsilon = 1e-6`, `DiameterEpsilon = 1e-6`, `GroovingToolDiameter
 
 XNC `program` sub-documents need **no** id remapping — their coordinates are part-local.
 
-## Headless usage pattern (from `XncOptimizerUI.Test/GibLabProjectServiceTests.cs`)
+## Headless usage pattern (from `XncOptimizerUI.Test/ProjectServicesTests.cs`)
 
 ```csharp
 var config = Substitute.For<IConfigService>();
 config.SawWidth.Returns(4.0m);
 config.MillingToolDiams.Returns(new List<decimal> { 6.0m, 10.0m, 20.0m });
-var svc = new GibLabProjectService(config, timeProvider);
-svc.OpenProject(path);
-svc.ReadBands();          // before ReadParts
-svc.ReadSheets();         // before ReadParts
-var parts = svc.ReadParts();
-string log = "";
-svc.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection.GroovesToMills, processPockets: false);
-// output -> <name>_gm.project next to the input
+config.GroovingToolWidths.Returns(new List<decimal> { 2.8m });
+var project = TestProject.Create(config, timeProvider);   // ProjectServices, wired like App.xaml.cs
+project.Session.Open(path);
+var parts = project.Reader.ReadParts();
+var result = project.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.GroovesToMills, processPockets: false);
+// result.Changed, result.LogText; output -> <name>_gm.project next to the input (project.Session.FullPath)
 ```
 
 Fixtures: `XncOptimizerUI/TestData/*.project`. Conversion/optimization tests:
-`GibLabProjectServiceTests.ConvertGroovesAndMills_*`, `OptimizeMillTraversal_*`. Reader tests:
-`XncProgramReaderTests`, `XncExpressionEvaluatorTests`.
+`ProjectServicesTests.ConvertGroovesAndMills_*`, `OptimizeMillTraversal_*`; byte-exact output of every
+operation: `OperationGoldenTests` (`Golden/Operations/`). Reader tests: `XncProgramReaderTests`,
+`XncExpressionEvaluatorTests`.

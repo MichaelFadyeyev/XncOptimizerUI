@@ -24,7 +24,7 @@ exported from "Базис-Мебельщик" (Bazis). Not ground truth for ever
 | `cost`, `costMaterial`, `costOperation` | always `0` in fixtures |
 | `date`, `orderDate` | Unix epoch **milliseconds**; absent on some hand-made fixtures |
 | `importBMV` | e.g. `1.84` — only on Bazis-imported files |
-| `description` | timestamped audit trail, itself HTML-escaped (`&lt;br/&gt;`); appended by `GibLabProjectService.AppendDescription` |
+| `description` | timestamped audit trail, itself HTML-escaped (`&lt;br/&gt;`); appended by `ProjectDocument.AppendDescription` |
 
 ## `<good typeId="product">` + product `<part>`
 
@@ -182,7 +182,7 @@ second op can have `elLength="0"`, `count="0"` and **no `<part>` child**. Parts 
 | `td-missing-ml-error.project` | contour with `<mac>` arc + an `<ml>` with no `dp` |
 | `td-pocket-to-groove.project` | 8 products (7 empty); contour-traced thin pockets (`c="3"`); `turn="1"` |
 | `td-programs.project` | coverage: `<tool>`, `<ms>/<ml>`, `<bl>`, `<gr>` (c=0/1/2), `<var>`, `<mac>` circle, `<mr>`; 2nd op = `<bf>` face bores |
-| `td.project` | default base fixture for most `GibLabProjectServiceTests` — large multi-part real-world export, thousands of `<bf>/<bt>/<bb>/<bl>/<br>` bores and `<mac>`/`<ms>` mills, `turn` 0/1/2 across parts |
+| `td.project` | default base fixture for most `ProjectServicesTests` — large multi-part real-world export, thousands of `<bf>/<bt>/<bb>/<bl>/<br>` bores and `<mac>`/`<ms>` mills, `turn` 0/1/2 across parts |
 | `td-2.project` | variant of `td.project` (same shape/scale); not wired into automated tests — dev/manual fixture |
 | `td-rotation.project` | `RotatePart`: part 2 = op 10 (`side="true"`, every element kind incl. bore arrays, all four edge bores, `gr` p=0/3/2, `ms+ml`, `ms+mac+ma`, `mr` at a `<var>` x, `me`, `dp="dx"`) + op 11 back-side `bf`; part 3 = discordant ops (`turn` 0 and 1, same bore); no CS op (so `ReadParts` cannot resolve sheets) |
 | `td-bl-65-bore.project` | one `<bl y="65" m="true">` middle bore on `500×200×18` (no `z` ⇒ `z = dz/2 = 9`); user reference for the Y-down / visual-plane-name duality and `RotatePart` (→ `bt x=135`) |

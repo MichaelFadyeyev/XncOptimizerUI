@@ -7,7 +7,7 @@ description: >
   groovings, milling contours/arcs, rectangular pockets, `<var>` expressions); convert
   grooves <-> mills and re-order mill passes; and merge data from several `.project`
   files (id remapping, band/sheet dedup). Covers both direct `XDocument`/`XElement`
-  editing and the `IProjectService` / `GibLabProjectService` API. Use whenever a task
+  editing and the project-service API (`Contracts/IProject*.cs`, `IXncBatchOperations`). Use whenever a task
   touches a `*.project` file or the `Services/Xnc` model layer. Format facts reflect
   `XncOptimizerUI/TestData/*.project`; not ground truth for every GibLab dialect.
 ---
@@ -21,7 +21,7 @@ description: >
   milling, pockets, tool lists, `<var>` expressions;
 - **converting** programs (groove <-> mill, mill-pass ordering) or writing new transforms;
 - **merging** several `.project` files into one;
-- extending `GibLabProjectService` / `IProjectService` or the `MVVM/Models/Xnc` classes.
+- extending the project services (`Services/Project`, `Services/Xnc`) or the `MVVM/Models/Xnc` classes.
 
 ## Reference files (read on demand)
 
@@ -29,7 +29,7 @@ description: >
 |---|---|
 | `references/project-file-schema.md` | outer `.project` XML: `<project>`, every `<good typeId=...>`, `<operation typeId=...>`, `<part>`, all attributes, id cross-references, encoding rules |
 | `references/xnc-program-format.md` | the escaped `program` sub-document: two-layer parse, coordinate frame, value/expression resolution, full `<tool>/<var>/<bf..br>/<gr>/<ms>/<ml>/<mac>/<mr>` element reference, worked example |
-| `references/dotnet-api.md` | `IProjectService` / `GibLabProjectService` methods, `XContainersExtensions` accessors, `MVVM/Models` + `MVVM/Models/Xnc` classes, `AppOptions`/`ConfigService`, headless-usage pattern, existing transforms, merge recipe |
+| `references/dotnet-api.md` | project-service roles (`IProjectSession`, `IProjectReader`, `IProjectEditor`, `IProjectRestructuring`, `IXncBatchOperations`) and their implementations, `XContainersExtensions` accessors, `MVVM/Models` + `MVVM/Models/Xnc` classes, `AppOptions`/`ConfigService`, headless-usage pattern, existing transforms, merge recipe |
 
 ## The 60-second model
 
@@ -52,23 +52,22 @@ hand-authored = natural). Never depend on order; never rewrite nodes you did not
 
 ## Load / save
 
-**Via the service (preferred when the app is in the loop):**
+**Via the project services (preferred when the app is in the loop):**
 
 ```csharp
-var svc = new GibLabProjectService(config, timeProvider);
-svc.OpenProject(path);
-svc.ReadBands();          // REQUIRED before ReadParts — fills the band cache
-svc.ReadSheets();         // REQUIRED before ReadParts — sheet-id resolution
-var parts = svc.ReadParts();
-string log = "";
-svc.ConvertGroovesAndMills(ref log, parts, GrooveMillDirection.GroovesToMills, processPockets: false);
+var project = TestProject.Create(config, timeProvider);   // ProjectServices, wired like App.AddProjectServices
+project.Session.Open(path);
+var parts = project.Reader.ReadParts();                   // self-contained: resolves bands and sheets itself
+var result = project.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.GroovesToMills, processPockets: false);
+// result.Changed, result.LogText
 ```
 
-- `SaveProject()` **overwrites the input file** (used only by `UpdatePart`).
-- Every batch transform instead writes a **new** file next to the input and re-points `FullPath`:
-  `_opt` (`GroupIdenticalElements`), `_ren` (`ReplaceXncPrograms`), `_gm` (`ConvertGroovesAndMills`),
-  `_mo` (`OptimizeMillTraversal`); a name clash gets `(1)`, `(2)`, ...
-- `AppendDescription(text)` stamps a timestamped audit line into `project/@description`.
+- In-place edits (`project.Editor`: `UpdatePart`, `RotatePart`, `UpdateBore`, `UpdateVariable`) save
+  nothing; `project.Session.Save()` then **overwrites the input file**.
+- Restructuring (`project.Restructuring`) and batch transforms (`project.Batch`) write a **new** file
+  next to the input and re-point `Session.FullPath`: `_opt` (group), `_spl` (split), `_ren` (replace),
+  `_gm`, `_bm`, `_mo`, `_to`, `_off`, `_cln`; a name clash gets `(1)`, `(2)`, ...
+- `ProjectDocument.AppendDescription(text)` stamps a timestamped audit line into `project/@description`.
 
 **Via raw LINQ-to-XML (new transforms, merges, one-offs):**
 
@@ -77,9 +76,10 @@ var doc = XDocument.Load(path);
 var project = doc.Element("project")!;                 // == doc.GetProject()
 foreach (var xnc in project.GetOperations().Where(o => o.GetTypeIdValue() == "XNC"))
 {
-    var program = XDocument.Parse(WebUtility.HtmlDecode(xnc.GetProgramValue()!)).Element("program")!;
+    var programDocument = XncProgramText.Load(xnc);          // decode (+ format checks)
+    var program = XncProgramText.Root(programDocument);
     // ... edit program ...
-    xnc.SetAttributeValue("program", program.ToString());   // LINQ-to-XML re-escapes on Save
+    XncProgramText.Write(xnc, XncProgramText.Serialize(programDocument));   // keeps the <?xml?> declaration
 }
 doc.Save(outPath);
 ```
@@ -93,7 +93,7 @@ the project idiom and already handle the `#`-token banding refs and the string-t
 ### Modify a part (dimensions, banding, name)
 `references/project-file-schema.md` §Part lists every attribute and which of `l/dl/cl/jl`
 (and the `w`-family) must move together. Through the service: mutate the `Part` model, call
-`svc.UpdatePart(ref log, part)` (writes in place via `SaveProject`). Raw: set `l`+`dl` with
+`project.Editor.UpdatePart(part)`, then `project.Session.Save()` (in place). Raw: set `l`+`dl` with
 `SetLengthValue`/`SetDLengthValue`, `w`+`dw` with `SetWidthValue`/`SetDWidthValue`. Banding
 refs are `elt/elb/ell/elr` -> `@operation#<id>` **plus** the `*Mat` name string — keep them
 consistent, and make sure a matching `EL` operation + `band` good exist.
@@ -103,26 +103,26 @@ consistent, and make sure a matching `EL` operation + `band` good exist.
 stateful: every `<tool>`/`<var>` seen so far is context for later elements; a milling contour is
 `<ms>` + the following run of `<ml>`/`<mac>`. 3. Resolve every coordinate/size attribute with
 `XncExpressionEvaluator.Evaluate(value, symbols)` — a value is a literal, an expression
-(`dy-35-40`, `tool.dia/2`), or a bare `<var>` name. 4. Re-serialise with `program.ToString()`
-and write it back to `@program`. Full element/attribute tables: `references/xnc-program-format.md`.
+(`dy-35-40`, `tool.dia/2`), or a bare `<var>` name. 4. Re-serialise with
+`XncProgramText.Serialize` and write it back with `XncProgramText.Write`. Full element/attribute tables: `references/xnc-program-format.md`.
 
-To *read* programs for inspection, use `svc.ReadXncPrograms(partId)` -> `IReadOnlyList<XncProgram>`
+To *read* programs for inspection, use `project.Reader.ReadXncPrograms(partId)` -> `IReadOnlyList<XncProgram>`
 (fully resolved). That model is **read-only** — it cannot round-trip edits back to XML.
 
 ### Convert programs
-- **Bores <-> mills:** `ConvertBoresAndMills(ref log, parts, direction, useEllipse)`. Face bores
-  (`<bf>`) wider than 35 mm <-> round mills cut with a fixed 6 mm `Mill6`: default is a closed
+- **Bores <-> mills:** `project.Batch.ConvertBoresAndMills(parts, direction, useEllipse)`. Face bores
+  (`<bf>`) wider than 34 mm <-> round mills cut with a fixed 6 mm `Mill6`: default is a closed
   `<ms>` (circle top) + four `<mac dir="false">` quarter-arc contour, declared counter-clockwise,
   `useEllipse` emits an `<me>` (l/w = radius). The
   reverse also accepts `<ma>` arcs and `l==w` ellipses; it makes a `Bore<diameter>` tool. Saves
   `_bm.project`. Details: `references/dotnet-api.md` §Conversions.
-- **Grooves <-> mills:** `ConvertGroovesAndMills(ref log, parts, direction, processPockets)`.
+- **Grooves <-> mills:** `project.Batch.ConvertGroovesAndMills(parts, direction, processPockets)`.
   Only axis-parallel, primary-pass (`<gr>` `p` absent/`0`), non-through elements convert;
   `GroovesToMills` needs `AppOptions.MillingToolDiams` non-empty (exact-diameter -> single mill
-  pass; off-size -> rectangular pocket with the smallest cutter). Mills->grooves uses a
-  hard-coded 2.8 mm grooving tool. Algorithm + edge-overshoot rules: `references/dotnet-api.md`
+  pass; off-size -> rectangular pocket with the smallest cutter). Mills->grooves cuts with the
+  first `AppOptions.GroovingToolWidths` entry (default 2.8 mm). Algorithm + edge-overshoot rules: `references/dotnet-api.md`
   §Conversions.
-- **Mill-pass ordering:** `OptimizeMillTraversal(ref log, parts)` — greedy nearest-neighbour
+- **Mill-pass ordering:** `project.Batch.OptimizeMillTraversal(parts)` — greedy nearest-neighbour
   re-sequence of straight axis-parallel passes, per operation per tool.
 
 ### Merge several `.project` files
@@ -130,17 +130,16 @@ No built-in API — implement with the pattern in `references/dotnet-api.md` §M
 load each `XDocument`, pick a base, offset/renumber colliding `id`s and rewrite **every**
 reference, dedupe `tool.*`/`sheet`/`band` goods, append foreign `<good>`/`<operation>` nodes
 (goods before operations), `AppendDescription`, save `_merged.project`. Model the renumber-and-
-remap on `GroupIdenticalElements`.
+remap on `IdenticalPartsGrouper`.
 
 ## Gotchas
 
-- `ReadParts()` blanks banding + sheet fields unless `ReadBands()` **and** `ReadSheets()` ran first.
+- `ReadParts()` throws `InvalidDataException` for a part that no CS operation cuts (e.g.
+  `td-rotation.project` has no sheets) - read programs per part id instead in such fixtures.
 - XNC attributes are **strings on purpose** (they hold expressions). Don't `double.Parse` them
   blindly — go through `XncExpressionEvaluator`.
 - `<mac>` has no radius/sweep/start — derive from centre + previous point; `dir="false"` = CW
   (still unconfirmed across every dialect).
 - `<mr>` `x/y` is the rectangle **centre**.
-- `AppOptions.GroovingToolWidths` exists but is **not wired** to anything; mills->grooves is
-  fixed at 2.8 mm.
 - A second `EL` operation (the `!СмЧт ...` band) can have **no `<part>` child**.
 - Empty products (`<good typeId="product">` with zero `<part>`) are legal (`td-pocket-to-groove.project`).
