@@ -175,7 +175,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var start = ToPoint(MillPreviewGeometry.StartPoint(toolPath), layout);
             var radiusPx = diameterPx / 2d;
             var overshootPx = lines.CenterLineOvershootMm * layout.Scale;
-            var crossDashPx = path.Diameter > 5d ? lines.CenterLineDashMm * layout.Scale : (double?)null;
+            var crossDashPx = path.Diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm
+                ? lines.CenterLineDashMm * layout.Scale
+                : (double?)null;
 
             var circle = Add(layers.Markers, new Ellipse { Width = diameterPx, Height = diameterPx, Fill = Brushes.Transparent }, sideBrush, isClickTarget: true);
             PartPreviewOverlayGeometry.SetStroke(circle, lines.Thickness2Px);

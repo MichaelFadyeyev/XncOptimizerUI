@@ -38,8 +38,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// rectangles; <see cref="Thickness1Px"/> for rectangular bore symbols, bore center
         /// lines, and every dashed groove line. <see cref="DashLengthPx"/> is the screen-space
         /// dash length used by dashed groove lines; <see cref="CenterLineDashMm"/> is the
-        /// model-space dash length used by a bore center line when its bore's diameter exceeds
-        /// 5mm (scaled to px per draw, since it must grow/shrink with zoom).
+        /// model-space dash length used by a bore's crossed center lines when its diameter
+        /// exceeds <see cref="PartPreviewOverlayGeometry.DashedCrossLineDiameterMm"/> (scaled
+        /// to px per draw, since it must grow/shrink with zoom).
         /// </summary>
         internal readonly record struct BoreBrushes(
             Brush SideTrue,
@@ -113,7 +114,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             // diameter; a rectangular bore symbol's (depth-reading) center line runs along the
             // depth axis, so it's keyed on the bore's depth instead - the two thresholds are
             // independent, per the drawing spec.
-            var crossDashPx = diameter > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
+            var crossDashPx = diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
             var bandDashPx = bore.Depth > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
 
             void AddShape(Shape shape, bool isClickTarget, double thickness)
@@ -215,7 +216,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             // See DrawBore: the circle's crossing center lines are keyed on diameter, the
             // rectangle's depth-axis center line on depth - independent thresholds.
-            var crossDashPx = diameter > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
+            var crossDashPx = diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
             var bandDashPx = bore.Depth > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
 
             void AddShape(Shape shape, bool isClickTarget, double thickness)

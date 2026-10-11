@@ -15,6 +15,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// </summary>
     internal static class PartPreviewOverlayGeometry
     {
+        internal const double DashedCrossLineDiameterMm = 8d;
+
         /// <summary>
         /// Sets <paramref name="shape"/>'s stroke thickness and, when <paramref name="dashLengthPx"/>
         /// is given, a dash/gap pattern of that length. WPF expresses <c>StrokeDashArray</c> as
