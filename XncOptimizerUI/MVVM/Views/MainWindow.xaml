@@ -14,7 +14,7 @@
     xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
     Title="{Binding WindowTitle}"
     Width="1024"
-    Height="768"
+    Height="1200"
     d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
@@ -116,7 +116,6 @@
         </Grid.RowDefinitions>
 
         <!--  Menu bar  -->
-
         <StackPanel
             Grid.Row="0"
             Grid.RowSpan="4"
@@ -184,6 +183,14 @@
                     </CheckBox>
                 </StackPanel>
             </Border>
+
+            <!--  Copy Parts List panel  -->
+            <StackPanel Margin="2,2,2,2">
+                <Button
+                    Command="{Binding CopyPartsListCommand}"
+                    Content="Copy parts"
+                    Style="{StaticResource CommandButtonStyle}" />
+            </StackPanel>
 
             <!--  Group by XNC panel  -->
             <StackPanel Margin="2,2,2,2">
@@ -306,6 +313,29 @@
                             IsChecked="{Binding CleanOutsideMills}"
                             ToolTip="Milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
                     </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!--  Sort Tool Declarations panel: tools to program start, Bore - Cut - Mill, then by diameter  -->
+            <Border x:Name="SortToolDeclarationsPanel" Style="{StaticResource MenuGroupBorder}">
+                <StackPanel>
+                    <Button
+                        x:Name="SortToolDeclarationsButton"
+                        Command="{Binding SortToolDeclarationsCommand}"
+                        Content="Sort tools"
+                        Style="{StaticResource CommandButtonStyle}"
+                        ToolTip="Move tool declarations to the program start, ordered Bore - Cut - Mill, then by Ø ascending" />
+
+                    <!--  Scope: all filtered parts (all parts when unfiltered) instead of the checked ones  -->
+                    <CheckBox
+                        x:Name="SortToolsGloballyCheckBox"
+                        Height="20"
+                        Margin="0,7,0,0"
+                        VerticalContentAlignment="Center"
+                        Content="Apply globally / filtered"
+                        FontSize="10"
+                        IsChecked="{Binding SortToolsGlobally}"
+                        ToolTip="Sort tools in every part passing the filter (all parts when no filter is set), not only the checked ones" />
                 </StackPanel>
             </Border>
 
@@ -587,37 +617,6 @@
                 <Button
                     Command="{Binding OptimizeMillTraversalCommand}"
                     Content="Optimize mill order"
-                    Style="{StaticResource CommandButtonStyle}" />
-            </StackPanel>
-
-            <!--  Sort Tool Declarations panel: tools to program start, Bore - Cut - Mill, then by diameter  -->
-            <Border x:Name="SortToolDeclarationsPanel" Style="{StaticResource MenuGroupBorder}">
-                <StackPanel>
-                    <Button
-                        x:Name="SortToolDeclarationsButton"
-                        Command="{Binding SortToolDeclarationsCommand}"
-                        Content="Sort tools"
-                        Style="{StaticResource CommandButtonStyle}"
-                        ToolTip="Move tool declarations to the program start, ordered Bore - Cut - Mill, then by Ø ascending" />
-
-                    <!--  Scope: all filtered parts (all parts when unfiltered) instead of the checked ones  -->
-                    <CheckBox
-                        x:Name="SortToolsGloballyCheckBox"
-                        Height="20"
-                        Margin="0,7,0,0"
-                        VerticalContentAlignment="Center"
-                        Content="Apply globally / filtered"
-                        FontSize="10"
-                        IsChecked="{Binding SortToolsGlobally}"
-                        ToolTip="Sort tools in every part passing the filter (all parts when no filter is set), not only the checked ones" />
-                </StackPanel>
-            </Border>
-
-            <!--  Copy Parts List panel  -->
-            <StackPanel Margin="2,2,2,2">
-                <Button
-                    Command="{Binding CopyPartsListCommand}"
-                    Content="Copy parts"
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
         </StackPanel>
@@ -1044,7 +1043,7 @@
                                 x:Name="PartRotationPanel"
                                 Grid.Column="1"
                                 Margin="0,4,0,0"
-                                VerticalAlignment="Top" />                        
+                                VerticalAlignment="Top" />
                         </Grid>
 
                         <GridSplitter
