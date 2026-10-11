@@ -61,3 +61,8 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# Golden snapshots are compared ignoring line endings; keep them LF everywhere.
+###############################################################################
+XncOptimizerUI.Test/Golden/** text eol=lf

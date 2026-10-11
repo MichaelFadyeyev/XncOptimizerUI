@@ -434,7 +434,7 @@ namespace XncOptimizerUI.Services
                         xncOperation.Attribute("count")!.SetValue($"{newCount}");
                         xncOperation.Attribute("countBore")!.SetValue($"{boreCount}");
 
-                        programAttribute.Value = program.ToString();
+                        programAttribute.Value = SerializeProgram(programInnerXml);
                     }
 
                     log += $"{name} resized to {widthStringValue}; count changed: {count} -> {newCount}\n";
@@ -614,7 +614,7 @@ namespace XncOptimizerUI.Services
 
                         if (converted > 0)
                         {
-                            programAttribute.Value = program.ToString();
+                            programAttribute.Value = SerializeProgram(programXml);
                         }
 
                         partConverted += converted;
@@ -716,7 +716,7 @@ namespace XncOptimizerUI.Services
 
                         if (converted > 0)
                         {
-                            programAttribute.Value = program.ToString();
+                            programAttribute.Value = SerializeProgram(programXml);
                         }
 
                         partConverted += converted;

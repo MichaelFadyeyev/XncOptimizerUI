@@ -12,7 +12,7 @@
     <part id="2" />
     <part id="1" />
   </operation>
-  <operation costMaterial="0" costOperation="0" costTotal="0" program="&lt;program dx=&quot;1000&quot; dy=&quot;600&quot; dz=&quot;19&quot;&gt;&#xD;&#xA;  &lt;tool name=&quot;Bore40&quot; d=&quot;40&quot; /&gt;&#xD;&#xA;  &lt;bf x=&quot;250&quot; y=&quot;300&quot; dp=&quot;15&quot; ac=&quot;1&quot; av=&quot;false&quot; name=&quot;Bore40&quot; /&gt;&#xD;&#xA;&lt;/program&gt;" count="1" side="true" turn="0" mirHor="false" mirVert="false" bySizeDetail="false" priceBore="0" countBore="0" costBore="0" priceMill="0" countMill="0" costMill="0" priceCut="0" countCut="0" costCut="0" price="0" cost="0" typeId="XNC" typeName="panel-1" id="2">
+  <operation costMaterial="0" costOperation="0" costTotal="0" program="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;program dx=&quot;1000&quot; dy=&quot;600&quot; dz=&quot;19&quot;&gt;&#xD;&#xA;  &lt;tool name=&quot;Bore40&quot; d=&quot;40&quot; /&gt;&#xD;&#xA;  &lt;bf x=&quot;250&quot; y=&quot;300&quot; dp=&quot;15&quot; ac=&quot;1&quot; av=&quot;false&quot; name=&quot;Bore40&quot; /&gt;&#xD;&#xA;&lt;/program&gt;" count="1" side="true" turn="0" mirHor="false" mirVert="false" bySizeDetail="false" priceBore="0" countBore="0" costBore="0" priceMill="0" countMill="0" costMill="0" priceCut="0" countCut="0" costCut="0" price="0" cost="0" typeId="XNC" typeName="panel-1" id="2">
     <part id="2" />
   </operation>
 </project>
