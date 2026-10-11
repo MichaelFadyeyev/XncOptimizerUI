@@ -1421,6 +1421,92 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [Test]
+        public void CleanOutsideOperations_DefaultsToAllKinds()
+        {
+            var vm = CreateViewModel();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.CleanOutsideBores, Is.True);
+                Assert.That(vm.CleanOutsideGrooves, Is.True);
+                Assert.That(vm.CleanOutsideMills, Is.True);
+            });
+        }
+
+        [Test]
+        public void CleanOutsideOperations_PassesCheckedPartsAndKindsToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[1].IsSelected = true;
+            vm.CleanOutsideGrooves = false;
+            _projectService.Calls.Clear();
+
+            vm.CleanOutsideOperationsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.Parts[1].Id }));
+                Assert.That(_projectService.LastCleanOutsideKinds, Is.EqualTo(OutsideOperationKinds.Bores | OutsideOperationKinds.Mills));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful cleaning reloads the project");
+            });
+        }
+
+        [Test]
+        public void CleanOutsideOperations_WithNoPartsChecked_ProcessesAllParts()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.FilterName = vm.Parts[0].Name;
+
+            vm.CleanOutsideOperationsCommand.Execute(null);
+
+            Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id),
+                Is.EquivalentTo(_projectService.Parts.Select(p => p.Id)), "all parts of the project, not only the filtered ones");
+        }
+
+        [Test]
+        public void CleanOutsideOperations_WithNoKindSelected_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.CleanOutsideBores = false;
+            vm.CleanOutsideGrooves = false;
+            vm.CleanOutsideMills = false;
+            _projectService.Calls.Clear();
+
+            vm.CleanOutsideOperationsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("Select bores, grooves and/or mills to clean!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void CleanOutsideOperations_WhenServiceFails_DoesNotReload()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.CleanOutsideOperationsResult = false;
+            _projectService.Calls.Clear();
+
+            vm.CleanOutsideOperationsCommand.Execute(null);
+
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.CleanOutsideOperations) }));
+        }
+
         [TestCase(true, false, MillPathKinds.Open)]
         [TestCase(false, true, MillPathKinds.Closed)]
         public void OffsetMillPaths_PassesSelectedKindsToService(bool open, bool closed, MillPathKinds expected)

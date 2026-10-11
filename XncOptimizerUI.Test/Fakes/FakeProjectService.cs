@@ -31,6 +31,7 @@ namespace XncOptimizerUI.Test.Fakes
         public bool OptimizeMillTraversalResult { get; set; } = true;
         public bool SortToolDeclarationsResult { get; set; } = true;
         public bool OffsetMillPathsResult { get; set; } = true;
+        public bool CleanOutsideOperationsResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
         public bool RotatePartResult { get; set; } = true;
 
@@ -136,6 +137,19 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return OffsetMillPathsResult;
+        }
+
+        public IList<Part>? LastCleanOutsideParts { get; private set; }
+        public OutsideOperationKinds? LastCleanOutsideKinds { get; private set; }
+
+        public bool CleanOutsideOperations(ref string log, IList<Part> parts, OutsideOperationKinds kinds)
+        {
+            Calls.Add(nameof(CleanOutsideOperations));
+            LastCleanOutsideParts = parts;
+            LastCleanOutsideKinds = kinds;
+            log += LogToAppend;
+
+            return CleanOutsideOperationsResult;
         }
 
         public int? LastRotatePartId { get; private set; }

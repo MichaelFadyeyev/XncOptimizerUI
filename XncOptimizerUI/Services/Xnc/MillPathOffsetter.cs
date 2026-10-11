@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using static XncOptimizerUI.Services.Xnc.ContourOffsetGeometry;
+using static XncOptimizerUI.Services.Xnc.XncMillElements;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Xnc
@@ -66,27 +67,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static MillPathKinds KindOf(bool closed) => closed ? MillPathKinds.Closed : MillPathKinds.Open;
 
-        #region Mill discovery
-
-        private sealed record Mill(XElement Head, IReadOnlyList<XElement> Segments);
-
-        /// <summary>Snapshots every mill before any rewrite, so inserted round-join arcs are never picked up as input.</summary>
-        private static List<Mill> CollectMills(XElement program)
-        {
-            var elements = program.Elements().ToList();
-
-            return elements
-                .Select((element, index) => (element, index))
-                .Where(e => e.element.Name.LocalName is "ms" or "mr" or "me")
-                .Select(e => new Mill(
-                    e.element,
-                    e.element.Name.LocalName == "ms"
-                        ? elements.Skip(e.index + 1).TakeWhile(IsContourSegment).ToList()
-                        : []))
-                .ToList();
-        }
-
-        private static bool IsContourSegment(XElement element) => element.Name.LocalName is "ml" or "mac" or "ma";
+        #region Mill dispatch
 
         private static Outcome TryOffsetMill(
             Mill mill, XncSymbolTable symbols, Vec2 outline, double distance, MillOffsetSide side, MillPathKinds kinds)
@@ -109,12 +90,6 @@ namespace XncOptimizerUI.Services.Xnc
                 return Outcome.Ignored;
             }
         }
-
-        #endregion
-
-        #region Traversal side
-
-        private static bool ReadForward(XElement head) => !bool.TryParse(head.GetFwdValue(), out var forward) || forward;
 
         #endregion
 
@@ -200,63 +175,6 @@ namespace XncOptimizerUI.Services.Xnc
 
             return Outcome.Offset;
         }
-
-        private static List<Primitive>? ReadPath(Vec2 entry, IReadOnlyList<XElement> segments, XncSymbolTable symbols)
-        {
-            var path = new List<Primitive>(segments.Count);
-            var current = entry;
-
-            foreach (var segment in segments)
-            {
-                if (ReadPrimitive(current, segment, symbols) is not { } primitive)
-                {
-                    return null;
-                }
-
-                path.Add(primitive);
-                current = primitive.End;
-            }
-
-            return path;
-        }
-
-        private static Primitive? ReadPrimitive(Vec2 start, XElement segment, XncSymbolTable symbols)
-        {
-            var end = ReadPoint(segment, symbols);
-
-            return segment.Name.LocalName switch
-            {
-                "ml" => start.DistanceTo(end) > Tolerance ? Primitive.Line(start, end) : null,
-                "mac" => ReadCentreArc(start, end, segment, symbols),
-                _ => ReadRadiusArc(start, end, segment, symbols),
-            };
-        }
-
-        private static Primitive? ReadCentreArc(Vec2 start, Vec2 end, XElement mac, XncSymbolTable symbols)
-        {
-            var centre = new Vec2(EvalXnc(mac.GetCxValue(), symbols), EvalXnc(mac.GetCyValue(), symbols));
-            var radius = start.DistanceTo(centre);
-
-            return radius > Tolerance && Math.Abs(end.DistanceTo(centre) - radius) <= Tolerance
-                ? Primitive.Arc(start, end, centre, radius, IsClockwiseDir(mac))
-                : null;
-        }
-
-        private static Primitive? ReadRadiusArc(Vec2 start, Vec2 end, XElement ma, XncSymbolTable symbols)
-        {
-            var radius = EvalXnc(ma.GetRValue(), symbols);
-
-            return TryReconstructArcCentre(
-                    start.X, start.Y, end.X, end.Y, radius, ParseDirSign(ma.GetDirValue()),
-                    out var centreX, out var centreY)
-                ? Primitive.Arc(start, end, new Vec2(centreX, centreY), radius, IsClockwiseDir(ma))
-                : null;
-        }
-
-        private static bool IsClockwiseDir(XElement arc) => ParseDirSign(arc.GetDirValue()) > 0;
-
-        private static Vec2 ReadPoint(XElement element, XncSymbolTable symbols) =>
-            new(EvalXnc(element.GetXValue(), symbols), EvalXnc(element.GetYValue(), symbols));
 
         #endregion
 

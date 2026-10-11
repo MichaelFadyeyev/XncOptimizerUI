@@ -433,6 +433,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// </summary>
         [ObservableProperty]
         private bool _sortToolsGlobally;
+
+        /// <summary>"Clean operations" removes bores lying outside the part.</summary>
+        [ObservableProperty]
+        private bool _cleanOutsideBores = true;
+
+        /// <summary>"Clean operations" removes grooves lying outside the part.</summary>
+        [ObservableProperty]
+        private bool _cleanOutsideGrooves = true;
+
+        /// <summary>"Clean operations" removes mills (contours, rectangles, ellipses) lying outside the part.</summary>
+        [ObservableProperty]
+        private bool _cleanOutsideMills = true;
+
         #endregion
 
         #region Commands
@@ -830,6 +843,57 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var logStart = log.Length;
 
             var success = _projectService.OffsetMillPaths(ref log, parts, (double)offset, MillOffsetSide, kinds);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        /// <summary>
+        /// Removes the selected kinds of operations lying outside their part from the checked parts,
+        /// or from every part of the project when none is checked.
+        /// </summary>
+        [RelayCommand]
+        private void CleanOutsideOperations()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            var kinds = (CleanOutsideBores ? OutsideOperationKinds.Bores : OutsideOperationKinds.None)
+                | (CleanOutsideGrooves ? OutsideOperationKinds.Grooves : OutsideOperationKinds.None)
+                | (CleanOutsideMills ? OutsideOperationKinds.Mills : OutsideOperationKinds.None);
+
+            if (kinds == OutsideOperationKinds.None)
+            {
+                Log += "Select bores, grooves and/or mills to clean!\n";
+                return;
+            }
+
+            var checkedParts = _allParts.Where(p => p.IsSelected).ToList();
+            var parts = (checkedParts.Count > 0 ? checkedParts : _allParts)
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += "No parts to clean operations for!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.CleanOutsideOperations(ref log, parts, kinds);
 
             Log = log;
 

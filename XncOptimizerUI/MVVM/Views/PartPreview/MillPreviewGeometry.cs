@@ -130,8 +130,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             }
 
             var radius = Math.Clamp(rectangle.CornerRadius, 0d, Math.Min(halfLength, halfWidth));
-            var counterClockwise = RoundedRectangle(halfLength, halfWidth, radius)
-                .Select(p => Place(p, rectangle.Origin, rectangle.Angle))
+            var counterClockwise = MillShapeGeometry.RoundedRectangle(halfLength, halfWidth, radius)
+                .Select(p => MillShapeGeometry.Place(p, ToVec(rectangle.Origin), rectangle.Angle))
                 .ToList();
 
             var travel = Orient(counterClockwise, true, rectangle.Forward, isRectangleOrEllipse: true);
@@ -153,9 +153,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             }
 
             var counterClockwise = (Math.Abs(ellipse.Length - ellipse.Width) <= Tolerance
-                    ? Circle(ellipse.Length)
-                    : EllipseChords(ellipse.Length, ellipse.Width))
-                .Select(p => Place(p, ellipse.Center, ellipse.Angle))
+                    ? MillShapeGeometry.Circle(ellipse.Length)
+                    : MillShapeGeometry.EllipseChords(ellipse.Length, ellipse.Width, EllipseSegments))
+                .Select(p => MillShapeGeometry.Place(p, ToVec(ellipse.Center), ellipse.Angle))
                 .ToList();
 
             var travel = Orient(counterClockwise, true, ellipse.Forward, isRectangleOrEllipse: true);
@@ -205,98 +205,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
         private static List<Primitive> Reverse(IReadOnlyList<Primitive> path) =>
             path.Reverse().Select(p => p.Reversed()).ToList();
-
-        /// <summary>Local rounded rectangle, counter-clockwise on screen, from the middle of its local <c>y-</c> side.</summary>
-        private static IEnumerable<Primitive> RoundedRectangle(double halfLength, double halfWidth, double radius)
-        {
-            // Corner centres in Y-down coordinates, counter-clockwise on screen starting from the
-            // y- side: (x-, y-), (x-, y+), (x+, y+), (x+, y-).
-            var corners = new[]
-            {
-                new Vec2(-halfLength + radius, -halfWidth + radius),
-                new Vec2(-halfLength + radius, halfWidth - radius),
-                new Vec2(halfLength - radius, halfWidth - radius),
-                new Vec2(halfLength - radius, -halfWidth + radius),
-            };
-
-            // Outward normals of the sides: side i runs into corner i (y- side first).
-            var start = new Vec2(0d, -halfWidth);
-            var current = start;
-            var sides = new[] { new Vec2(0d, -1d), new Vec2(-1d, 0d), new Vec2(0d, 1d), new Vec2(1d, 0d) };
-
-            for (var i = 0; i < 4; i++)
-            {
-                var corner = corners[i];
-                var sideEnd = corner + (sides[i] * radius);
-
-                if (current.DistanceTo(sideEnd) > Tolerance)
-                {
-                    yield return Primitive.Line(current, sideEnd);
-                }
-
-                var arcEnd = corner + (sides[(i + 1) % 4] * radius);
-
-                if (radius > Tolerance)
-                {
-                    yield return Primitive.Arc(sideEnd, arcEnd, corner, radius, clockwise: false);
-                }
-
-                current = arcEnd;
-            }
-
-            if (current.DistanceTo(start) > Tolerance)
-            {
-                yield return Primitive.Line(current, start);
-            }
-        }
-
-        /// <summary>Local full circle as two counter-clockwise (on screen) half arcs from <c>(0, -r)</c>, the <c>y-</c> end of its <c>w</c> semi-axis.</summary>
-        private static IEnumerable<Primitive> Circle(double radius)
-        {
-            var start = new Vec2(0d, -radius);
-            var opposite = new Vec2(0d, radius);
-            var origin = new Vec2(0d, 0d);
-
-            yield return Primitive.Arc(start, opposite, origin, radius, clockwise: false);
-            yield return Primitive.Arc(opposite, start, origin, radius, clockwise: false);
-        }
-
-        /// <summary>Local ellipse chords, counter-clockwise on screen, from <c>(0, -w)</c>, the <c>y-</c> end of its <c>w</c> semi-axis.</summary>
-        private static IEnumerable<Primitive> EllipseChords(double semiX, double semiY)
-        {
-            Vec2 PointAt(int i)
-            {
-                // t = pi/2 is (0, -w); increasing t runs counter-clockwise on screen.
-                var t = (Math.PI / 2d) + (2d * Math.PI * i / EllipseSegments);
-
-                return i % EllipseSegments == 0
-                    ? new Vec2(0d, -semiY)
-                    : new Vec2(semiX * Math.Cos(t), -semiY * Math.Sin(t));
-            }
-
-            return Enumerable.Range(0, EllipseSegments)
-                .Select(i => Primitive.Line(PointAt(i), PointAt(i + 1)));
-        }
-
-        /// <summary>Rotates a local primitive by <paramref name="angleDegrees"/> (positive = clockwise on screen, confirmed with the user) and moves it to <paramref name="centre"/>.</summary>
-        private static Primitive Place(Primitive local, XncPoint centre, double angleDegrees)
-        {
-            var radians = angleDegrees * Math.PI / 180d;
-            var cos = Math.Cos(radians);
-            var sin = Math.Sin(radians);
-            var origin = ToVec(centre);
-
-            // Y-down frame: the standard rotation of the raw coordinates turns clockwise on screen
-            // (+x towards +y, i.e. right towards down).
-            Vec2 Map(Vec2 p) => origin + new Vec2((p.X * cos) - (p.Y * sin), (p.X * sin) + (p.Y * cos));
-
-            return local with
-            {
-                Start = Map(local.Start),
-                End = Map(local.End),
-                Centre = local.Centre is { } c ? Map(c) : null,
-            };
-        }
 
         #endregion
 

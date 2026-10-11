@@ -131,6 +131,25 @@ namespace XncOptimizerUI.Services.Xnc
             return symbols;
         }
 
+        /// <summary>Diameter (<c>d</c>) of every <c>&lt;tool&gt;</c> of a program by name (any case); the last declaration wins, matching XncProgramReader.</summary>
+        public static Dictionary<string, double> ReadToolDiameters(XElement program)
+        {
+            var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tool in program.Elements("tool"))
+            {
+                var name = tool.GetNameValue();
+
+                if (name != null
+                    && double.TryParse(tool.GetDValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out var diameter))
+                {
+                    map[name] = diameter;
+                }
+            }
+
+            return map;
+        }
+
         public static double RequireProgramDouble(string? raw, string name)
         {
             if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))

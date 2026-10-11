@@ -1064,6 +1064,162 @@ namespace XncOptimizerUI.Services
             _ => "open and closed",
         };
 
+        // --- Outside operations cleaning ----------------------------------------------------
+
+        /// <summary>What cleaning one XNC operation's program removed.</summary>
+        private sealed record OperationCleaning(
+            XElement Operation,
+            IReadOnlyList<OutsideOperationDetector.OutsideElement> Removed,
+            int ToolsRemoved,
+            int Unresolved);
+
+        /// <summary>
+        /// Removes the bores / grooves / mills of the selected <paramref name="kinds"/> lying outside
+        /// the part from the XNC programs of the supplied parts (geometry in
+        /// <see cref="OutsideOperationDetector"/>). Every program is cleaned before anything is
+        /// written back, so a failing program leaves the document untouched. Saves nothing and
+        /// returns <c>false</c> when nothing was removed.
+        /// </summary>
+        public bool CleanOutsideOperations(ref string log, IList<Part> parts, OutsideOperationKinds kinds)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for outside operations cleaning.";
+                return false;
+            }
+
+            if ((kinds & OutsideOperationKinds.All) == OutsideOperationKinds.None)
+            {
+                log += "***\nNo operation types selected for outside cleaning.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+            var kindsName = DescribeOutsideOperationKinds(kinds);
+
+            List<(Part Part, List<(OperationCleaning Cleaning, string? Program)> Operations)> cleanedParts;
+
+            try
+            {
+                cleanedParts = parts
+                    .Select(part => (Part: part, Operations: xncOperations
+                        .Where(o => o.GetPart()?.GetIdIntValue() == part.Id && o.GetProgram() != null)
+                        .Select(op => CleanOperationProgram(op, kinds))
+                        .ToList()))
+                    .ToList();
+            }
+            catch (Exception e)
+            {
+                log += $"***\nOutside operations cleaning failed: {e.Message}";
+                return false;
+            }
+
+            cleanedParts
+                .SelectMany(p => p.Operations)
+                .Where(o => o.Program != null)
+                .ToList()
+                .ForEach(o => o.Cleaning.Operation.GetProgram()!.Value = o.Program!);
+
+            log += string.Concat(cleanedParts.Select(p => DescribePartCleaning(p.Part, p.Operations.Select(o => o.Cleaning).ToList())));
+
+            var cleanings = cleanedParts.SelectMany(p => p.Operations.Select(o => o.Cleaning)).ToList();
+            var totalRemoved = cleanings.Sum(c => c.Removed.Count);
+            var totalUnresolved = cleanings.Sum(c => c.Unresolved);
+
+            if (totalRemoved == 0)
+            {
+                log += $"***\nNo outside {kindsName} found (unresolved {totalUnresolved}).";
+                return false;
+            }
+
+            AppendDescription($"cleaned outside {kindsName}");
+
+            var result = GetCleanFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            var touchedParts = cleanedParts.Count(p => p.Operations.Any(o => o.Cleaning.Removed.Count > 0));
+
+            log += $"***\nOutside operations cleaning complete: removed {totalRemoved} ({DescribeRemovedCounts(cleanings.SelectMany(c => c.Removed))}), "
+                + $"{cleanings.Sum(c => c.ToolsRemoved)} tool(s) removed, unresolved {totalUnresolved}, across {touchedParts} part(s). Stored to: {_fullPath}";
+
+            return true;
+        }
+
+        /// <summary>Finds and removes the outside elements of one operation's program; the new program text is <c>null</c> when nothing was removed.</summary>
+        private static (OperationCleaning Cleaning, string? Program) CleanOperationProgram(XElement operation, OutsideOperationKinds kinds)
+        {
+            var programXml = LoadProgramDocument(operation);
+            var program = ProgramRoot(programXml);
+            var found = OutsideOperationDetector.Find(program, kinds);
+
+            found.Outside
+                .SelectMany(o => o.Segments.Prepend(o.Element))
+                .ToList()
+                .ForEach(e => e.Remove());
+
+            var toolsRemoved = RemoveUnreferencedTools(program, ToolNames(found.Outside));
+
+            return (
+                new OperationCleaning(operation, found.Outside, toolsRemoved, found.Unresolved),
+                found.Outside.Count > 0 ? SerializeProgram(programXml) : null);
+        }
+
+        private static HashSet<string> ToolNames(IEnumerable<OutsideOperationDetector.OutsideElement> elements) =>
+            elements
+                .Select(e => e.Element.GetNameValue())
+                .OfType<string>()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>One log line per removed element, then the part summary; nothing for a part without removed or unresolved elements.</summary>
+        private static string DescribePartCleaning(Part part, IReadOnlyList<OperationCleaning> cleanings)
+        {
+            var removed = cleanings.Sum(c => c.Removed.Count);
+            var unresolved = cleanings.Sum(c => c.Unresolved);
+
+            if (removed == 0 && unresolved == 0)
+            {
+                return string.Empty;
+            }
+
+            var lines = cleanings.SelectMany(c => c.Removed.Select(r =>
+                $"Clean: \"{part.Name}\" (id={part.Id}), XNC id={c.Operation.GetIdValue()}: removed {DescribeOutsideElement(r)}\n"));
+
+            var summary = $"Clean: \"{part.Name}\" (id={part.Id}): {removed} removed"
+                + (removed > 0 ? $" ({DescribeRemovedCounts(cleanings.SelectMany(c => c.Removed))})" : string.Empty)
+                + $", {cleanings.Sum(c => c.ToolsRemoved)} tool(s) removed, {unresolved} unresolved\n";
+
+            return string.Concat(lines) + summary;
+        }
+
+        /// <summary>The element as authored, e.g. <c>&lt;bf x="-20" y="30" dp="10" name="Bore8"/&gt;</c>; a contour adds its segment count.</summary>
+        private static string DescribeOutsideElement(OutsideOperationDetector.OutsideElement removed)
+        {
+            var element = new XElement(removed.Element.Name, removed.Element.Attributes()).ToString(SaveOptions.DisableFormatting);
+
+            return removed.Segments.Count > 0 ? $"{element} + {removed.Segments.Count} segment(s)" : element;
+        }
+
+        private static string DescribeRemovedCounts(IEnumerable<OutsideOperationDetector.OutsideElement> removed)
+        {
+            var counts = removed.GroupBy(r => r.Kind).ToDictionary(g => g.Key, g => g.Count());
+
+            int Count(OutsideOperationKinds kind) => counts.GetValueOrDefault(kind);
+
+            return $"{Count(OutsideOperationKinds.Bores)} bore(s), {Count(OutsideOperationKinds.Grooves)} groove(s), {Count(OutsideOperationKinds.Mills)} mill(s)";
+        }
+
+        private static string DescribeOutsideOperationKinds(OutsideOperationKinds kinds) => string.Join(", ",
+            new[]
+            {
+                (Kind: OutsideOperationKinds.Bores, Name: "bores"),
+                (Kind: OutsideOperationKinds.Grooves, Name: "grooves"),
+                (Kind: OutsideOperationKinds.Mills, Name: "mills"),
+            }
+            .Where(k => kinds.HasFlag(k.Kind))
+            .Select(k => k.Name));
+
         /// <summary>
         /// Turns every XNC program of the part to the absolute <paramref name="targetTurn"/>
         /// (geometry in <see cref="XncProgramRotator"/>). All programs are rotated first and only
@@ -2660,24 +2816,6 @@ namespace XncOptimizerUI.Services
             return removed;
         }
 
-        private static Dictionary<string, double> ReadToolDiameters(XElement program)
-        {
-            var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var tool in program.Elements("tool"))
-            {
-                var name = tool.GetNameValue();
-
-                if (name != null
-                    && double.TryParse(tool.GetDValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out var diameter))
-                {
-                    map[name] = diameter; // last declaration wins, matching XncProgramReader
-                }
-            }
-
-            return map;
-        }
-
         private static string EnsureConversionTool(
             XElement anchor,
             double diameter,
@@ -2868,6 +3006,8 @@ namespace XncOptimizerUI.Services
         private string GetMillOffsetFileName() => GetSuffixedFileName("_off");
 
         private string GetToolOrderFileName() => GetSuffixedFileName("_to");
+
+        private string GetCleanFileName() => GetSuffixedFileName("_cln");
 
         /// <summary>
         /// Output file name for an operation: <c>name.project</c> becomes <c>name{suffix}.project</c>;

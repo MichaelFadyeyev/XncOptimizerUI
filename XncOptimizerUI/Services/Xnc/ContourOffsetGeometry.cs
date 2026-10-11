@@ -68,10 +68,11 @@ namespace XncOptimizerUI.Services.Xnc
         /// <paramref name="distance"/> to <paramref name="side"/> of its traversal direction, given by
         /// <paramref name="forward"/> (the <c>&lt;ms&gt;</c> contour's <c>fwd</c>). Open-path ends on or beyond
         /// <paramref name="outline"/> (the part's <c>dx</c>/<c>dy</c>) keep their distance from the
-        /// crossed edge. Returns <c>null</c> when the offset collapses or reverses part of the path.
+        /// crossed edge; without an <paramref name="outline"/> every open end is offset perpendicularly.
+        /// Returns <c>null</c> when the offset collapses or reverses part of the path.
         /// </summary>
         internal static OffsetLayout? TryOffset(
-            IReadOnlyList<Primitive> path, bool forward, Vec2 outline, double distance, MillOffsetSide side)
+            IReadOnlyList<Primitive> path, bool forward, Vec2? outline, double distance, MillOffsetSide side)
         {
             if (path.Count == 0)
             {
@@ -215,7 +216,7 @@ namespace XncOptimizerUI.Services.Xnc
             return new OffsetLayout(joints[^1]!.Out, primitives, joints.Select(j => j!.RoundJoin).ToList());
         }
 
-        private static OffsetLayout? JoinOpen(IReadOnlyList<Primitive> path, IReadOnlyList<Primitive> shifted, Vec2 outline)
+        private static OffsetLayout? JoinOpen(IReadOnlyList<Primitive> path, IReadOnlyList<Primitive> shifted, Vec2? outline)
         {
             var count = shifted.Count;
             var joints = Enumerable.Range(0, count - 1)
@@ -315,12 +316,13 @@ namespace XncOptimizerUI.Services.Xnc
         /// keeps its perpendicular distance from the outline edge the path crosses (it slides along
         /// a guide line parallel to that edge); an end inside the part is offset perpendicularly.
         /// </summary>
-        private static Vec2 ClipOpenEnd(Primitive original, Primitive shifted, bool atStart, Vec2 outline)
+        private static Vec2 ClipOpenEnd(Primitive original, Primitive shifted, bool atStart, Vec2? outline)
         {
             var point = atStart ? original.Start : original.End;
             var perpendicular = atStart ? shifted.Start : shifted.End;
 
-            if (CrossedEdgeGuide(point, atStart ? original.End : original.Start, outline) is not { } guideDirection)
+            if (outline is not { } edges
+                || CrossedEdgeGuide(point, atStart ? original.End : original.Start, edges) is not { } guideDirection)
             {
                 return perpendicular;
             }

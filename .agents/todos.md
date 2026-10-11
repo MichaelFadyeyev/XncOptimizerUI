@@ -100,3 +100,19 @@ every mill; `ContourOffsetGeometry.TravelsCounterClockwise` encodes the per-kind
 bore -> mill converter follows it as specified by the user: its round `<ms>` contour starts at
 the circle top and is declared counter-clockwise with four `<mac dir="false">` quarter arcs,
 `fwd="true"`, through bores `c="2"` (tool inside the hole).
+
+## Clean operations (outside operations removal)
+
+`OutsideOperationDetector` keeps (counts as unresolved or treats conservatively) what it cannot
+place exactly. Possible refinements:
+
+- **Edge-bore arrays** (`ac` > 1 on `bt`/`bb`/`bl`/`br`) are kept as unresolved: the step direction
+  of `av` on an edge is unconfirmed.
+- **Edge-groove `c`** is ignored - the through-thickness band is `z ± t`, so a groove just outside a
+  face with its width pointing away is kept.
+- **Lead-in/out** (`in`/`out`, `sxy`) moves of mills are not modelled.
+- **Mitred offset corners**: a `c="1"`/`"2"` mill's tool-centre path uses the offset's mitre joins
+  (up to 4× Ø/2 from the vertex), slightly more than the tool really sweeps at a sharp convex corner,
+  so such a mill passing a part corner from outside may be kept.
+- **`countBore`** on the XNC operation is not recalculated after removing bores (same as the other
+  conversions).

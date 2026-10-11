@@ -80,6 +80,17 @@ namespace XncOptimizerUI.Contracts
         bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds);
 
         /// <summary>
+        /// For every supplied part, removes from each XNC machining program the elements of the
+        /// selected <paramref name="kinds"/> (bores, grooves, mills) that lie outside the part volume
+        /// and never intersect it (see <see cref="Services.Xnc.OutsideOperationDetector"/>); a removed
+        /// <c>&lt;ms&gt;</c> takes its segments along, and tools no longer used are dropped. Every
+        /// removed element is listed in <paramref name="log"/>; elements whose geometry cannot be
+        /// resolved are kept and counted. The result is saved with the <c>_cln</c> suffix. Returns
+        /// <c>false</c> (and saves nothing) when nothing was removed.
+        /// </summary>
+        bool CleanOutsideOperations(ref string log, IList<Part> parts, OutsideOperationKinds kinds);
+
+        /// <summary>
         /// Turns the part with the given id to the absolute <paramref name="targetTurn"/>
         /// (<c>0..3</c> = 0°/90°/180°/270° clockwise): every XNC operation of the part gets
         /// <c>turn = targetTurn</c>, and its program is rotated from its own current turn - bores,
