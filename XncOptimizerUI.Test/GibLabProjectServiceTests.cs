@@ -1020,6 +1020,79 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SortToolDeclarations_MovesToolsToProgramStart_OrderedByKindThenDiameter()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-programs.project"));
+            var before = service.ReadXncPrograms(1).Single(p => p.Side);
+
+            var log = string.Empty;
+            var result = service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True);
+                Assert.That(service.FullPath, Does.EndWith("_to.project"));
+                Assert.That(File.Exists(service.FullPath), Is.True);
+                Assert.That(log, Does.Contain("sorted 2 program(s), 0 skipped"));
+                Assert.That(log, Does.Contain("Stored to:"));
+            });
+
+            var programs = service.ReadXncPrograms(1);
+            var front = programs.Single(p => p.Side);
+            var back = programs.Single(p => !p.Side);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(front.Tools.Select(t => t.Name), Is.EqualTo(new[] { "Bore8", "Bore10", "Cut3.2", "Mill6" }));
+                Assert.That(back.Tools.Select(t => t.Name), Is.EqualTo(new[] { "Bore8", "Bore15" }));
+
+                // the machining itself is unchanged, only the declarations moved
+                Assert.That(front.Bores.Select(b => (b.X, b.Y, b.Depth)), Is.EqualTo(before.Bores.Select(b => (b.X, b.Y, b.Depth))));
+                Assert.That(front.Groovings, Has.Count.EqualTo(before.Groovings.Count));
+                Assert.That(front.MillingContours.Select(c => c.Segments.Count), Is.EqualTo(before.MillingContours.Select(c => c.Segments.Count)));
+                Assert.That(front.MillingRectangles, Has.Count.EqualTo(before.MillingRectangles.Count));
+            });
+        }
+
+        [Test]
+        public void SortToolDeclarations_AlreadySorted_ReturnsFalseAndSavesNothing()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-programs.project"));
+
+            var log = string.Empty;
+            service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
+            var sortedPath = service.FullPath;
+
+            log = string.Empty;
+            var result = service.SortToolDeclarations(ref log, [new Part { Id = 1, Name = "panel" }]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No tool declarations reordered (skipped 0 program(s))."));
+                Assert.That(service.FullPath, Is.EqualTo(sortedPath), "nothing reordered => nothing saved");
+            });
+        }
+
+        [Test]
+        public void SortToolDeclarations_WithNoParts_ReturnsFalseAndLogs()
+        {
+            var service = CreateService();
+            service.OpenProject(CopyFixture("td-programs.project"));
+
+            var log = string.Empty;
+            var result = service.SortToolDeclarations(ref log, []);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("No parts selected for tool declaration sorting."));
+            });
+        }
+
+        [Test]
         public void ConvertBoresAndMills_BoresToMills_LargeBoreBecomesClosedFourArcContour()
         {
             var service = CreateService();

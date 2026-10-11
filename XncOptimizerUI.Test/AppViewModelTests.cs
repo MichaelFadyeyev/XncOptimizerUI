@@ -1276,6 +1276,112 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void SortToolDeclarations_PassesCheckedPartsToService_ThenReloads()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.SortToolDeclarations)));
+                Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
+                Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OpenProject)),
+                    "a successful sort reloads the project");
+            });
+        }
+
+        [Test]
+        public void SortToolDeclarations_AppliedGloballyWithoutFilter_PassesAllPartsEvenUnchecked()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.SortToolsGlobally = true;
+            _projectService.Calls.Clear();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EquivalentTo(new[] { 100, 101 }));
+        }
+
+        [Test]
+        public void SortToolDeclarations_AppliedGloballyWithFilter_PassesOnlyFilteredPartsEvenUnchecked()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var hidden = vm.Parts.Single(p => p.Id == 101);
+            hidden.IsSelected = true;
+            vm.FilterName = vm.Parts.Single(p => p.Id == 100).Name;
+            vm.SortToolsGlobally = true;
+            _projectService.Calls.Clear();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }),
+                "the filter decides the scope; a checked part hidden by the filter is not sorted");
+        }
+
+        [Test]
+        public void SortToolDeclarations_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
+        {
+            SeedTwoParts();
+            _projectService.SortToolDeclarationsResult = false;
+            _projectService.LogToAppend = "***\nNo tool declarations reordered (skipped 0 program(s)).";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.Parts[0].IsSelected = true;
+            _projectService.Calls.Clear();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            _dialogs.Received(1).ShowWarning("No tool declarations reordered (skipped 0 program(s)).", Arg.Any<string>());
+            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.SortToolDeclarations) }),
+                "a failed sort should not reload the project");
+        }
+
+        [Test]
+        public void SortToolDeclarations_WithNoPartsChecked_LogsAndDoesNotCallService()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            _projectService.Calls.Clear();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No parts checked for tool sorting!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void SortToolDeclarations_WithNoFileOpen_LogsAndDoesNothing()
+        {
+            var vm = CreateViewModel();
+
+            vm.SortToolDeclarationsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(_projectService.Calls, Is.Empty);
+            });
+        }
+
+        [Test]
         public void OffsetMillPaths_PassesCheckedPartsOffsetAndSideToService_ThenReloads()
         {
             SeedTwoParts();

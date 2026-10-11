@@ -426,6 +426,13 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// <summary>Mill path offset processes closed contours, rectangles and ellipses.</summary>
         [ObservableProperty]
         private bool _offsetClosedMillPaths = true;
+
+        /// <summary>
+        /// Tool sorting processes every part passing the current filter (all parts when no filter
+        /// is set), checked or not, instead of only the checked ones. Opt-in: off by default.
+        /// </summary>
+        [ObservableProperty]
+        private bool _sortToolsGlobally;
         #endregion
 
         #region Commands
@@ -732,6 +739,45 @@ namespace XncOptimizerUI.MVVM.ViewModels
             var logStart = log.Length;
 
             var success = _projectService.OptimizeMillTraversal(ref log, parts);
+
+            Log = log;
+
+            if (!success)
+            {
+                WarnFromLogDelta(logStart);
+                return;
+            }
+
+            LoadProject(_projectService.FullPath);
+            ReadItems();
+        }
+
+        [RelayCommand]
+        private void SortToolDeclarations()
+        {
+            if (FullPath == string.Empty)
+            {
+                Log += "No file selected!\n";
+                return;
+            }
+
+            // Globally: every part the grid shows - the filtered set, or all parts when unfiltered.
+            var parts = (SortToolsGlobally ? Parts : _allParts.Where(p => p.IsSelected))
+                .Select(p => p.Part)
+                .ToList();
+
+            if (parts.Count == 0)
+            {
+                Log += SortToolsGlobally
+                    ? "No parts pass the filter for tool sorting!\n"
+                    : "No parts checked for tool sorting!\n";
+                return;
+            }
+
+            var log = Log;
+            var logStart = log.Length;
+
+            var success = _projectService.SortToolDeclarations(ref log, parts);
 
             Log = log;
 

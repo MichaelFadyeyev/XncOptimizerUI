@@ -29,6 +29,7 @@ namespace XncOptimizerUI.Test.Fakes
         public bool ConvertGroovesAndMillsResult { get; set; } = true;
         public bool ConvertBoresAndMillsResult { get; set; } = true;
         public bool OptimizeMillTraversalResult { get; set; } = true;
+        public bool SortToolDeclarationsResult { get; set; } = true;
         public bool OffsetMillPathsResult { get; set; } = true;
         public bool UpdatePartResult { get; set; } = true;
         public bool RotatePartResult { get; set; } = true;
@@ -48,6 +49,7 @@ namespace XncOptimizerUI.Test.Fakes
         public BoreMillDirection? LastBoreMillDirection { get; private set; }
         public bool? LastBoreMillUseEllipse { get; private set; }
         public IList<Part>? LastMillTraversalParts { get; private set; }
+        public IList<Part>? LastToolSortParts { get; private set; }
         public IList<Part>? LastMillOffsetParts { get; private set; }
         public double? LastMillOffset { get; private set; }
         public MillOffsetSide? LastMillOffsetSide { get; private set; }
@@ -113,6 +115,15 @@ namespace XncOptimizerUI.Test.Fakes
             log += LogToAppend;
 
             return OptimizeMillTraversalResult;
+        }
+
+        public bool SortToolDeclarations(ref string log, IList<Part> parts)
+        {
+            Calls.Add(nameof(SortToolDeclarations));
+            LastToolSortParts = parts;
+            log += LogToAppend;
+
+            return SortToolDeclarationsResult;
         }
 
         public bool OffsetMillPaths(ref string log, IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)

@@ -188,6 +188,9 @@ rewrites one attribute of the `variableIndex`-th `<var>` (rules in `Services/Xnc
 
 Tools are declared inline, just before the elements that use them, and re-declared per group.
 No length / tool-number / spindle data is present. `d` is always a numeric literal.
+"Sort tools" (`XncToolDeclarationSorter`) hoists all declarations to the program start, ordered
+`Bore` - `Cut` - `Mill` by name prefix, then by `d` ascending; it is safe because a tool's `d`
+never depends on symbols, unless a name is re-declared with another `d` (then skipped).
 
 ### 6.2 Bores
 

@@ -51,6 +51,17 @@ namespace XncOptimizerUI.Contracts
         bool OptimizeMillTraversal(ref string log, IList<Part> parts);
 
         /// <summary>
+        /// For every supplied part, moves the <c>&lt;tool&gt;</c> declarations of each XNC
+        /// machining program to the start of the program, before every element that uses them,
+        /// ordered by kind (<c>Bore</c> - <c>Cut</c> - <c>Mill</c> name prefix, other names last),
+        /// then by diameter ascending. Duplicate declarations of one tool collapse into one.
+        /// Programs where a tool name is declared with different diameters, a diameter is not a
+        /// number, or a declaration sits inside a milling contour are left untouched and logged as
+        /// skipped. Returns <c>false</c> (and saves nothing) when nothing was reordered.
+        /// </summary>
+        bool SortToolDeclarations(ref string log, IList<Part> parts);
+
+        /// <summary>
         /// For every supplied part, shifts the tool traversal path of every mill (open and closed
         /// <c>&lt;ms&gt;</c> contours, pockets, <c>&lt;mr&gt;</c> rectangles, <c>&lt;me&gt;</c>
         /// ellipses) in each XNC machining program by <paramref name="offset"/> mm to the

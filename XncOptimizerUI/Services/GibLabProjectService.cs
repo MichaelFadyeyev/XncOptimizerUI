@@ -869,6 +869,88 @@ namespace XncOptimizerUI.Services
         }
 
         /// <summary>
+        /// Moves the tool declarations of every XNC program of the supplied parts to the start of
+        /// the program, ordered Bore - Cut - Mill, then by diameter ascending (rules in
+        /// <see cref="XncToolDeclarationSorter"/>). Programs whose meaning would change are left
+        /// untouched and logged as skipped. Saves nothing and returns <c>false</c> when nothing
+        /// was reordered.
+        /// </summary>
+        public bool SortToolDeclarations(ref string log, IList<Part> parts)
+        {
+            if (parts == null || parts.Count == 0)
+            {
+                log += "***\nNo parts selected for tool declaration sorting.";
+                return false;
+            }
+
+            var xncOperations = GetXncOperations();
+
+            var totalSorted = 0;
+            var totalSkipped = 0;
+
+            try
+            {
+                foreach (var part in parts)
+                {
+                    var results = xncOperations
+                        .Where(op => op.GetPart()?.GetIdIntValue() == part.Id && op.GetProgram() != null)
+                        .Select(SortToolDeclarationsInOperation)
+                        .ToList();
+
+                    var sorted = results.Count(r => r.Sorted);
+                    var skipped = results.Where(r => r.Skipped).ToList();
+
+                    if (sorted > 0 || skipped.Count > 0)
+                    {
+                        log += $"Tool order: \"{part.Name}\" (id={part.Id}): sorted {sorted} program(s), {skipped.Count} skipped\n";
+                    }
+
+                    log += string.Concat(skipped
+                        .SelectMany(r => r.Problems)
+                        .Select(problem => $"  skipped: {problem}\n"));
+
+                    totalSorted += sorted;
+                    totalSkipped += skipped.Count;
+                }
+            }
+            catch (Exception e)
+            {
+                log += $"***\n{e.Message}";
+                return false;
+            }
+
+            if (totalSorted == 0)
+            {
+                log += $"***\nNo tool declarations reordered (skipped {totalSkipped} program(s)).";
+                return false;
+            }
+
+            AppendDescription("sorted tool declarations");
+
+            var result = GetToolOrderFileName();
+
+            _fullPath = Path.Combine(_path, result);
+            _doc!.Save(_fullPath);
+
+            log += $"***\nTool declaration sorting complete: sorted {totalSorted} program(s), skipped {totalSkipped}. Stored to: {_fullPath}";
+
+            return true;
+        }
+
+        private static XncToolDeclarationSorter.Result SortToolDeclarationsInOperation(XElement operation)
+        {
+            var programXml = LoadProgramDocument(operation);
+            var result = XncToolDeclarationSorter.SortInProgram(ProgramRoot(programXml));
+
+            if (result.Sorted)
+            {
+                operation.GetProgram()!.Value = SerializeProgram(programXml);
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Shifts every mill path of the selected <paramref name="kinds"/> in the XNC programs of
         /// the supplied parts by <paramref name="offset"/> to the <paramref name="side"/> of its
         /// traversal direction (geometry in <see cref="MillPathOffsetter"/>). Saves nothing and
@@ -2784,6 +2866,8 @@ namespace XncOptimizerUI.Services
         private string GetMillOrderFileName() => GetSuffixedFileName("_mo");
 
         private string GetMillOffsetFileName() => GetSuffixedFileName("_off");
+
+        private string GetToolOrderFileName() => GetSuffixedFileName("_to");
 
         /// <summary>
         /// Output file name for an operation: <c>name.project</c> becomes <c>name{suffix}.project</c>;

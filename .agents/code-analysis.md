@@ -15,8 +15,8 @@ Root `<project>` containing `<good typeId="product">` (finished product, holding
 
 ## Core abstractions & services
 
-- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `GetPartsWithXncTurnDiscordance`, `ReplaceXncPrograms`, `UpdateBore`, `UpdateVariable`, `ConvertGroovesAndMills`, `ConvertBoresAndMills`, `OptimizeMillTraversal`, `OffsetMillPaths`, `RotatePart`, `FullPath`), implemented by `GibLabProjectService`.
-- **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), mill traversal optimization (`OptimizeMillTraversal`), mill path offset (`OffsetMillPaths`, geometry in `Services/Xnc/MillPathOffsetter.cs` + `PlanarGeometry.cs`), and part rotation (`RotatePart`, geometry in `Services/Xnc/XncProgramRotator.cs`). Helpers shared by the rewriters (symbol seeding, expression evaluation, arc-centre reconstruction, `FormatNumber`/`SetNumber` for writing recalculated values) live in `Services/Xnc/XncProgramMath.cs`; output file names come from `GetSuffixedFileName`. Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
+- **`XncOptimizerUI.Contracts.IProjectService`** — abstraction for all XML manipulation and file I/O (`OpenProject`, `CloseProject`, `SaveProject`, `GroupIdenticalElements`, `PrepForSplitAlongX`, `UpdatePart`, `ReadParts`/`ReadBands`/`ReadSheets`, `ReadXncPrograms`, `GetXncProgramsCount`, `GetPartsWithXncTurnDiscordance`, `ReplaceXncPrograms`, `UpdateBore`, `UpdateVariable`, `ConvertGroovesAndMills`, `ConvertBoresAndMills`, `OptimizeMillTraversal`, `SortToolDeclarations`, `OffsetMillPaths`, `RotatePart`, `FullPath`), implemented by `GibLabProjectService`.
+- **`Services/GibLabProjectService.cs`** — contains the XML/document logic and XNC program reading (`ReadXncPrograms`), XNC program copying (`ReplaceXncPrograms`), XNC operation counting (`GetXncProgramsCount`), groove ⇄ mill conversion (`ConvertGroovesAndMills`), mill traversal optimization (`OptimizeMillTraversal`), tool declaration sorting (`SortToolDeclarations`, rules in `Services/Xnc/XncToolDeclarationSorter.cs`), mill path offset (`OffsetMillPaths`, geometry in `Services/Xnc/MillPathOffsetter.cs` + `PlanarGeometry.cs`), and part rotation (`RotatePart`, geometry in `Services/Xnc/XncProgramRotator.cs`). Helpers shared by the rewriters (symbol seeding, expression evaluation, arc-centre reconstruction, `FormatNumber`/`SetNumber` for writing recalculated values) live in `Services/Xnc/XncProgramMath.cs`; output file names come from `GetSuffixedFileName`. Uses `Services/Xnc/XncProgramReader.cs` + `XncExpressionEvaluator.cs` + `XncSymbolTable.cs` for program parsing (see [[project-file-processing-skill]]).
 - **`IConfigService`**, **`IDialogService`** — injected abstractions (formerly static/modal classes), replacing the old `ConfigService` static methods and direct `MessageBox`/`SaveFileDialog` calls with testable dependencies.
 - **`Extensions/XContainersExtensions.cs`** — null-safe getters/setters for XML attributes: typed accessors (`GetLengthDecimalValue`, `GetIdIntValue`, `GetElbIdIntValue` for `@operation#<id>` parsing, `GetProgramValue`, `GetSideValue`, etc.), and mutation methods (`SetLengthValue`, `SetWidthValue`, ...) to support in-place editing.
 
@@ -124,6 +124,21 @@ axis-parallel milling contours per XNC face and tool using a greedy nearest-neig
 reversing passes as needed to form a serpentine path. Arcs, multi-segment contours, pockets,
 and `<mr>` rectangles remain in place and are counted as ignored. Nothing reordered ⇒ returns
 `false`, saves nothing. Output is `_mo.project` with collision numbering and an audit description.
+
+**Sort tools** — for checked parts, or, when the "Apply globally / filtered" checkbox under the
+button is set (`AppViewModel.SortToolsGlobally`, off by default, not persisted), for every part
+the grid shows (`AppViewModel.Parts`: the filtered set, all parts when no filter is set),
+checked or not - a checked part hidden by the filter is then left out; moves every `<tool>` declaration of each XNC program to
+the program start (before `<var>`s and every element using it), ordered by kind from the name
+prefix (`Bore` - `Cut` - `Mill`, case-insensitive, other names last; kind follows the name, not
+the use - a `Bore10` cutting an `<ms>` still ranks as a bore), then by `d` ascending, then by
+name. Repeated identical declarations collapse into the first one. A program is skipped
+(untouched, reason logged) when one tool name is declared with different `d` values, a `d` is
+not numeric, or a `<tool>` sits between a contour element and a following segment (removing it
+would join the segments to the previous contour). Nothing reordered ⇒ returns `false`, saves
+nothing. Output is `_to.project` with collision numbering and an audit description.
+`GibLabProjectService.SortToolDeclarations(ref string log, IList<Part> parts)` →
+`Services/Xnc/XncToolDeclarationSorter.SortInProgram`.
 
 **Offset mill path** — for checked parts, shifts every mill in every XNC program by the
 distance typed next to the "Offset mill path" button (mm, > 0) to the right (`R`) or left (`L`)
