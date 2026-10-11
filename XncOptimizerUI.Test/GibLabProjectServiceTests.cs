@@ -480,6 +480,23 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void PrepForSplitAlongX_FindsXncProgramsByPartIdNotByName()
+        {
+            // The XNC operation's typeName no longer matches the part name (e.g. renamed in GibLab).
+            var (service, part) = OpenWithXncTypeName("unrelated operation name");
+            var log = string.Empty;
+
+            service.PrepForSplitAlongX(ref log, [part.Id.ToString(CultureInfo.InvariantCulture)]);
+
+            var operation = XncOperationsOf(XDocument.Load(service.FullPath), part.Id).First();
+            var program = XDocument.Parse(operation.Attribute("program")!.Value).Root!;
+            var expectedWidth = part.Width * 2 + 4.0m;
+
+            Assert.That((string?)program.Attribute("dy"), Is.EqualTo(expectedWidth.ToString(CultureInfo.InvariantCulture)),
+                "the part's program must be resized with the part");
+        }
+
+        [Test]
         public void PrepForSplitAlongX_UsesInjectedSawWidth()
         {
             var service = OpenAndRead(CreateService(), _projectPath);

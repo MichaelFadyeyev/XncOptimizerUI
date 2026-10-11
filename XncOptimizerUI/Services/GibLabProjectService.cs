@@ -373,7 +373,7 @@ namespace XncOptimizerUI.Services
 
                     part.Attribute("count")!.SetValue(newCount);
 
-                    var partXncOperations = _xncOperations.Where(x => x.Attribute("typeName")!.Value == name).ToList();
+                    var partXncOperations = _xncOperations.Where(x => x.GetPart()?.GetIdValue() == part.GetIdValue()).ToList();
 
                     foreach (var xncOperation in partXncOperations)
                     {
