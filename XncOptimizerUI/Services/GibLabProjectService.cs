@@ -314,25 +314,12 @@ namespace XncOptimizerUI.Services
                 partOperations.Add(partId, groupCode);
             }
 
-            bool CheckBendsAreIdentical(XElement part1, XElement part2)
-            {
-                if (part1.GetElbMat() == null && part2.GetElbMat() != null
-                    || part1.GetElbMat() != null && part2.GetElbMat() == null) return false;
-
-                if (part1.GetEllMat() == null && part2.GetEllMat() != null
-                    || part1.GetEllMat() != null && part2.GetEllMat() == null) return false;
-
-                if (part1.GetElrMat() == null && part2.GetElrMat() != null
-                    || part1.GetElrMat() != null && part2.GetElrMat() == null) return false;
-
-                if (part1.GetEltMat() == null && part2.GetEltMat() != null
-                    || part1.GetEltMat() != null && part2.GetEltMat() == null) return false;
-
-                return (part1.GetElbMat() != null && part1.GetElbMatValue() == part2.GetElbMatValue() || true)
-                    && (part1.GetEllMat() != null && part1.GetEllMatValue() == part2.GetEllMatValue() || true)
-                    && (part1.GetElrMat() != null && part1.GetElrMatValue() == part2.GetElrMatValue() || true)
-                    && (part1.GetEltMat() != null && part1.GetEltMatValue() == part2.GetEltMatValue() || true);
-            }
+            // Same band material on every edge; an unbanded edge only matches an unbanded edge.
+            static bool CheckBendsAreIdentical(XElement part1, XElement part2) =>
+                part1.GetElbMatValue() == part2.GetElbMatValue()
+                && part1.GetEllMatValue() == part2.GetEllMatValue()
+                && part1.GetElrMatValue() == part2.GetElrMatValue()
+                && part1.GetEltMatValue() == part2.GetEltMatValue();
 
             #endregion
 

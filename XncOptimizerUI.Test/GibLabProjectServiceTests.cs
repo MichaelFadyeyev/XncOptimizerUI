@@ -120,6 +120,34 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void GroupIdenticalElements_WithDifferentBandMaterial_KeepsPartsInSeparateGroups()
+        {
+            // 301.07.03 and 301.08.03 share one program and are grouped as [01]; a different top
+            // band material on the second must split them (it was ignored: `|| true`).
+            var path = CopyFixture("td-execute-optimize.project");
+            var doc = XDocument.Load(path);
+            doc.Descendants("part")
+                .Single(p => (string?)p.Attribute("name") == "301.08.03.підріз.47=ПАН-ВРХ")
+                .SetAttributeValue("eltMat", "Крайка 42х2мм");
+            doc.Save(path);
+
+            var service = OpenAndRead(CreateService(), path);
+            var log = string.Empty;
+            Assert.That(service.GroupIdenticalElements(ref log), Is.True, log);
+
+            var names = XDocument.Load(service.FullPath).Descendants("part")
+                .Select(p => (string?)p.Attribute("name"))
+                .ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(names, Does.Contain("[01]301.07.03.підріз.47=ПАН-ВРХ"));
+                Assert.That(names, Has.None.EqualTo("[01]301.08.03.підріз.47=ПАН-ВРХ"));
+                Assert.That(names, Has.Some.EndsWith("]301.08.03.підріз.47=ПАН-ВРХ"));
+            });
+        }
+
+        [Test]
         public void GroupIdenticalElements_DoesNotTouchSourceFileOnDisk()
         {
             var path = CopyFixture("td-execute-optimize.project");
