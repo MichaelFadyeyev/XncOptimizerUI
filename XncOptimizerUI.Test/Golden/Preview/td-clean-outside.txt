@@ -1,0 +1,304 @@
+## part 2: operations 10
+Path F1M40,40L540,40 540,340 40,340 40,40z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1 | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1 | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1 | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1M40,40L540,40 540,340 40,340 40,40z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1M40,40L540,40 540,90 540,140 540,340 40,340 40,40z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1 | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path F1 | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path M30,90L30,290 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M38.5,90L38.5,290 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M37.5,90L37.5,290 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M-7.5,92.5L-7.5,137.5L37.5,137.5L37.5,92.5L-7.5,92.5 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M542.5,92.5L542.5,137.5L587.5,137.5L587.5,92.5L542.5,92.5 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M17.5,17.5L17.5,362.5L562.5,362.5L562.5,17.5L17.5,17.5 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M15,15L15,365L565,365L565,15L15,15 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M545,140A50,50,0,0,1,545,240 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M545,140A50,50,0,0,0,545,240 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M537.5,87.5L537.5,142.5L592.5,142.5L592.5,87.5L537.5,87.5 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M27.5,255L37.5,255L37.5,275L17.5,275L17.5,255L27.5,255 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M-10,179L1,179L1,201L-21,201L-21,179L-10,179 | stroke=Face thickness=3 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M290,175L291.635,175.032L293.263,175.128L294.877,175.288L296.47,175.511L298.036,175.796L299.567,176.142L301.057,176.547L302.5,177.01L303.889,177.528L305.219,178.1L306.484,178.722L307.678,179.393L308.796,180.11L309.834,180.869L310.787,181.666L311.651,182.5L312.422,183.366L313.097,184.26L313.673,185.178L314.148,186.118L314.52,187.074L314.786,188.042L314.946,189.019L315,190L314.946,190.981L314.786,191.958L314.52,192.926L314.148,193.882L313.673,194.822L313.097,195.74L312.422,196.634L311.651,197.5L310.787,198.334L309.834,199.131L308.796,199.89L307.678,200.607L306.484,201.278L305.219,201.9L303.889,202.472L302.5,202.99L301.057,203.453L299.567,203.858L298.036,204.204L296.47,204.489L294.877,204.712L293.263,204.872L291.635,204.968L290,205L288.365,204.968L286.737,204.872L285.123,204.712L283.53,204.489L281.964,204.204L280.433,203.858L278.943,203.453L277.5,202.99L276.111,202.472L274.781,201.9L273.516,201.278L272.322,200.607L271.204,199.89L270.166,199.131L269.213,198.334L268.349,197.5L267.578,196.634L266.903,195.74L266.327,194.822L265.852,193.882L265.48,192.926L265.214,191.958L265.054,190.981L265,190L265.054,189.019L265.214,188.042L265.48,187.074L265.852,186.118L266.327,185.178L266.903,184.26L267.578,183.366L268.349,182.5L269.213,181.666L270.166,180.869L271.204,180.11L272.322,179.393L273.516,178.722L274.781,178.1L276.111,177.528L277.5,177.01L278.943,176.547L280.433,176.142L281.964,175.796L283.53,175.511L285.123,175.288L286.737,175.128L288.365,175.032L290,175 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M595,181.34L596.122,182.012L597.218,182.719L598.283,183.457L599.313,184.223L600.302,185.014L601.248,185.826L602.145,186.656L602.99,187.5L603.78,188.355L604.511,189.217L605.179,190.082L605.783,190.947L606.319,191.808L606.785,192.662L607.179,193.503L607.5,194.33L607.746,195.138L607.915,195.925L608.009,196.686L608.024,197.418L607.963,198.118L607.825,198.784L607.61,199.412L607.321,200L606.956,200.545L606.52,201.045L606.012,201.497L605.436,201.901L604.794,202.253L604.089,202.553L603.323,202.799L602.5,202.99L601.624,203.126L600.697,203.206L599.726,203.229L598.712,203.195L597.661,203.105L596.577,202.958L595.465,202.756L594.33,202.5L593.176,202.19L592.009,201.828L590.833,201.415L589.653,200.953L588.475,200.445L587.304,199.891L586.144,199.296L585,198.66L583.878,197.988L582.782,197.281L581.717,196.543L580.687,195.777L579.698,194.986L578.752,194.174L577.855,193.344L577.01,192.5L576.22,191.645L575.489,190.783L574.821,189.918L574.217,189.053L573.681,188.192L573.215,187.338L572.821,186.497L572.5,185.67L572.254,184.862L572.085,184.075L571.991,183.314L571.976,182.582L572.037,181.882L572.175,181.216L572.39,180.588L572.679,180L573.044,179.455L573.48,178.955L573.988,178.503L574.564,178.099L575.206,177.747L575.911,177.447L576.677,177.201L577.5,177.01L578.376,176.874L579.303,176.794L580.274,176.771L581.288,176.805L582.339,176.895L583.423,177.042L584.535,177.244L585.67,177.5L586.824,177.81L587.991,178.172L589.167,178.585L590.347,179.047L591.525,179.555L592.696,180.109L593.856,180.704L595,181.34 | stroke=Face thickness=3 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M30,90L30,290 | stroke=CentreLine thickness=1 tag=MillTag
+Path M36,90L36,290 | stroke=CentreLine thickness=1 tag=MillTag
+Path M40,90L40,290 | stroke=CentreLine thickness=1 tag=MillTag
+Path M-10,90L-10,140L40,140L40,90L-10,90 | stroke=CentreLine thickness=1 tag=MillTag
+Path M540,90L540,140L590,140L590,90L540,90 | stroke=CentreLine thickness=1 tag=MillTag
+Path M15,15L15,365L565,365L565,15L15,15 | stroke=CentreLine thickness=1 tag=MillTag
+Path M15,15L15,365L565,365L565,15L15,15 | stroke=CentreLine thickness=1 tag=MillTag
+Path M545,140A50,50,0,0,1,545,240 | stroke=CentreLine thickness=1 tag=MillTag
+Path M545,140A50,50,0,0,0,545,240 | stroke=CentreLine thickness=1 tag=MillTag
+Path M540,90L540,140L590,140L590,90L540,90 | stroke=CentreLine thickness=1 tag=MillTag
+Path M27.5,252.5L40,252.5L40,277.5L15,277.5L15,252.5L27.5,252.5 | stroke=CentreLine thickness=1 tag=MillTag
+Path M-10,177.5L2.5,177.5L2.5,202.5L-22.5,202.5L-22.5,177.5L-10,177.5 | stroke=CentreLine thickness=1 tag=MillTag
+Path M290,175L291.635,175.032L293.263,175.128L294.877,175.288L296.47,175.511L298.036,175.796L299.567,176.142L301.057,176.547L302.5,177.01L303.889,177.528L305.219,178.1L306.484,178.722L307.678,179.393L308.796,180.11L309.834,180.869L310.787,181.666L311.651,182.5L312.422,183.366L313.097,184.26L313.673,185.178L314.148,186.118L314.52,187.074L314.786,188.042L314.946,189.019L315,190L314.946,190.981L314.786,191.958L314.52,192.926L314.148,193.882L313.673,194.822L313.097,195.74L312.422,196.634L311.651,197.5L310.787,198.334L309.834,199.131L308.796,199.89L307.678,200.607L306.484,201.278L305.219,201.9L303.889,202.472L302.5,202.99L301.057,203.453L299.567,203.858L298.036,204.204L296.47,204.489L294.877,204.712L293.263,204.872L291.635,204.968L290,205L288.365,204.968L286.737,204.872L285.123,204.712L283.53,204.489L281.964,204.204L280.433,203.858L278.943,203.453L277.5,202.99L276.111,202.472L274.781,201.9L273.516,201.278L272.322,200.607L271.204,199.89L270.166,199.131L269.213,198.334L268.349,197.5L267.578,196.634L266.903,195.74L266.327,194.822L265.852,193.882L265.48,192.926L265.214,191.958L265.054,190.981L265,190L265.054,189.019L265.214,188.042L265.48,187.074L265.852,186.118L266.327,185.178L266.903,184.26L267.578,183.366L268.349,182.5L269.213,181.666L270.166,180.869L271.204,180.11L272.322,179.393L273.516,178.722L274.781,178.1L276.111,177.528L277.5,177.01L278.943,176.547L280.433,176.142L281.964,175.796L283.53,175.511L285.123,175.288L286.737,175.128L288.365,175.032L290,175 | stroke=CentreLine thickness=1 tag=MillTag
+Path M595,181.34L596.122,182.012L597.218,182.719L598.283,183.457L599.313,184.223L600.302,185.014L601.248,185.826L602.145,186.656L602.99,187.5L603.78,188.355L604.511,189.217L605.179,190.082L605.783,190.947L606.319,191.808L606.785,192.662L607.179,193.503L607.5,194.33L607.746,195.138L607.915,195.925L608.009,196.686L608.024,197.418L607.963,198.118L607.825,198.784L607.61,199.412L607.321,200L606.956,200.545L606.52,201.045L606.012,201.497L605.436,201.901L604.794,202.253L604.089,202.553L603.323,202.799L602.5,202.99L601.624,203.126L600.697,203.206L599.726,203.229L598.712,203.195L597.661,203.105L596.577,202.958L595.465,202.756L594.33,202.5L593.176,202.19L592.009,201.828L590.833,201.415L589.653,200.953L588.475,200.445L587.304,199.891L586.144,199.296L585,198.66L583.878,197.988L582.782,197.281L581.717,196.543L580.687,195.777L579.698,194.986L578.752,194.174L577.855,193.344L577.01,192.5L576.22,191.645L575.489,190.783L574.821,189.918L574.217,189.053L573.681,188.192L573.215,187.338L572.821,186.497L572.5,185.67L572.254,184.862L572.085,184.075L571.991,183.314L571.976,182.582L572.037,181.882L572.175,181.216L572.39,180.588L572.679,180L573.044,179.455L573.48,178.955L573.988,178.503L574.564,178.099L575.206,177.747L575.911,177.447L576.677,177.201L577.5,177.01L578.376,176.874L579.303,176.794L580.274,176.771L581.288,176.805L582.339,176.895L583.423,177.042L584.535,177.244L585.67,177.5L586.824,177.81L587.991,178.172L589.167,178.585L590.347,179.047L591.525,179.555L592.696,180.109L593.856,180.704L595,181.34 | stroke=CentreLine thickness=1 tag=MillTag
+Path M30,90L30,290 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M38.5,90L38.5,290 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M37.5,90L37.5,290 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M-7.5,92.5L-7.5,137.5L37.5,137.5L37.5,92.5L-7.5,92.5 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M542.5,92.5L542.5,137.5L587.5,137.5L587.5,92.5L542.5,92.5 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M17.5,17.5L17.5,362.5L562.5,362.5L562.5,17.5L17.5,17.5 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M15,15L15,365L565,365L565,15L15,15 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M545,140A50,50,0,0,1,545,240 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M545,140A50,50,0,0,0,545,240 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M537.5,87.5L537.5,142.5L592.5,142.5L592.5,87.5L537.5,87.5 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M27.5,255L37.5,255L37.5,275L17.5,275L17.5,255L27.5,255 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M-10,179L1,179L1,201L-21,201L-21,179L-10,179 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M290,175L291.635,175.032L293.263,175.128L294.877,175.288L296.47,175.511L298.036,175.796L299.567,176.142L301.057,176.547L302.5,177.01L303.889,177.528L305.219,178.1L306.484,178.722L307.678,179.393L308.796,180.11L309.834,180.869L310.787,181.666L311.651,182.5L312.422,183.366L313.097,184.26L313.673,185.178L314.148,186.118L314.52,187.074L314.786,188.042L314.946,189.019L315,190L314.946,190.981L314.786,191.958L314.52,192.926L314.148,193.882L313.673,194.822L313.097,195.74L312.422,196.634L311.651,197.5L310.787,198.334L309.834,199.131L308.796,199.89L307.678,200.607L306.484,201.278L305.219,201.9L303.889,202.472L302.5,202.99L301.057,203.453L299.567,203.858L298.036,204.204L296.47,204.489L294.877,204.712L293.263,204.872L291.635,204.968L290,205L288.365,204.968L286.737,204.872L285.123,204.712L283.53,204.489L281.964,204.204L280.433,203.858L278.943,203.453L277.5,202.99L276.111,202.472L274.781,201.9L273.516,201.278L272.322,200.607L271.204,199.89L270.166,199.131L269.213,198.334L268.349,197.5L267.578,196.634L266.903,195.74L266.327,194.822L265.852,193.882L265.48,192.926L265.214,191.958L265.054,190.981L265,190L265.054,189.019L265.214,188.042L265.48,187.074L265.852,186.118L266.327,185.178L266.903,184.26L267.578,183.366L268.349,182.5L269.213,181.666L270.166,180.869L271.204,180.11L272.322,179.393L273.516,178.722L274.781,178.1L276.111,177.528L277.5,177.01L278.943,176.547L280.433,176.142L281.964,175.796L283.53,175.511L285.123,175.288L286.737,175.128L288.365,175.032L290,175 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M595,181.34L596.122,182.012L597.218,182.719L598.283,183.457L599.313,184.223L600.302,185.014L601.248,185.826L602.145,186.656L602.99,187.5L603.78,188.355L604.511,189.217L605.179,190.082L605.783,190.947L606.319,191.808L606.785,192.662L607.179,193.503L607.5,194.33L607.746,195.138L607.915,195.925L608.009,196.686L608.024,197.418L607.963,198.118L607.825,198.784L607.61,199.412L607.321,200L606.956,200.545L606.52,201.045L606.012,201.497L605.436,201.901L604.794,202.253L604.089,202.553L603.323,202.799L602.5,202.99L601.624,203.126L600.697,203.206L599.726,203.229L598.712,203.195L597.661,203.105L596.577,202.958L595.465,202.756L594.33,202.5L593.176,202.19L592.009,201.828L590.833,201.415L589.653,200.953L588.475,200.445L587.304,199.891L586.144,199.296L585,198.66L583.878,197.988L582.782,197.281L581.717,196.543L580.687,195.777L579.698,194.986L578.752,194.174L577.855,193.344L577.01,192.5L576.22,191.645L575.489,190.783L574.821,189.918L574.217,189.053L573.681,188.192L573.215,187.338L572.821,186.497L572.5,185.67L572.254,184.862L572.085,184.075L571.991,183.314L571.976,182.582L572.037,181.882L572.175,181.216L572.39,180.588L572.679,180L573.044,179.455L573.48,178.955L573.988,178.503L574.564,178.099L575.206,177.747L575.911,177.447L576.677,177.201L577.5,177.01L578.376,176.874L579.303,176.794L580.274,176.771L581.288,176.805L582.339,176.895L583.423,177.042L584.535,177.244L585.67,177.5L586.824,177.81L587.991,178.172L589.167,178.585L590.347,179.047L591.525,179.555L592.696,180.109L593.856,180.704L595,181.34 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Ellipse at (27.5, 87.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (30, 90) -> (34, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (30, 90) -> (26, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (30, 90) -> (30, 94) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (30, 90) -> (30, 86) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (36, 87.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (38.5, 90) -> (42.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (38.5, 90) -> (34.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (38.5, 90) -> (38.5, 94) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (38.5, 90) -> (38.5, 86) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (35, 87.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (37.5, 90) -> (41.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (37.5, 90) -> (33.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (37.5, 90) -> (37.5, 94) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (37.5, 90) -> (37.5, 86) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (-10, 90) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (-7.5, 92.5) -> (-3.5, 92.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (-7.5, 92.5) -> (-11.5, 92.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (-7.5, 92.5) -> (-7.5, 96.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (-7.5, 92.5) -> (-7.5, 88.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (540, 90) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (542.5, 92.5) -> (546.5, 92.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (542.5, 92.5) -> (538.5, 92.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (542.5, 92.5) -> (542.5, 96.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (542.5, 92.5) -> (542.5, 88.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (15, 15) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (17.5, 17.5) -> (21.5, 17.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (17.5, 17.5) -> (13.5, 17.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (17.5, 17.5) -> (17.5, 21.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (17.5, 17.5) -> (17.5, 13.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (12.5, 12.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (15, 15) -> (19, 15) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (15, 15) -> (11, 15) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (15, 15) -> (15, 19) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (15, 15) -> (15, 11) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (542.5, 137.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (545, 140) -> (549, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (541, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (545, 144) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (545, 136) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (542.5, 137.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (545, 140) -> (549, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (541, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (545, 144) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (545, 140) -> (545, 136) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (535, 85) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (537.5, 87.5) -> (541.5, 87.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (537.5, 87.5) -> (533.5, 87.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (537.5, 87.5) -> (537.5, 91.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (537.5, 87.5) -> (537.5, 83.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (25, 252.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (27.5, 255) -> (31.5, 255) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (27.5, 255) -> (23.5, 255) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (27.5, 255) -> (27.5, 259) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (27.5, 255) -> (27.5, 251) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (-11.5, 177.5) size 3 x 3 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (-10, 179) -> (-7, 179) | stroke=SideTrue thickness=1 tag=MillTag
+Line (-10, 179) -> (-13, 179) | stroke=SideTrue thickness=1 tag=MillTag
+Line (-10, 179) -> (-10, 182) | stroke=SideTrue thickness=1 tag=MillTag
+Line (-10, 179) -> (-10, 176) | stroke=SideTrue thickness=1 tag=MillTag
+Ellipse at (287.5, 172.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (290, 175) -> (294, 175) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (290, 175) -> (286, 175) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (290, 175) -> (290, 179) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (290, 175) -> (290, 171) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (593.5, 179.84) size 3 x 3 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (595, 181.34) -> (598, 181.34) | stroke=SideTrue thickness=1 tag=MillTag
+Line (595, 181.34) -> (592, 181.34) | stroke=SideTrue thickness=1 tag=MillTag
+Line (595, 181.34) -> (595, 184.34) | stroke=SideTrue thickness=1 tag=MillTag
+Line (595, 181.34) -> (595, 178.34) | stroke=SideTrue thickness=1 tag=MillTag
+Ellipse at (88, 88) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (90, 90) -> (93.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (86.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 93.5) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 86.5) | stroke=SideTrue thickness=1
+Rectangle at (88, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 28.5) -> (90, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (88, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 343.5) -> (90, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 90) -> (551.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (35.5, 88) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (37.5, 90) -> (41, 90) | stroke=SideTrue thickness=1
+Line (37.5, 90) -> (34, 90) | stroke=SideTrue thickness=1
+Line (37.5, 90) -> (37.5, 93.5) | stroke=SideTrue thickness=1
+Line (37.5, 90) -> (37.5, 86.5) | stroke=SideTrue thickness=1
+Rectangle at (35.5, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (37.5, 28.5) -> (37.5, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (35.5, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (37.5, 343.5) -> (37.5, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 90) -> (551.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (36.5, 138) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (38.5, 140) -> (42, 140) | stroke=SideTrue thickness=1
+Line (38.5, 140) -> (35, 140) | stroke=SideTrue thickness=1
+Line (38.5, 140) -> (38.5, 143.5) | stroke=SideTrue thickness=1
+Line (38.5, 140) -> (38.5, 136.5) | stroke=SideTrue thickness=1
+Rectangle at (36.5, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38.5, 28.5) -> (38.5, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (36.5, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38.5, 343.5) -> (38.5, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 138) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 140) -> (36.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 138) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 140) -> (551.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (36, 188) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (38, 190) -> (41.5, 190) | stroke=SideTrue thickness=1
+Line (38, 190) -> (34.5, 190) | stroke=SideTrue thickness=1
+Line (38, 190) -> (38, 193.5) | stroke=SideTrue thickness=1
+Line (38, 190) -> (38, 186.5) | stroke=SideTrue thickness=1
+Rectangle at (36, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38, 28.5) -> (38, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (36, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38, 343.5) -> (38, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 188) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 190) -> (36.5, 190) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 188) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 190) -> (551.5, 190) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (28.5, 33) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (30.5, 35) -> (34, 35) | stroke=SideTrue thickness=1
+Line (30.5, 35) -> (27, 35) | stroke=SideTrue thickness=1
+Line (30.5, 35) -> (30.5, 38.5) | stroke=SideTrue thickness=1
+Line (30.5, 35) -> (30.5, 31.5) | stroke=SideTrue thickness=1
+Rectangle at (40, 33) size 10 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38.5, 35) -> (51.5, 35) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (20.5, 188) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (22.5, 190) -> (26, 190) | stroke=SideTrue thickness=1
+Line (22.5, 190) -> (19, 190) | stroke=SideTrue thickness=1
+Line (22.5, 190) -> (22.5, 193.5) | stroke=SideTrue thickness=1
+Line (22.5, 190) -> (22.5, 186.5) | stroke=SideTrue thickness=1
+Rectangle at (40, 188) size 10 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (38.5, 190) -> (51.5, 190) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (38, 288) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (40, 290) -> (43.5, 290) | stroke=SideTrue thickness=1
+Line (40, 290) -> (36.5, 290) | stroke=SideTrue thickness=1
+Line (40, 290) -> (40, 293.5) | stroke=SideTrue thickness=1
+Line (40, 290) -> (40, 286.5) | stroke=SideTrue thickness=1
+Rectangle at (38, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (40, 28.5) -> (40, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (38, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (40, 343.5) -> (40, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 288) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 290) -> (36.5, 290) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 288) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 290) -> (551.5, 290) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (288, 28.5) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (290, 30.5) -> (293.5, 30.5) | stroke=SideTrue thickness=1
+Line (290, 30.5) -> (286.5, 30.5) | stroke=SideTrue thickness=1
+Line (290, 30.5) -> (290, 34) | stroke=SideTrue thickness=1
+Line (290, 30.5) -> (290, 27) | stroke=SideTrue thickness=1
+Rectangle at (288, 40) size 4 x 10 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (290, 38.5) -> (290, 51.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (13, 238) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (15, 240) -> (18.5, 240) | stroke=SideTrue thickness=1
+Line (15, 240) -> (11.5, 240) | stroke=SideTrue thickness=1
+Line (15, 240) -> (15, 243.5) | stroke=SideTrue thickness=1
+Line (15, 240) -> (15, 236.5) | stroke=SideTrue thickness=1
+Rectangle at (13, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (15, 28.5) -> (15, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (13, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (15, 343.5) -> (15, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 238) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 240) -> (36.5, 240) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 238) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 240) -> (551.5, 240) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Polygon [35,189 545,189 545,191 35,191] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (33.5, 190) -> (546.5, 190) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (35, 32.5) size 510 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (35, 345) size 510 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (32.5, 189) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (545, 189) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (31, 190) -> (36.5, 190) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (543.5, 190) -> (549, 190) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [40,36.5 540,36.5 540,38.5 40,38.5] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (38.5, 37.5) -> (541.5, 37.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (40, 32.5) size 500 x 2.5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (40, 345) size 500 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (32.5, 36.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (545, 36.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (31, 37.5) -> (36.5, 37.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (543.5, 37.5) -> (549, 37.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [40,39.5 540,39.5 540,41.5 40,41.5] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (38.5, 39.5) -> (541.5, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (40, 32.5) size 500 x 2.5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (40, 345) size 500 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (32.5, 39.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (545, 39.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (31, 39.5) -> (36.5, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (543.5, 39.5) -> (549, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [40,37.5 540,37.5 540,39.5 40,39.5] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (38.5, 39.5) -> (541.5, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (40, 32.5) size 500 x 2.5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (40, 345) size 500 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (32.5, 37.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (545, 37.5) size 2.5 x 2 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (31, 39.5) -> (36.5, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (543.5, 39.5) -> (549, 39.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [590,29.5 690,29.5 690,31.5 590,31.5] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (588.5, 30.5) -> (691.5, 30.5) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [590,348.5 690,348.5 690,350.5 590,350.5] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (590, 40) size 100 x 2.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [31.5,40 31.5,42.5 29.5,42.5 29.5,40] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Line (30.5, 38.5) -> (30.5, 44) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [550.5,40 550.5,42.5 548.5,42.5 548.5,40] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (549.5, 38.5) -> (549.5, 44) | stroke=SideTrue thickness=1 dash=[3 3]
+
+## part 3: operations 11
+Ellipse at (88, 88) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (90, 90) -> (93.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (86.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 93.5) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 86.5) | stroke=SideTrue thickness=1
+Rectangle at (88, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 28.5) -> (90, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (88, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 343.5) -> (90, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 90) -> (551.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (28, 88) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (30, 90) -> (33.5, 90) | stroke=SideTrue thickness=1
+Line (30, 90) -> (26.5, 90) | stroke=SideTrue thickness=1
+Line (30, 90) -> (30, 93.5) | stroke=SideTrue thickness=1
+Line (30, 90) -> (30, 86.5) | stroke=SideTrue thickness=1
+Rectangle at (28, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (30, 28.5) -> (30, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (28, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (30, 343.5) -> (30, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 90) -> (551.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+
+## part 4: operations 12
+Ellipse at (88, 88) size 4 x 4 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (90, 90) -> (93.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (86.5, 90) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 93.5) | stroke=SideTrue thickness=1
+Line (90, 90) -> (90, 86.5) | stroke=SideTrue thickness=1
+Rectangle at (88, 30) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 28.5) -> (90, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (88, 345) size 4 x 5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (90, 343.5) -> (90, 351.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (30, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (28.5, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (545, 88) size 5 x 4 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (543.5, 90) -> (551.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+

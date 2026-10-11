@@ -1,0 +1,28 @@
+## part 5: operations 6
+Ellipse at (105, 130) size 20 x 20 | stroke=SideTrue thickness=2 fill=ThroughFill tag=BoreTag
+Line (115, 140) -> (126.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (115, 140) -> (103.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (115, 140) -> (115, 151.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (115, 140) -> (115, 128.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (105, 25) size 20 x 10 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (115, 23.5) -> (115, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (105, 195) size 20 x 10 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (115, 193.5) -> (115, 206.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (25, 130) size 10 x 20 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (23.5, 140) -> (36.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (345, 130) size 10 x 20 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (343.5, 140) -> (356.5, 140) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Ellipse at (255, 80) size 20 x 20 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (265, 90) -> (276.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (265, 90) -> (253.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (265, 90) -> (265, 101.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Line (265, 90) -> (265, 78.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (255, 27.5) size 20 x 7.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (265, 26) -> (265, 36.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (255, 195) size 20 x 7.5 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (265, 193.5) -> (265, 204) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (27.5, 80) size 7.5 x 20 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (26, 90) -> (36.5, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+Rectangle at (345, 80) size 7.5 x 20 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (343.5, 90) -> (354, 90) | stroke=SideTrue thickness=1 dash=[1.5 1.5]
+

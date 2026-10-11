@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-using System.Text;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
@@ -12,18 +10,14 @@ namespace XncOptimizerUI.Test
     /// <summary>
     /// Characterization ("golden file") tests: every document-changing operation of
     /// <see cref="GibLabProjectService"/> runs on a fixture, and the saved <c>.project</c>
-    /// plus the log are compared with the snapshots in <c>Golden/</c>. They lock in the
-    /// exact output while the service is refactored; a difference means behaviour changed.
-    /// <para>
-    /// A missing snapshot is written and the test fails, so new cases must be reviewed and
-    /// committed. To deliberately accept changed output, run with the environment variable
-    /// <c>XNC_UPDATE_GOLDEN=1</c>, then review the diff of <c>Golden/</c> before committing.
-    /// </para>
+    /// plus the log are compared with the snapshots in <c>Golden/Operations/</c>. They lock in
+    /// the exact output while the service is refactored; a difference means behaviour changed.
+    /// See <see cref="GoldenSnapshot"/> for creating and accepting snapshots.
     /// </summary>
     [TestFixture]
-    public class GoldenFileTests : TempFixtureTestBase
+    public class OperationGoldenTests : TempFixtureTestBase
     {
-        private const string UpdateVariable = "XNC_UPDATE_GOLDEN";
+        private const string SnapshotFolder = "Operations";
         private const string TempPlaceholder = "<temp>";
 
         /// <summary>Frozen so the description timestamp written into saved XML is deterministic.</summary>
@@ -247,36 +241,11 @@ namespace XncOptimizerUI.Test
 
         /// <summary>Unifies line endings and hides the per-test temp directory.</summary>
         private string Normalize(string text) =>
-            text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            GoldenSnapshot.NormalizeLineEndings(text)
                 .Replace(TempDirectory, TempPlaceholder, StringComparison.OrdinalIgnoreCase);
 
-        private static void AssertMatchesSnapshot(string fileName, string actual)
-        {
-            var path = Path.Combine(GoldenDirectory(), fileName);
-            var update = Environment.GetEnvironmentVariable(UpdateVariable) == "1";
-
-            if (update || !File.Exists(path))
-            {
-                Directory.CreateDirectory(GoldenDirectory());
-                File.WriteAllText(path, actual, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-                if (!update)
-                {
-                    Assert.Fail($"Golden snapshot {fileName} did not exist and was created; review and commit it.");
-                }
-
-                return;
-            }
-
-            var expected = File.ReadAllText(path).Replace("\r\n", "\n", StringComparison.Ordinal);
-
-            Assert.That(actual, Is.EqualTo(expected),
-                $"{fileName} differs from its golden snapshot. If the change is intended, rerun with {UpdateVariable}=1 and review the diff.");
-        }
-
-        /// <summary><c>Golden/</c> next to this source file, so snapshots are read from and written to the repository.</summary>
-        private static string GoldenDirectory([CallerFilePath] string sourceFile = "") =>
-            Path.Combine(Path.GetDirectoryName(sourceFile)!, "Golden");
+        private static void AssertMatchesSnapshot(string fileName, string actual) =>
+            GoldenSnapshot.AssertMatches(Path.Combine(SnapshotFolder, fileName), actual);
 
         private static string Stem(string fixture) =>
             Path.GetFileNameWithoutExtension(fixture).Replace("td-", string.Empty, StringComparison.Ordinal);

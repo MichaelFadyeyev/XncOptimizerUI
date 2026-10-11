@@ -1,0 +1,11 @@
+## part 2: operations 2
+Path F1M165,180C159.477,180,155,184.477,155,190C155,195.523,159.477,200,165,200C170.523,200,175,195.523,175,190C175,184.477,170.523,180,165,180z M40,40L540,40 540,340 40,340 40,40z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path M176.5,190A11.5,11.5,0,0,0,153.5,190A11.5,11.5,0,0,0,176.5,190 | stroke=Face thickness=3 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M175,190A10,10,0,0,0,155,190A10,10,0,0,0,175,190 | stroke=CentreLine thickness=1 tag=MillTag
+Path M176.5,190A11.5,11.5,0,0,0,153.5,190A11.5,11.5,0,0,0,176.5,190 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Ellipse at (175, 188.5) size 3 x 3 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (176.5, 190) -> (179.5, 190) | stroke=SideTrue thickness=1 tag=MillTag
+Line (176.5, 190) -> (173.5, 190) | stroke=SideTrue thickness=1 tag=MillTag
+Line (176.5, 190) -> (176.5, 193) | stroke=SideTrue thickness=1 tag=MillTag
+Line (176.5, 190) -> (176.5, 187) | stroke=SideTrue thickness=1 tag=MillTag
+

@@ -1,0 +1,20 @@
+## part 2: operations 2, 3
+Path F1M40,40L5040,40 5040,252.5 40,252.5 40,40z | stroke=none thickness=1 fill=ThroughCutOff no-hit-test tag=MillTag
+Path F1M115,65L140,65 165,65 165,115 115,115 115,65z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path M35,250L5045,250 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M140,67.5L162.5,67.5L162.5,112.5L117.5,112.5L117.5,67.5L140,67.5 | stroke=Face thickness=5 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M35,252.5L5045,252.5 | stroke=CentreLine thickness=1 tag=MillTag
+Path M140,65L165,65L165,115L115,115L115,65L140,65 | stroke=CentreLine thickness=1 tag=MillTag
+Path M35,250L5045,250 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Path M140,67.5L162.5,67.5L162.5,112.5L117.5,112.5L117.5,67.5L140,67.5 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Ellipse at (32.5, 247.5) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (35, 250) -> (39, 250) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (35, 250) -> (31, 250) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (35, 250) -> (35, 254) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (35, 250) -> (35, 246) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Ellipse at (137.5, 65) size 5 x 5 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (140, 67.5) -> (144, 67.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (140, 67.5) -> (136, 67.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (140, 67.5) -> (140, 71.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+Line (140, 67.5) -> (140, 63.5) | stroke=SideTrue thickness=1 dash=[1.5 1.5] tag=MillTag
+
