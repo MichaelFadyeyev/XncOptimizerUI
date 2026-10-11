@@ -474,7 +474,6 @@
     <part id="482" />
     <part id="483" />
     <part id="484" />
-    <part id="484" />
   </operation>
   <operation elWastePRC="0.13" elCalcMat="true" w="23" t="2" elRoundMat="1" elRoundLength="20" elMinDimDetail="0" printable="true" startNewPage="true" costMaterial="0" costOperation="0" costTotal="0" elColor="#000000" elLength="397.81" elLineMark="0" elPreMillingEqual="false" elSymbol="A" id="1" tool1="5" typeId="EL">
     <material id="6" count="450" />
@@ -1061,7 +1060,6 @@
     <part id="454" />
     <part id="455" />
     <part id="456" />
-    <part id="485" />
     <part id="485" />
   </operation>
   <operation elWastePRC="0.13" elCalcMat="true" w="43" t="2" elRoundMat="1" elRoundLength="20" elMinDimDetail="0" printable="true" startNewPage="true" costMaterial="0" costOperation="0" costTotal="0" elColor="#000000" elLength="30.67" elLineMark="0" elPreMillingEqual="false" elSymbol="A" id="67" tool1="16" typeId="EL">

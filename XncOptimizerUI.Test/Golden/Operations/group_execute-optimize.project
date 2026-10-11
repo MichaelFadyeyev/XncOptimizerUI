@@ -45,7 +45,6 @@
     <part id="35" />
     <part id="36" />
     <part id="37" />
-    <part id="37" />
   </operation>
   <operation elWastePRC="0.13" elCalcMat="true" w="22" t="1" elRoundMat="1" elRoundLength="20" elMinDimDetail="0" printable="true" startNewPage="true" costMaterial="0" costOperation="0" costTotal="0" elColor="#000000" elLength="72.81" elLineMark="0" elPreMillingEqual="false" elSymbol="A" id="1" tool1="5" typeId="EL">
     <material id="6" count="83" />

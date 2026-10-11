@@ -149,6 +149,27 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void GroupIdenticalElements_ListsEachCutOperationSheetOnce()
+        {
+            var service = OpenAndRead(CreateService(), CopyFixture("td-execute-optimize.project"));
+            var log = string.Empty;
+            Assert.That(service.GroupIdenticalElements(ref log), Is.True, log);
+
+            var cutOperations = XDocument.Load(service.FullPath).Root!.Elements("operation")
+                .Where(o => (string?)o.Attribute("typeId") == "CS")
+                .ToList();
+
+            Assert.Multiple(() =>
+            {
+                foreach (var operation in cutOperations)
+                {
+                    var ids = operation.Elements("part").Select(p => (string?)p.Attribute("id")).ToList();
+                    Assert.That(ids, Is.Unique, $"CS operation {(string?)operation.Attribute("id")} lists a part twice");
+                }
+            });
+        }
+
+        [Test]
         public void GroupIdenticalElements_DoesNotTouchSourceFileOnDisk()
         {
             var path = CopyFixture("td-execute-optimize.project");

@@ -244,6 +244,7 @@ namespace XncOptimizerUI.Services
                     var sheetPart = new XElement(parts.Last());
 
                     parts.Last().Remove();
+                    parts.RemoveAt(parts.Count - 1);
 
                     List<XElement> orederedParts = [.. parts.OrderBy(p => int.Parse(p.GetIdValue()!, CultureInfo.InvariantCulture))];
 
