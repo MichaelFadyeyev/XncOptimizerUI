@@ -18,7 +18,7 @@ namespace XncOptimizerUI.Test
     /// <summary>
     /// Characterization tests for the part-preview overlays: for every part of a fixture, the
     /// shapes <see cref="MillPreviewRenderer"/>, <see cref="BorePreviewRenderer"/> and
-    /// <see cref="GroovePreviewRenderer"/> add to a canvas (in the order <c>RenderPart</c> calls
+    /// <see cref="GroovePreviewRenderer"/> add to a canvas (in the order <see cref="PartPreviewRenderer.DrawPart"/> calls
     /// them) are listed as text - kind, geometry rounded to 0.001 px, brushes, thickness, dashes -
     /// and compared with the snapshots in <c>Golden/Preview/</c>. They lock in the drawing while
     /// the renderers are refactored. See <see cref="GoldenSnapshot"/> for accepting changes.
@@ -53,11 +53,11 @@ namespace XncOptimizerUI.Test
             [CentreLine] = nameof(CentreLine),
         };
 
-        private static readonly BorePreviewRenderer.BoreBrushes BoreBrushes = new(
+        private static readonly BoreBrushes BoreBrushes = new(
             SideTrue, SideFalse, Selected, ThroughFill,
             Thickness2Px: 2, Thickness1Px: 1, CenterLineOvershootMm: 3, DashLengthPx: 3, CenterLineDashMm: 3);
 
-        private static readonly MillPreviewRenderer.MillBrushes MillBrushes = new(
+        private static readonly MillBrushes MillBrushes = new(
             Face, ThroughCutOff, BlindCutOff, CentreLine, CentreLineThickness: 1, StripOpacity: 0.5, Lines: BoreBrushes);
 
         private static readonly string[] Fixtures =
@@ -112,11 +112,11 @@ namespace XncOptimizerUI.Test
                 .Select(g => (g.Key, g.Select(XncProgramReader.Read).ToList()));
         }
 
-        /// <summary>Draws like <c>MainWindow.RenderPart</c>: mills first, then bores, then grooves, at a fixed scale.</summary>
+        /// <summary>Draws like <see cref="PartPreviewRenderer.DrawPart"/>: mills first, then bores, then grooves, at a fixed scale.</summary>
         private static IEnumerable<UIElement> Render(List<XncProgram> programs)
         {
             var first = programs[0];
-            var layout = new BorePreviewRenderer.FaceLayout(
+            var layout = new FaceLayout(
                 Origin, Origin, first.Dx * Scale, first.Dy * Scale, Scale, GapMm * Scale, first.Dz * Scale);
             var canvas = new Canvas();
 

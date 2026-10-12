@@ -44,7 +44,7 @@ namespace XncOptimizerUI.Test
                 Tools = [new XncTool { Name = "Drill", Diameter = diameter }],
                 Bores = [new XncBore { Surface = surface, ToolName = "Drill", Depth = 5, X = 20, Y = 20, Z = 2 }],
             };
-            var brushes = new BorePreviewRenderer.BoreBrushes(
+            var brushes = new BoreBrushes(
                 Brushes.Black,
                 Brushes.Gray,
                 Brushes.Red,
@@ -54,7 +54,7 @@ namespace XncOptimizerUI.Test
                 CenterLineOvershootMm: 3,
                 DashLengthPx: 3,
                 CenterLineDashMm: 3);
-            var layout = new BorePreviewRenderer.FaceLayout(0, 0, 100, 100, 1, 10, 5);
+            var layout = new FaceLayout(0, 0, 100, 100, 1, 10, 5);
 
             BorePreviewRenderer.DrawBores(canvas, [program], layout, brushes);
 

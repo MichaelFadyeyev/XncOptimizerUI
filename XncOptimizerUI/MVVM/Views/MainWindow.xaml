@@ -976,27 +976,12 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="{StaticResource PartRotationColumnWidth}" />
                             </Grid.ColumnDefinitions>
-                            <!--  Preview  -->
-                            <Border
-                                x:Name="PartPreviewBorder"
+
+                            <!--  Preview: zoomable part drawing  -->
+                            <partPreview:PartPreviewControl
+                                x:Name="PartPreview"
                                 Grid.Column="0"
-                                Background="{StaticResource PartPreviewBackgroundBrush}"
-                                BorderBrush="{StaticResource PartOutlineBrush}"
-                                BorderThickness="1">
-                                <Grid>
-                                    <ScrollViewer
-                                        x:Name="PartPreviewScrollViewer"
-                                        HorizontalScrollBarVisibility="Visible"
-                                        VerticalScrollBarVisibility="Visible">
-                                        <Canvas
-                                            x:Name="PartCanvas"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Top"
-                                            Background="Transparent" />
-                                    </ScrollViewer>
-                                    <Canvas x:Name="PreviewOverlayCanvas" IsHitTestVisible="False" />
-                                </Grid>
-                            </Border>
+                                DataContext="{Binding Preview}" />
 
                             <!--  Part rotation: 0° / 90° / 180° / 270° buttons stacked vertically  -->
                             <partPreview:PartRotationPanel

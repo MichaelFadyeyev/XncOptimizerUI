@@ -6,7 +6,7 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
-    /// Draws every groove on top of the part preview built by <c>MainWindow.RenderPart</c>,
+    /// Draws every groove on top of the part preview built by <see cref="PartPreviewRenderer.DrawPart"/>,
     /// mirroring <see cref="BorePreviewRenderer"/>. A front-plane groove (<see cref="XncGrooving.SideCode"/>
     /// <c>0</c>) gets its true rectangle (length = distance between its start/end points, width =
     /// <c>t</c>, offset from its center line per <c>c</c>) on the Face rectangle, plus a
@@ -24,9 +24,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// </summary>
     internal static class GroovePreviewRenderer
     {
-        /// <summary>Identifies the groove (and its owning program, for the <c>Side</c> colour) a shape belongs to.</summary>
-        internal readonly record struct GrooveTag(XncProgram Program, XncGrooving Groove);
-
         /// <summary>
         /// Draws every groove in <paramref name="programs"/> onto <paramref name="canvas"/>. A
         /// front-plane groove's five projections (its Face rectangle + its four edge-band
@@ -37,8 +34,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         public static void DrawGrooves(
             Canvas canvas,
             IEnumerable<XncProgram> programs,
-            BorePreviewRenderer.FaceLayout layout,
-            BorePreviewRenderer.BoreBrushes brushes)
+            FaceLayout layout,
+            BoreBrushes brushes)
         {
             foreach (var program in programs)
             {
@@ -80,8 +77,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             Canvas canvas,
             XncProgram program,
             XncGrooving groove,
-            BorePreviewRenderer.FaceLayout layout,
-            BorePreviewRenderer.BoreBrushes brushes)
+            FaceLayout layout,
+            BoreBrushes brushes)
         {
             var normalBrush = program.Side ? brushes.SideTrue : brushes.SideFalse;
             var side = program.Side;
@@ -272,8 +269,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             Canvas canvas,
             XncProgram program,
             XncGrooving groove,
-            BorePreviewRenderer.FaceLayout layout,
-            BorePreviewRenderer.BoreBrushes brushes)
+            FaceLayout layout,
+            BoreBrushes brushes)
         {
             // Edge-plane grooves always share one color, regardless of the owning program's Side
             // - unlike a front-plane groove's Side-based coloring (mirrors DrawEdgeBore).
@@ -586,7 +583,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             double fixedAxisPx,
             double depthPx,
             double overshootPx,
-            BorePreviewRenderer.FaceLayout layout,
+            FaceLayout layout,
             bool side,
             bool horizontal,
             bool near)

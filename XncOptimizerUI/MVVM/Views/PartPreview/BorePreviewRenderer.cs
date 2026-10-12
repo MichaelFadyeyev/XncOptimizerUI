@@ -6,7 +6,7 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
-    /// Draws every bore on top of the part preview built by <c>MainWindow.RenderPart</c>.
+    /// Draws every bore on top of the part preview built by <see cref="PartPreviewRenderer.DrawPart"/>.
     /// A face-drilled bore (<see cref="BoreSurface.Face"/>) gets a circle with crossed
     /// center lines on the Face rectangle, plus a rectangle with one center line projected
     /// onto each of the four Top/Bottom/Left/Right edge bands. An edge-drilled bore
@@ -14,45 +14,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <see cref="BoreSurface.Left"/>/<see cref="BoreSurface.Right"/>) is the mirror image:
     /// its true cross-section (circle) sits on the one band it was drilled from, and its
     /// depth reading (rectangle) sits on the Face rectangle, flush to that same edge and
-    /// growing inward toward the panel center. Kept separate from <c>MainWindow.xaml.cs</c>
-    /// so the overlay logic and its geometry are independently reusable/testable.
+    /// growing inward toward the panel center.
     /// </summary>
     internal static class BorePreviewRenderer
     {
-        /// <summary>Face/band geometry already computed by <c>RenderPart</c>, reused as-is.</summary>
-        internal readonly record struct FaceLayout(
-            double OriginX,
-            double OriginY,
-            double FaceWidth,
-            double FaceHeight,
-            double Scale,
-            double Gap,
-            double BandThickness);
-
-        /// <summary>Identifies the bore (and its owning program, for the <c>Side</c> colour) a shape belongs to.</summary>
-        internal readonly record struct BoreTag(XncProgram Program, XncBore Bore);
-
-        /// <summary>
-        /// Bore/groove styling, sourced from <c>Window.Resources</c> by the caller.
-        /// <see cref="Thickness2Px"/> is used for circular bore symbols and solid groove
-        /// rectangles; <see cref="Thickness1Px"/> for rectangular bore symbols, bore center
-        /// lines, and every dashed groove line. <see cref="DashLengthPx"/> is the screen-space
-        /// dash length used by dashed groove lines; <see cref="CenterLineDashMm"/> is the
-        /// model-space dash length used by a bore's crossed center lines when its diameter
-        /// exceeds <see cref="PartPreviewOverlayGeometry.DashedCrossLineDiameterMm"/> (scaled
-        /// to px per draw, since it must grow/shrink with zoom).
-        /// </summary>
-        internal readonly record struct BoreBrushes(
-            Brush SideTrue,
-            Brush SideFalse,
-            Brush Selected,
-            Brush ThroughFill,
-            double Thickness2Px,
-            double Thickness1Px,
-            double CenterLineOvershootMm,
-            double DashLengthPx,
-            double CenterLineDashMm);
-
         /// <summary>
         /// Draws every bore in <paramref name="programs"/> onto <paramref name="canvas"/>. A
         /// bore whose tool can't be resolved (or has a non-positive diameter) is skipped.

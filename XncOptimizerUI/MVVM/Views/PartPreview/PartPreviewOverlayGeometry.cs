@@ -82,7 +82,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// near-to-far direction sign (-1 for Top/Left, +1 for Bottom/Right).
         /// </summary>
         internal static (double NearEdge, double FarEdge, double Direction) GetBandEdges(
-            BorePreviewRenderer.FaceLayout layout, bool horizontal, bool near)
+            FaceLayout layout, bool horizontal, bool near)
         {
             var direction = near ? -1d : 1d;
             var nearEdge = horizontal
@@ -110,7 +110,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             double axisHighPx,
             double perpendicularPx,
             double overshootPx,
-            BorePreviewRenderer.FaceLayout layout,
+            FaceLayout layout,
             bool side,
             bool horizontal,
             bool near)
@@ -172,7 +172,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             double axisHighPx,
             double perpendicularPx,
             double overshootPx,
-            BorePreviewRenderer.FaceLayout layout,
+            FaceLayout layout,
             BoreSurface surface,
             bool horizontal)
         {

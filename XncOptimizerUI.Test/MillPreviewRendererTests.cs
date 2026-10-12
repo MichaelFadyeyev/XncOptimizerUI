@@ -32,7 +32,7 @@ namespace XncOptimizerUI.Test
                     },
                 ],
             };
-            var boreBrushes = new BorePreviewRenderer.BoreBrushes(
+            var boreBrushes = new BoreBrushes(
                 Brushes.Black,
                 Brushes.Gray,
                 Brushes.Red,
@@ -42,7 +42,7 @@ namespace XncOptimizerUI.Test
                 CenterLineOvershootMm: 3,
                 DashLengthPx: 3,
                 CenterLineDashMm: 3);
-            var millBrushes = new MillPreviewRenderer.MillBrushes(
+            var millBrushes = new MillBrushes(
                 Brushes.White,
                 Brushes.LightBlue,
                 Brushes.LightGray,
@@ -50,7 +50,7 @@ namespace XncOptimizerUI.Test
                 CentreLineThickness: 1,
                 StripOpacity: 0.5,
                 Lines: boreBrushes);
-            var layout = new BorePreviewRenderer.FaceLayout(0, 0, 100, 80, 1, 10, 5);
+            var layout = new FaceLayout(0, 0, 100, 80, 1, 10, 5);
 
             MillPreviewRenderer.DrawMills(canvas, [program], layout, millBrushes);
 

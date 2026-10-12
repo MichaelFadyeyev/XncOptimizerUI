@@ -11,7 +11,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
     /// Draws every mill (<c>&lt;ms&gt;</c> contour, <c>&lt;mr&gt;</c> rectangle, <c>&lt;me&gt;</c>
-    /// ellipse) on the Face rectangle of the part preview built by <c>MainWindow.RenderPart</c>
+    /// ellipse) on the Face rectangle of the part preview built by <see cref="PartPreviewRenderer.DrawPart"/>
     /// (edge bands get no mill projection yet). Per mill, bottom to top:
     /// <list type="number">
     /// <item>the part area the mill cuts off (<c>c</c> = right/left/pocket), filled with the
@@ -32,19 +32,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// </summary>
     internal static class MillPreviewRenderer
     {
-        /// <summary>Identifies the mill (<see cref="XncMillingContour"/>, <see cref="XncMillingRectangle"/> or <see cref="XncMillingEllipse"/>) and its owning program a shape belongs to.</summary>
-        internal readonly record struct MillTag(XncProgram Program, object Mill);
-
-        /// <summary>Mill styling, sourced from <c>Window.Resources</c> by the caller.</summary>
-        internal readonly record struct MillBrushes(
-            Brush Face,
-            Brush ThroughCutOff,
-            Brush BlindCutOff,
-            Brush CentreLine,
-            double CentreLineThickness,
-            double StripOpacity,
-            BorePreviewRenderer.BoreBrushes Lines);
-
         /// <summary>The shapes of every mill, one list per stacking layer.</summary>
         private sealed class Layers
         {
@@ -61,7 +48,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         public static void DrawMills(
             Canvas canvas,
             IEnumerable<XncProgram> programs,
-            BorePreviewRenderer.FaceLayout layout,
+            FaceLayout layout,
             MillBrushes brushes)
         {
             var layers = new Layers();
@@ -99,7 +86,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             XncProgram program,
             object mill,
             MillPath path,
-            BorePreviewRenderer.FaceLayout layout,
+            FaceLayout layout,
             MillBrushes brushes)
         {
             var lines = brushes.Lines;
@@ -200,7 +187,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// arcs as true <see cref="ArcSegment"/>s (a full circle as two halves).
         /// <paramref name="filled"/> closes and fills each figure, for an area boundary.
         /// </summary>
-        private static PathGeometry ToGeometry(IReadOnlyList<Primitive> chain, BorePreviewRenderer.FaceLayout layout, bool filled)
+        private static PathGeometry ToGeometry(IReadOnlyList<Primitive> chain, FaceLayout layout, bool filled)
         {
             var geometry = new PathGeometry();
             PathFigure? figure = null;
@@ -225,7 +212,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             return geometry;
         }
 
-        private static IEnumerable<PathSegment> ToSegments(Primitive primitive, BorePreviewRenderer.FaceLayout layout)
+        private static IEnumerable<PathSegment> ToSegments(Primitive primitive, FaceLayout layout)
         {
             if (primitive.Centre is not { } centre)
             {
@@ -251,7 +238,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             yield return new ArcSegment(ToPoint(primitive.End, layout), size, 0d, isLargeArc, sweep, isStroked: true);
         }
 
-        private static Point ToPoint(Vec2 mm, BorePreviewRenderer.FaceLayout layout) =>
+        private static Point ToPoint(Vec2 mm, FaceLayout layout) =>
             new(layout.OriginX + (mm.X * layout.Scale), layout.OriginY + (mm.Y * layout.Scale));
     }
 }

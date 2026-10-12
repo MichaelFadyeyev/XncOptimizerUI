@@ -1,0 +1,38 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPreview.PartPreviewControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Preview"
+    d:DataContext="{d:DesignInstance Type=viewmodels:PartPreviewVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Preview frame  -->
+    <Border
+        x:Name="PartPreviewBorder"
+        Background="{StaticResource PartPreviewBackgroundBrush}"
+        BorderBrush="{StaticResource PartOutlineBrush}"
+        BorderThickness="1">
+
+        <!--  Zoomable drawing under the fixed viewport overlay  -->
+        <Grid x:Name="PartPreviewLayers">
+
+            <!--  Scrollable part drawing: face, side views and machining  -->
+            <ScrollViewer
+                x:Name="PartPreviewScrollViewer"
+                HorizontalScrollBarVisibility="Visible"
+                VerticalScrollBarVisibility="Visible">
+                <Canvas
+                    x:Name="PartCanvas"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="Transparent" />
+            </ScrollViewer>
+
+            <!--  Viewport overlay: axis glyph and turn label, not zoomed or scrolled  -->
+            <Canvas x:Name="PreviewOverlayCanvas" IsHitTestVisible="False" />
+        </Grid>
+    </Border>
+</UserControl>
