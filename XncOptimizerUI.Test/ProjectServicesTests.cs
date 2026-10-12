@@ -1,3 +1,4 @@
+using System.Xml;
 using System.Globalization;
 using System.Xml.Linq;
 using NSubstitute;
@@ -625,6 +626,25 @@ namespace XncOptimizerUI.Test
 
             Assert.That((string?)program.Attribute("dy"), Is.EqualTo(expectedWidth.ToString(CultureInfo.InvariantCulture)),
                 "the part's program must be resized with the part");
+        }
+
+        /// <summary>
+        /// Part 1 of td.project: w=263, jw=261 (a 2 mm joint shrink), kerf 4. The sawn blank is
+        /// 2*263+4 = 530 wide; cut and detail widths are the blank's, the joint width keeps the shrink.
+        /// </summary>
+        [Test]
+        public void PrepForSplitAlongX_SetsTheBlankWidths()
+        {
+            var service = OpenAndRead(CreateService(), _projectPath);
+            var log = string.Empty;
+
+            service.Restructuring.PrepForSplitAlongX(["1"]).Into(ref log);
+
+            var part = XDocument.Load(service.Session.FullPath).Descendants("part").Single(p => (string?)p.Attribute("id") == "1" && p.Attribute("w") is not null);
+
+            Assert.That(
+                new[] { "w", "cw", "dw", "jw" }.Select(name => XmlConvert.ToDecimal(part.Attribute(name)!.Value)),
+                Is.EqualTo(new[] { 530m, 530m, 530m, 528m }));
         }
 
         [Test]

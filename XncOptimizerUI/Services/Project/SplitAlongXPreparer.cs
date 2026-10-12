@@ -9,8 +9,9 @@ namespace XncOptimizerUI.Services.Project
 {
     /// <summary>
     /// "Prep for split along X": each selected part becomes a double-width blank that is sawn in
-    /// two after machining. Its width becomes <c>2w + saw kerf</c>, the derived widths
-    /// (<c>dw</c>/<c>cw</c>) grow with it, the count halves (rounded up), and each of its XNC
+    /// two after machining. Its width becomes <c>2w + saw kerf</c>, so do the cut and detail
+    /// widths (<c>cw</c>/<c>dw</c>); the joint width <c>jw</c> keeps the part's banding shrink
+    /// (<c>w - jw</c>). The count halves (rounded up), and each of its XNC
     /// programs gets the new <c>dy</c> plus a mirrored copy of every bore for the second half.
     /// Saved as a new <see cref="ProjectFileNames.SplitSuffix"/> file.
     /// </summary>
@@ -47,8 +48,9 @@ namespace XncOptimizerUI.Services.Project
             var jointShrink = width - RequireDecimal(part, "jw");
 
             part.SetAttributeValue("w", XmlConvert.ToString(newWidth));
-            part.SetAttributeValue("cw", XmlConvert.ToString(RequireDecimal(part, "cw") - jointShrink));
-            part.SetAttributeValue("dw", XmlConvert.ToString(RequireDecimal(part, "dw") - jointShrink));
+            part.SetAttributeValue("cw", XmlConvert.ToString(newWidth));
+            part.SetAttributeValue("dw", XmlConvert.ToString(newWidth));
+            part.SetAttributeValue("jw", XmlConvert.ToString(newWidth - jointShrink));
 
             var count = int.Parse(part.Attribute("count")!.Value, CultureInfo.InvariantCulture);
             var newCount = count / 2 + count % 2;

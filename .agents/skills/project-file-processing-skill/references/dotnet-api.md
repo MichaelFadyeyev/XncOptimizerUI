@@ -53,7 +53,7 @@ and `SaveAsSuffixed(suffix)` (output names in `Services/Project/ProjectFileNames
 | member | notes |
 |---|---|
 | `GroupIdenticalElements()` | `IdenticalPartsGrouper`: group XNC ops with the same program on parts with the same band materials, renumber ids, collapse products; `*_opt.project` |
-| `PrepForSplitAlongX(IReadOnlyCollection<string> partIds)` | `SplitAlongXPreparer`: `width = w*2 + config.SawWidth`, count halved, bores mirrored; `*_spl.project` |
+| `PrepForSplitAlongX(IReadOnlyCollection<string> partIds)` | `SplitAlongXPreparer`: `w = cw = dw = w*2 + config.SawWidth`, `jw` keeps the `w - jw` shrink, count halved, bores mirrored; `*_spl.project` |
 | `ReplaceXncPrograms(Part source, IList<Part> targets)` | `XncProgramReplacer`: copy `program`+`countBore` onto identical parts (face key `"{side}|{turn}"`); `*_ren.project` |
 
 ## `IXncBatchOperations` (`Services/Xnc/Batch/XncBatchOperations.cs`) - saves a new file
