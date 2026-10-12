@@ -5,7 +5,7 @@ description: Deferred work items / future hooks for XncOptimizerUI, captured dur
 
 # TODO / future hooks
 
-## Part preview (MVVM/Views/MainWindow.xaml `PartCanvas`)
+## Part preview (MVVM/Views/PartPreview/PartPreviewControl.xaml `PartCanvas`)
 
 Iteration 1 draws only the part face rectangle + four edge-side projections, scaled
 per selected part. Deferred:
@@ -15,10 +15,9 @@ per selected part. Deferred:
   shapes (or a single handler on `PartCanvas` using `e.OriginalSource`), read `.Tag`,
   and raise an event / bind a command on `AppViewModel` so a face/side can be selected
   from the drawing. (Bore shapes already do this themselves - see below.)
-- **Extract to control** — rendering currently lives in `MainWindow.xaml.cs`
-  (`RenderPart`). If it grows, move to a `PartView` `UserControl`, or go full MVVM:
-  build an observable shape collection in the view model and bind it to an
-  `ItemsControl` with a `Canvas` `ItemsPanel`.
+- **Extract to control** — done: `PartPreviewControl` (refactoring phase 4). Still
+  open: going full MVVM - an observable shape collection in the view model bound to an
+  `ItemsControl` with a `Canvas` `ItemsPanel` - if the drawing needs view-model state.
 - **Machining overlay** — all bores are drawn by `BorePreviewRenderer`
   (`MVVM/Views/PartPreview/BorePreviewRenderer.cs`). A face-drilled bore
   (`XncBore.Surface == Face`) gets a circle + crossed center lines on the Face
@@ -34,13 +33,12 @@ per selected part. Deferred:
   outline-only, unlike a face bore's front circle). Selection state is local to the
   current render pass, not yet wired into `AppViewModel`.
   Groovings are drawn the same way by `GroovePreviewRenderer`
-  (`MVVM/Views/PartPreview/GroovePreviewRenderer.cs`), sharing the band/Face rectangle
+  (`MVVM/Views/PartPreview/GroovePreviewRenderer.cs`, dispatching to `FrontPlaneGrooveRenderer`/`EdgePlaneGrooveRenderer`), sharing the band/Face rectangle
   placement math with `BorePreviewRenderer` via `PartPreviewOverlayGeometry`. Unlike a
-  bore (which anchors near/far by the owning program's `Side`), every groove
-  perpendicular offset always measures from the target band's inner (Face-adjacent)
-  edge, regardless of `Side` - confirmed with the user, so every
-  `AddSideRectangleRange`/`Z`-anchor call for a groove passes a literal `true`, not
-  `program.Side`. A front-plane groove (`XncGrooving.SideCode == 0`) gets a Face
+  bore (which anchors near/far by the owning program's `Side`), every band position of
+  an edge-plane groove measures from the target band's inner (Face-adjacent) edge,
+  regardless of `Side` - confirmed with the user (`BandEdges.At(..., fromInner: true)`);
+  a front-plane groove's band projections follow `program.Side` like a bore. A front-plane groove (`XncGrooving.SideCode == 0`) gets a Face
   rectangle (length = distance between its start/end points, width = `t`, offset from
   the start-end line per `c` - `Center` straddles it, `Right`/`Left` put the full width
   to the physical right/left of the start-to-end travel direction), colored by
@@ -64,7 +62,7 @@ per selected part. Deferred:
   (X for Left/Right-plane, Y for Top/Bottom-plane), and, perpendicular to that, displaced
   from *that target band's own* inner edge by the groove's own `Z` (the same
   `nearEdge + direction * Z` formula as (1), just evaluated per target band via
-  `GetBandEdges`, and drawn with the same `AddOffsetRectangle` helper as (1) so `c`
+  `FaceLayout.Band`, and drawn with the same `GrooveShapes.OffsetRectangle` helper as (1) so `c`
   positions its `t` width the same way) - all three always use `BoreBrushes.SideTrue`
   like an edge bore. All four of one edge-plane groove's shapes
   (or five of a front-plane groove's) toggle red together on click, same as a bore.
