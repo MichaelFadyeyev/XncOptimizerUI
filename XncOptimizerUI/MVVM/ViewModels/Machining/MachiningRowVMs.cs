@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Machining
@@ -17,7 +18,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         public string Side { get; }
         public XncTool Tool { get; }
         public string Name => Tool.Name;
-        public string Diameter => Tool.Diameter.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+        public string Diameter => MachiningNumber.Format(Tool.Diameter);
     }
 
     public sealed partial class MillingContourRowVM : ObservableObject
@@ -64,8 +65,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
 
-        private static string Format(double value) =>
-            value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+        private static string Format(double value) => MachiningNumber.Format(value);
     }
 
     public sealed partial class MillingEllipseRowVM : ObservableObject
@@ -101,8 +101,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
 
-        private static string Format(double value) =>
-            value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+        private static string Format(double value) => MachiningNumber.Format(value);
 
         internal static string FormatToolToCenterLine(ToolPosition position) => position switch
         {
@@ -147,7 +146,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
 
-        private static string Format(double value) =>
-            value.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+        private static string Format(double value) => MachiningNumber.Format(value);
     }
 }
