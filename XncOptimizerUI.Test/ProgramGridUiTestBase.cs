@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using NSubstitute;
+using NUnit.Framework.Interfaces;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.Services;
@@ -19,6 +21,8 @@ namespace XncOptimizerUI.Test
     [Apartment(ApartmentState.STA)]
     public abstract class ProgramGridUiTestBase : TempFixtureTestBase
     {
+        private readonly BindingErrorListener _bindingErrors = new();
+
         public enum LeaveBy
         {
             Enter,
@@ -37,6 +41,31 @@ namespace XncOptimizerUI.Test
             {
                 Source = new Uri($"pack://application:,,,/{assembly};component/Resources/ControlStyles.xaml")
             });
+        }
+
+        /// <summary>
+        /// A broken binding fails neither the build nor the binding itself - WPF only writes a
+        /// "System.Windows.Data Error" line to the trace - so every test here also fails on one.
+        /// </summary>
+        [SetUp]
+        public void ListenForBindingErrors()
+        {
+            PresentationTraceSources.Refresh();
+            PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
+            PresentationTraceSources.DataBindingSource.Listeners.Add(_bindingErrors);
+        }
+
+        [TearDown]
+        public void FailOnBindingErrors()
+        {
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(_bindingErrors);
+
+            var errors = _bindingErrors.TakeMessages();
+
+            if (TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Passed)
+            {
+                Assert.That(errors, Is.Empty, "WPF binding errors");
+            }
         }
 
         /// <summary>Opens a copy of <paramref name="fixture"/>; the first part is selected.</summary>

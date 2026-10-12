@@ -80,7 +80,7 @@
             <Trigger Property="Validation.HasError" Value="True">
                 <Setter Property="Foreground" Value="Red" />
                 <Setter Property="BorderBrush" Value="Red" />
-                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)[0].ErrorContent, RelativeSource={RelativeSource Self}}" />
+                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)/ErrorContent, RelativeSource={RelativeSource Self}}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -123,7 +123,7 @@
             <Trigger Property="Validation.HasError" Value="True">
                 <Setter Property="Foreground" Value="Red" />
                 <Setter Property="BorderBrush" Value="Red" />
-                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)[0].ErrorContent, RelativeSource={RelativeSource Self}}" />
+                <Setter Property="ToolTip" Value="{Binding (Validation.Errors)/ErrorContent, RelativeSource={RelativeSource Self}}" />
             </Trigger>
         </Style.Triggers>
     </Style>

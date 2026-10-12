@@ -112,6 +112,7 @@ namespace XncOptimizerUI.Test
 
                 var keptOpen = FindDescendant<ComboBox>(grid) is not null;
                 var wasRed = row.HasErrors;
+                var reason = selector.ToolTip as string;
 
                 Leave(LeaveBy.ClickOutside, grid, outside);
 
@@ -119,6 +120,7 @@ namespace XncOptimizerUI.Test
                 {
                     Assert.That(keptOpen, Is.True, "refused commit keeps the selector");
                     Assert.That(wasRed, Is.True);
+                    Assert.That(reason, Does.StartWith("Expr 'dz+2.00' does not fit type bool"), "the red selector shows why");
                     Assert.That((row.Type, row.TypeInput, row.HasErrors), Is.EqualTo(("double", "double", false)));
                     Assert.That(vm.Log.Text, Does.Not.Contain("Variable #"));
                 });
