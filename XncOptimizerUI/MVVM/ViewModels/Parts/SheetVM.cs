@@ -1,35 +1,35 @@
-﻿
-using XncOptimizerUI.Core;
+using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
+    /// <summary>One sheet material of the project, for the Sheets grid.</summary>
     public class SheetVM(Sheet sheet) : ObservableObject
     {
-        Sheet _sheet = sheet;
+        private readonly Sheet _sheet = sheet;
 
         public int Id
         {
-            get { return _sheet.Id; }
-            set { _sheet.Id = value; OnPropertyChanged(); }
+            get => _sheet.Id;
+            set => SetProperty(_sheet.Id, value, _sheet, (s, v) => s.Id = v);
         }
 
         public string Name
         {
-            get { return _sheet.Name; }
-            set { _sheet.Name = value; OnPropertyChanged(); }
+            get => _sheet.Name;
+            set => SetProperty(_sheet.Name, value, _sheet, (s, v) => s.Name = v);
         }
 
         public string Code
         {
-            get { return _sheet.Code; }
-            set { _sheet.Code = value; OnPropertyChanged(); }
+            get => _sheet.Code;
+            set => SetProperty(_sheet.Code, value, _sheet, (s, v) => s.Code = v);
         }
 
         public decimal Thickness
         {
-            get { return _sheet.Thickness; }
-            set { _sheet.Thickness = value; OnPropertyChanged(); }
+            get => _sheet.Thickness;
+            set => SetProperty(_sheet.Thickness, value, _sheet, (s, v) => s.Thickness = v);
         }
     }
 }

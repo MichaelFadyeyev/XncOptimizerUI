@@ -1,125 +1,119 @@
-﻿using XncOptimizerUI.Core;
+using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
-    public class PartVM(Part part) : ObservableObject
+    /// <summary>One row of the Parts grid: the <see cref="Models.Part"/> it edits, its row number and its "Sel" checkbox.</summary>
+    public partial class PartVM(Part part) : ObservableObject
     {
-        private Part _part = part;
-        private int _number;
-        private bool _isSelected;
-
-        public Part Part
-        {
-            get { return _part; }
-        }
-
-        public int Number
-        {
-            get { return _number; }
-            set { _number = value; OnPropertyChanged(); }
-        }
-
-        public bool IsSelected
-        {
-            get { return _isSelected; }
-            set { _isSelected = value; OnPropertyChanged(); }
-        }
+        #region Properties
+        public Part Part { get; } = part;
 
         public int Id
         {
-            get { return _part.Id; }
-            set { _part.Id = value; OnPropertyChanged(); }
+            get => Part.Id;
+            set => SetProperty(Part.Id, value, Part, (p, v) => p.Id = v);
         }
 
         public int GoodId
         {
-            get { return _part.GoodId; }
-            set { _part.GoodId = value; OnPropertyChanged(); }
+            get => Part.GoodId;
+            set => SetProperty(Part.GoodId, value, Part, (p, v) => p.GoodId = v);
         }
 
         public string Name
         {
-            get { return _part.Name; }
-            set { _part.Name = value; OnPropertyChanged(); }
+            get => Part.Name;
+            set => SetProperty(Part.Name, value, Part, (p, v) => p.Name = v);
         }
 
         public int Count
         {
-            get { return _part.Count; }
-            set { _part.Count = value; OnPropertyChanged(); }
+            get => Part.Count;
+            set => SetProperty(Part.Count, value, Part, (p, v) => p.Count = v);
         }
 
         public decimal Length
         {
-            get { return _part.Length; }
-            set { _part.Length = value; OnPropertyChanged(); }
+            get => Part.Length;
+            set => SetProperty(Part.Length, value, Part, (p, v) => p.Length = v);
         }
 
         public decimal Width
         {
-            get { return _part.Width; }
-            set { _part.Width = value; OnPropertyChanged(); }
+            get => Part.Width;
+            set => SetProperty(Part.Width, value, Part, (p, v) => p.Width = v);
         }
 
         public bool ConsiderTexture
         {
-            get { return _part.ConsiderTexture; }
-            set { _part.ConsiderTexture = value; OnPropertyChanged(); }
+            get => Part.ConsiderTexture;
+            set => SetProperty(Part.ConsiderTexture, value, Part, (p, v) => p.ConsiderTexture = v);
         }
 
         public int? TopBandingId
         {
-            get { return _part.TopBandingId; }
-            set { _part.TopBandingId = value; OnPropertyChanged(); }
+            get => Part.TopBandingId;
+            set => SetProperty(Part.TopBandingId, value, Part, (p, v) => p.TopBandingId = v);
         }
 
         public int? BottomBandingId
         {
-            get { return _part.BottomBandingId; }
-            set { _part.BottomBandingId = value; OnPropertyChanged(); }
+            get => Part.BottomBandingId;
+            set => SetProperty(Part.BottomBandingId, value, Part, (p, v) => p.BottomBandingId = v);
         }
 
         public int? LeftBandingId
         {
-            get { return _part.LeftBandingId; }
-            set { _part.LeftBandingId = value; OnPropertyChanged(); }
+            get => Part.LeftBandingId;
+            set => SetProperty(Part.LeftBandingId, value, Part, (p, v) => p.LeftBandingId = v);
         }
 
         public int? RightBandingId
         {
-            get { return _part.RightBandingId; }
-            set { _part.RightBandingId = value; OnPropertyChanged(); }
+            get => Part.RightBandingId;
+            set => SetProperty(Part.RightBandingId, value, Part, (p, v) => p.RightBandingId = v);
         }
 
         public string? TopBandingMat
         {
-            get { return _part.TopBandingMat; }
-            set { _part.TopBandingMat = value; OnPropertyChanged(); }
+            get => Part.TopBandingMat;
+            set => SetProperty(Part.TopBandingMat, value, Part, (p, v) => p.TopBandingMat = v);
         }
 
         public string? BottomBandingMat
         {
-            get { return _part.BottomBandingMat; }
-            set { _part.BottomBandingMat = value; OnPropertyChanged(); }
+            get => Part.BottomBandingMat;
+            set => SetProperty(Part.BottomBandingMat, value, Part, (p, v) => p.BottomBandingMat = v);
         }
 
         public string? LeftBandingMat
         {
-            get { return _part.LeftBandingMat; }
-            set { _part.LeftBandingMat = value; OnPropertyChanged(); }
+            get => Part.LeftBandingMat;
+            set => SetProperty(Part.LeftBandingMat, value, Part, (p, v) => p.LeftBandingMat = v);
         }
 
         public string? RightBandingMat
         {
-            get { return _part.RightBandingMat; }
-            set { _part.RightBandingMat = value; OnPropertyChanged(); }
+            get => Part.RightBandingMat;
+            set => SetProperty(Part.RightBandingMat, value, Part, (p, v) => p.RightBandingMat = v);
         }
 
         public int SheetId
         {
-            get { return _part.SheetId; }
-            set { _part.SheetId = value; OnPropertyChanged(); }
+            get => Part.SheetId;
+            set => SetProperty(Part.SheetId, value, Part, (p, v) => p.SheetId = v);
         }
+        #endregion
+
+        #region ObservableProperties
+        /// <summary>1-based position of the part in the project, shown in the grid's "#" column.</summary>
+        [ObservableProperty]
+        private int _number;
+
+        /// <summary>The "Sel" checkbox: the batch commands act on the checked parts.</summary>
+        [ObservableProperty]
+        private bool _isSelected;
+        #endregion
     }
 }

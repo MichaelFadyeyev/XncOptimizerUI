@@ -1,35 +1,35 @@
-
-using XncOptimizerUI.Core;
+using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
+    /// <summary>One product of the project, for the Products grid.</summary>
     public class ProductVM(Product product) : ObservableObject
     {
-        Product _product = product;
+        private readonly Product _product = product;
 
         public int Id
         {
-            get { return _product.Id; }
-            set { _product.Id = value; OnPropertyChanged(); }
+            get => _product.Id;
+            set => SetProperty(_product.Id, value, _product, (p, v) => p.Id = v);
         }
 
         public string Name
         {
-            get { return _product.Name; }
-            set { _product.Name = value; OnPropertyChanged(); }
+            get => _product.Name;
+            set => SetProperty(_product.Name, value, _product, (p, v) => p.Name = v);
         }
 
         public string Code
         {
-            get { return _product.Code; }
-            set { _product.Code = value; OnPropertyChanged(); }
+            get => _product.Code;
+            set => SetProperty(_product.Code, value, _product, (p, v) => p.Code = v);
         }
 
         public int Count
         {
-            get { return _product.Count; }
-            set { _product.Count = value; OnPropertyChanged(); }
+            get => _product.Count;
+            set => SetProperty(_product.Count, value, _product, (p, v) => p.Count = v);
         }
     }
 }
