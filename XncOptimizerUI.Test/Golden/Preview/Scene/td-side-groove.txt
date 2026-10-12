@@ -1,0 +1,122 @@
+## part 3 at zoom 1
+canvas 800 x 600
+Rectangle at (43.939, 208.848) size 712.121 x 12.818 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (43.939, 378.333) size 712.121 x 12.818 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 228.788) size 12.818 x 142.424 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (763.182, 228.788) size 12.818 x 142.424 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (43.939, 228.788) size 712.121 x 142.424 | stroke=Outline thickness=2 fill=Face tag=Face
+Polygon [43.939,263.326 756.061,263.326 756.061,265.462 43.939,265.462] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (41.803, 264.394) -> (758.197, 264.394) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (43.939, 214.545) size 712.121 x 7.121 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (43.939, 378.333) size 712.121 x 7.121 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (29.697, 263.326) size 7.121 x 2.136 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (763.182, 263.326) size 7.121 x 2.136 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (27.561, 264.394) -> (38.955, 264.394) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (761.045, 264.394) -> (772.439, 264.394) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [43.939,214.189 756.061,214.189 756.061,216.326 43.939,216.326] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (41.803, 215.258) -> (758.197, 215.258) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [43.939,383.674 756.061,383.674 756.061,385.811 43.939,385.811] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (43.939, 228.788) size 712.121 x 7.121 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [31.477,228.788 31.477,235.909 29.341,235.909 29.341,228.788] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (30.409, 226.652) -> (30.409, 238.045) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [770.659,228.788 770.659,235.909 768.523,235.909 768.523,228.788] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (769.591, 226.652) -> (769.591, 238.045) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [43.939,383.674 756.061,383.674 756.061,385.811 43.939,385.811] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (41.803, 384.742) -> (758.197, 384.742) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [43.939,214.189 756.061,214.189 756.061,216.326 43.939,216.326] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (43.939, 364.091) size 712.121 x 7.121 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [31.477,364.091 31.477,371.212 29.341,371.212 29.341,364.091] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (30.409, 361.955) -> (30.409, 373.348) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [770.659,364.091 770.659,371.212 768.523,371.212 768.523,364.091] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (769.591, 361.955) -> (769.591, 373.348) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [31.477,228.788 31.477,371.212 29.341,371.212 29.341,228.788] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (30.409, 226.652) -> (30.409, 373.348) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [770.659,228.788 770.659,371.212 768.523,371.212 768.523,228.788] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (43.939, 228.788) size 7.121 x 142.424 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [43.939,214.189 51.061,214.189 51.061,216.326 43.939,216.326] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (41.803, 215.258) -> (53.197, 215.258) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [43.939,383.674 51.061,383.674 51.061,385.811 43.939,385.811] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (41.803, 384.742) -> (53.197, 384.742) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [770.659,228.788 770.659,371.212 768.523,371.212 768.523,228.788] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (769.591, 226.652) -> (769.591, 373.348) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [31.477,228.788 31.477,371.212 29.341,371.212 29.341,228.788] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (748.939, 228.788) size 7.121 x 142.424 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [748.939,214.189 756.061,214.189 756.061,216.326 748.939,216.326] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (746.803, 215.258) -> (758.197, 215.258) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [748.939,383.674 756.061,383.674 756.061,385.811 748.939,385.811] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (746.803, 384.742) -> (758.197, 384.742) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (0, 0) -> (237.374, 0) offset (281.313, 285.758) | stroke=Texture thickness=1
+Line (0, 0) -> (237.374, 0) offset (281.313, 300) | stroke=Texture thickness=1
+Line (0, 0) -> (237.374, 0) offset (281.313, 314.242) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+
+## part 3 at zoom 2
+canvas 1552 x 600
+Rectangle at (63.879, 117.697) size 1424.242 x 25.636 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (63.879, 456.667) size 1424.242 x 25.636 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 157.576) size 25.636 x 284.848 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (1502.364, 157.576) size 25.636 x 284.848 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (63.879, 157.576) size 1424.242 x 284.848 | stroke=Outline thickness=2 fill=Face tag=Face
+Polygon [63.879,226.652 1488.121,226.652 1488.121,230.924 63.879,230.924] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (59.606, 228.788) -> (1492.394, 228.788) | stroke=SideTrue thickness=1 dash=[3 3]
+Rectangle at (63.879, 129.091) size 1424.242 x 14.242 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (63.879, 456.667) size 1424.242 x 14.242 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (35.394, 226.652) size 14.242 x 4.273 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Rectangle at (1502.364, 226.652) size 14.242 x 4.273 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (31.121, 228.788) -> (53.909, 228.788) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (1498.091, 228.788) -> (1520.879, 228.788) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [63.879,128.379 1488.121,128.379 1488.121,132.652 63.879,132.652] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (59.606, 130.515) -> (1492.394, 130.515) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [63.879,467.348 1488.121,467.348 1488.121,471.621 63.879,471.621] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (63.879, 157.576) size 1424.242 x 14.242 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [38.955,157.576 38.955,171.818 34.682,171.818 34.682,157.576] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (36.818, 153.303) -> (36.818, 176.091) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [1517.318,157.576 1517.318,171.818 1513.045,171.818 1513.045,157.576] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (1515.182, 153.303) -> (1515.182, 176.091) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [63.879,467.348 1488.121,467.348 1488.121,471.621 63.879,471.621] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (59.606, 469.485) -> (1492.394, 469.485) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [63.879,128.379 1488.121,128.379 1488.121,132.652 63.879,132.652] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (63.879, 428.182) size 1424.242 x 14.242 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [38.955,428.182 38.955,442.424 34.682,442.424 34.682,428.182] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (36.818, 423.909) -> (36.818, 446.697) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [1517.318,428.182 1517.318,442.424 1513.045,442.424 1513.045,428.182] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (1515.182, 423.909) -> (1515.182, 446.697) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [38.955,157.576 38.955,442.424 34.682,442.424 34.682,157.576] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (36.818, 153.303) -> (36.818, 446.697) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [1517.318,157.576 1517.318,442.424 1513.045,442.424 1513.045,157.576] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (63.879, 157.576) size 14.242 x 284.848 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [63.879,128.379 78.121,128.379 78.121,132.652 63.879,132.652] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (59.606, 130.515) -> (82.394, 130.515) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [63.879,467.348 78.121,467.348 78.121,471.621 63.879,471.621] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (59.606, 469.485) -> (82.394, 469.485) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [1517.318,157.576 1517.318,442.424 1513.045,442.424 1513.045,157.576] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (1515.182, 153.303) -> (1515.182, 446.697) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [38.955,157.576 38.955,442.424 34.682,442.424 34.682,157.576] | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Rectangle at (1473.879, 157.576) size 14.242 x 284.848 | stroke=SideTrue thickness=1 fill=#00FFFFFF dash=[3 3] tag=GrooveTag
+Polygon [1473.879,128.379 1488.121,128.379 1488.121,132.652 1473.879,132.652] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (1469.606, 130.515) -> (1492.394, 130.515) | stroke=SideTrue thickness=1 dash=[3 3]
+Polygon [1473.879,467.348 1488.121,467.348 1488.121,471.621 1473.879,471.621] | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=GrooveTag
+Line (1469.606, 469.485) -> (1492.394, 469.485) | stroke=SideTrue thickness=1 dash=[3 3]
+Line (0, 0) -> (474.747, 0) offset (538.626, 271.515) | stroke=Texture thickness=1
+Line (0, 0) -> (474.747, 0) offset (538.626, 300) | stroke=Texture thickness=1
+Line (0, 0) -> (474.747, 0) offset (538.626, 328.485) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+

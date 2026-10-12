@@ -1,0 +1,60 @@
+## part 2 at zoom 1
+canvas 800 x 600
+Rectangle at (44.612, 66.155) size 710.775 x 13.505 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (44.612, 520.34) size 710.775 x 13.505 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 86.767) size 13.505 x 426.465 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (762.495, 86.767) size 13.505 x 426.465 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (44.612, 86.767) size 710.775 x 426.465 | stroke=Outline thickness=2 fill=Face tag=Face
+Path F1M222.306,285.789C214.457,285.789,208.093,292.151,208.091,300C208.093,307.849,214.457,314.211,222.306,314.211C230.155,314.211,236.519,307.849,236.522,300C236.519,292.151,230.155,285.789,222.306,285.789z M44.612,86.767L755.388,86.767 755.388,513.233 44.612,513.233 44.612,86.767z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path M238.654,300A16.348,16.348,0,0,0,205.958,300A16.348,16.348,0,0,0,238.654,300 | stroke=Face thickness=4.265 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M236.522,300A14.216,14.216,0,0,0,208.091,300A14.216,14.216,0,0,0,236.522,300 | stroke=CentreLine thickness=1 tag=MillTag
+Path M238.654,300A16.348,16.348,0,0,0,205.958,300A16.348,16.348,0,0,0,238.654,300 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Ellipse at (236.522, 297.868) size 4.265 x 4.265 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (238.654, 300) -> (242.919, 300) | stroke=SideTrue thickness=1 tag=MillTag
+Line (238.654, 300) -> (234.389, 300) | stroke=SideTrue thickness=1 tag=MillTag
+Line (238.654, 300) -> (238.654, 304.265) | stroke=SideTrue thickness=1 tag=MillTag
+Line (238.654, 300) -> (238.654, 295.735) | stroke=SideTrue thickness=1 tag=MillTag
+Line (0, 0) -> (236.925, 0) offset (281.537, 257.353) | stroke=Texture thickness=1
+Line (0, 0) -> (236.925, 0) offset (281.537, 300) | stroke=Texture thickness=1
+Line (0, 0) -> (236.925, 0) offset (281.537, 342.647) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+
+## part 2 at zoom 2
+canvas 1552 x 983.38
+Rectangle at (65.225, 24) size 1421.55 x 27.009 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (65.225, 932.371) size 1421.55 x 27.009 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 65.225) size 27.009 x 852.93 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (1500.991, 65.225) size 27.009 x 852.93 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (65.225, 65.225) size 1421.55 x 852.93 | stroke=Outline thickness=2 fill=Face tag=Face
+Path F1M420.612,463.269C404.914,463.269,392.187,475.992,392.181,491.69C392.187,507.388,404.914,520.111,420.612,520.111C436.311,520.111,449.038,507.388,449.043,491.69C449.038,475.992,436.311,463.269,420.612,463.269z M65.225,65.225L1486.775,65.225 1486.775,918.155 65.225,918.155 65.225,65.225z | stroke=none thickness=1 fill=BlindCutOff no-hit-test tag=MillTag
+Path M453.308,491.69A32.696,32.696,0,0,0,387.917,491.69A32.696,32.696,0,0,0,453.308,491.69 | stroke=Face thickness=8.529 caps=Round join=Round opacity=0.5 tag=MillTag
+Path M449.043,491.69A28.431,28.431,0,0,0,392.181,491.69A28.431,28.431,0,0,0,449.043,491.69 | stroke=CentreLine thickness=1 tag=MillTag
+Path M453.308,491.69A32.696,32.696,0,0,0,387.917,491.69A32.696,32.696,0,0,0,453.308,491.69 | stroke=SideTrue thickness=1 dash=[3 3] tag=MillTag
+Ellipse at (449.043, 487.425) size 8.529 x 8.529 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=MillTag
+Line (453.308, 491.69) -> (461.837, 491.69) | stroke=SideTrue thickness=1 tag=MillTag
+Line (453.308, 491.69) -> (444.779, 491.69) | stroke=SideTrue thickness=1 tag=MillTag
+Line (453.308, 491.69) -> (453.308, 500.219) | stroke=SideTrue thickness=1 tag=MillTag
+Line (453.308, 491.69) -> (453.308, 483.161) | stroke=SideTrue thickness=1 tag=MillTag
+Line (0, 0) -> (473.85, 0) offset (539.075, 406.397) | stroke=Texture thickness=1
+Line (0, 0) -> (473.85, 0) offset (539.075, 491.69) | stroke=Texture thickness=1
+Line (0, 0) -> (473.85, 0) offset (539.075, 576.983) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+

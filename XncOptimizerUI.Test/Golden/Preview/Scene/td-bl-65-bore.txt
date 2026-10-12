@@ -1,0 +1,56 @@
+## part 2 at zoom 1
+canvas 800 x 600
+Rectangle at (61.871, 126.878) size 676.259 x 24.345 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (61.871, 448.777) size 676.259 x 24.345 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 164.748) size 24.345 x 270.504 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (751.655, 164.748) size 24.345 x 270.504 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (61.871, 164.748) size 676.259 x 270.504 | stroke=Outline thickness=2 fill=Face tag=Face
+Ellipse at (30.763, 247.252) size 10.82 x 10.82 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (36.173, 252.662) -> (45.64, 252.662) | stroke=SideTrue thickness=1
+Line (36.173, 252.662) -> (26.705, 252.662) | stroke=SideTrue thickness=1
+Line (36.173, 252.662) -> (36.173, 262.129) | stroke=SideTrue thickness=1
+Line (36.173, 252.662) -> (36.173, 243.194) | stroke=SideTrue thickness=1
+Rectangle at (61.871, 247.252) size 40.576 x 10.82 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (57.813, 252.662) -> (106.504, 252.662) | stroke=SideTrue thickness=1 dash=[4.058 4.058]
+Line (0, 0) -> (225.42, 0) offset (287.29, 272.95) | stroke=Texture thickness=1
+Line (0, 0) -> (225.42, 0) offset (287.29, 300) | stroke=Texture thickness=1
+Line (0, 0) -> (225.42, 0) offset (287.29, 327.05) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+
+## part 2 at zoom 2
+canvas 1552 x 740.489
+Rectangle at (99.741, 24) size 1352.518 x 48.691 | stroke=Outline thickness=2 fill=Edge tag=Top
+Rectangle at (99.741, 667.799) size 1352.518 x 48.691 | stroke=Outline thickness=2 fill=Edge tag=Bottom
+Rectangle at (24, 99.741) size 48.691 x 541.007 | stroke=Outline thickness=2 fill=Edge tag=Left
+Rectangle at (1479.309, 99.741) size 48.691 x 541.007 | stroke=Outline thickness=2 fill=Edge tag=Right
+Rectangle at (99.741, 99.741) size 1352.518 x 541.007 | stroke=Outline thickness=2 fill=Face tag=Face
+Ellipse at (37.525, 264.748) size 21.64 x 21.64 | stroke=SideTrue thickness=2 fill=#00FFFFFF tag=BoreTag
+Line (48.345, 275.568) -> (67.281, 275.568) | stroke=SideTrue thickness=1
+Line (48.345, 275.568) -> (29.41, 275.568) | stroke=SideTrue thickness=1
+Line (48.345, 275.568) -> (48.345, 294.504) | stroke=SideTrue thickness=1
+Line (48.345, 275.568) -> (48.345, 256.633) | stroke=SideTrue thickness=1
+Rectangle at (99.741, 264.748) size 81.151 x 21.64 | stroke=SideTrue thickness=1 fill=#00FFFFFF tag=BoreTag
+Line (91.626, 275.568) -> (189.007, 275.568) | stroke=SideTrue thickness=1 dash=[8.115 8.115]
+Line (0, 0) -> (450.839, 0) offset (550.58, 316.144) | stroke=Texture thickness=1
+Line (0, 0) -> (450.839, 0) offset (550.58, 370.245) | stroke=Texture thickness=1
+Line (0, 0) -> (450.839, 0) offset (550.58, 424.345) | stroke=Texture thickness=1
+Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
+Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
+Line (34, 12) -> (29, 17) | stroke=AxisX thickness=1.5
+Line (12, 12) -> (12, 34) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (7, 29) | stroke=AxisY thickness=1.5
+Line (12, 34) -> (17, 29) | stroke=AxisY thickness=1.5
+TextBlock "X" translate (36, 4) | foreground=AxisX size=10 weight=Bold
+TextBlock "Y" translate (2, 32) | foreground=AxisY size=10 weight=Bold
+TextBlock "0°" | foreground=TurnLabel size=24 weight=Bold
+

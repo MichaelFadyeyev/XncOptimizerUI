@@ -20,7 +20,9 @@ namespace XncOptimizerUI.Test
     /// shapes <see cref="MillPreviewRenderer"/>, <see cref="BorePreviewRenderer"/> and
     /// <see cref="GroovePreviewRenderer"/> add to a canvas (in the order <see cref="PartPreviewRenderer.DrawPart"/> calls
     /// them) are listed as text - kind, geometry rounded to 0.001 px, brushes, thickness, dashes -
-    /// and compared with the snapshots in <c>Golden/Preview/</c>. They lock in the drawing while
+    /// and compared with the snapshots in <c>Golden/Preview/</c>. The scene snapshots in
+    /// <c>Golden/Preview/Scene/</c> add the part itself and the viewport decorations, drawn by
+    /// <see cref="PartPreviewRenderer"/> into a fixed viewport. They lock in the drawing while
     /// the renderers are refactored. See <see cref="GoldenSnapshot"/> for accepting changes.
     /// </summary>
     [TestFixture]
@@ -40,6 +42,12 @@ namespace XncOptimizerUI.Test
         private static readonly Brush ThroughCutOff = Named(Colors.SkyBlue);
         private static readonly Brush BlindCutOff = Named(Colors.Silver);
         private static readonly Brush CentreLine = Named(Colors.Black);
+        private static readonly Brush Edge = Named(Colors.Tan);
+        private static readonly Brush Outline = Named(Colors.DimGray);
+        private static readonly Brush Texture = Named(Colors.Gray);
+        private static readonly Brush AxisX = Named(Colors.Crimson);
+        private static readonly Brush AxisY = Named(Colors.Green);
+        private static readonly Brush TurnLabel = Named(Colors.SlateGray);
 
         private static readonly Dictionary<Brush, string> BrushNames = new()
         {
@@ -51,6 +59,12 @@ namespace XncOptimizerUI.Test
             [ThroughCutOff] = nameof(ThroughCutOff),
             [BlindCutOff] = nameof(BlindCutOff),
             [CentreLine] = nameof(CentreLine),
+            [Edge] = nameof(Edge),
+            [Outline] = nameof(Outline),
+            [Texture] = nameof(Texture),
+            [AxisX] = nameof(AxisX),
+            [AxisY] = nameof(AxisY),
+            [TurnLabel] = nameof(TurnLabel),
         };
 
         private static readonly BoreBrushes BoreBrushes = new(
@@ -59,6 +73,15 @@ namespace XncOptimizerUI.Test
 
         private static readonly MillBrushes MillBrushes = new(
             Face, ThroughCutOff, BlindCutOff, CentreLine, CentreLineThickness: 1, StripOpacity: 0.5, Lines: BoreBrushes);
+
+        private static readonly PreviewPalette Palette = new(
+            new PartPreviewMetrics(GapMm, Margin: 24, MinBandThickness: 1),
+            new PartBrushes(Face, Edge, Outline, OutlineThickness: 2, Texture, TextureThickness: 1),
+            new DecorationBrushes(AxisX, AxisY, AxisThickness: 1.5, TurnLabel, TurnLabelFontSize: 24),
+            BoreBrushes,
+            MillBrushes);
+
+        private static readonly Size SceneViewport = new(800, 600);
 
         private static readonly string[] Fixtures =
         [
@@ -97,6 +120,37 @@ namespace XncOptimizerUI.Test
             GoldenSnapshot.AssertMatches(IOPath.Combine(SnapshotFolder, IOPath.ChangeExtension(fixture, ".txt")), text.ToString());
         }
 
+        /// <summary>
+        /// Every part of <paramref name="fixture"/> drawn whole - side views, face, machining and
+        /// texture mark on the part canvas, then the axis glyph and turn label on the overlay - at
+        /// fit-to-view and at 2x zoom.
+        /// </summary>
+        [TestCaseSource(nameof(Fixtures))]
+        public void Scene_MatchesGoldenSnapshot(string fixture)
+        {
+            var text = new StringBuilder();
+
+            foreach (var (partId, programs) in ProgramsByPart(fixture))
+            {
+                foreach (var zoom in new[] { 1d, 2d })
+                {
+                    text.Append(CultureInfo.InvariantCulture, $"## part {partId} at zoom {zoom}\n");
+
+                    var (canvasSize, part, overlay) = RenderScene(programs, zoom);
+                    text.Append(CultureInfo.InvariantCulture, $"canvas {N(canvasSize.Width)} x {N(canvasSize.Height)}\n");
+
+                    foreach (var element in part.Concat(overlay))
+                    {
+                        text.Append(Describe(element)).Append('\n');
+                    }
+
+                    text.Append('\n');
+                }
+            }
+
+            GoldenSnapshot.AssertMatches(IOPath.Combine(SnapshotFolder, "Scene", IOPath.ChangeExtension(fixture, ".txt")), text.ToString());
+        }
+
         #region Rendering
 
         /// <summary>XNC programs of every part in <paramref name="fixture"/>, in operation order, keyed by part id.</summary>
@@ -127,19 +181,54 @@ namespace XncOptimizerUI.Test
             return canvas.Children.Cast<UIElement>();
         }
 
+        /// <summary>Draws like <c>PartPreviewControl</c>: sized by the first program, with the texture mark.</summary>
+        private static (Size CanvasSize, IEnumerable<UIElement> Part, IEnumerable<UIElement> Overlay) RenderScene(List<XncProgram> programs, double zoom)
+        {
+            var first = programs[0];
+            var layout = PartPreviewLayout.Fit(SceneViewport.Width, SceneViewport.Height, first.Dx, first.Dy, first.Dz, zoom, Palette.Metrics)!;
+            var scene = new PartPreviewScene(programs, ConsiderTexture: true, TurnText: $"{first.TurnDegrees}°");
+            var part = new Canvas();
+            var overlay = new Canvas();
+
+            PartPreviewRenderer.DrawPart(part, layout, scene, Palette);
+            PartPreviewRenderer.DrawOverlay(overlay, SceneViewport, scene.TurnText, Palette);
+
+            return (new Size(layout.CanvasWidth, layout.CanvasHeight), part.Children.Cast<UIElement>(), overlay.Children.Cast<UIElement>());
+        }
+
         #endregion
 
         #region Description
 
         private static string Describe(UIElement element) => element switch
         {
-            Line line => $"Line ({N(line.X1)}, {N(line.Y1)}) -> ({N(line.X2)}, {N(line.Y2)}){Style(line)}",
+            Line line => $"Line ({N(line.X1)}, {N(line.Y1)}) -> ({N(line.X2)}, {N(line.Y2)}){CanvasOffset(line)}{Style(line)}",
             Rectangle rect => $"Rectangle {Box(rect)}{Style(rect)}",
             Ellipse ellipse => $"Ellipse {Box(ellipse)}{Style(ellipse)}",
             Polygon polygon => $"Polygon [{string.Join(" ", polygon.Points.Select(p => $"{N(p.X)},{N(p.Y)}"))}]{Style(polygon)}",
             ShapePath path => $"Path {Geometry(path.Data)}{Style(path)}",
+            TextBlock textBlock => Describe(textBlock),
             _ => element.GetType().Name,
         };
+
+        /// <summary>
+        /// A label's text and styling plus its render offset; its canvas position is left out,
+        /// since it depends on the measured text and the system scrollbar size.
+        /// </summary>
+        private static string Describe(TextBlock textBlock)
+        {
+            var offset = textBlock.RenderTransform is TranslateTransform translate
+                ? $" translate ({N(translate.X)}, {N(translate.Y)})"
+                : string.Empty;
+
+            return $"TextBlock \"{textBlock.Text}\"{offset} | foreground={BrushName(textBlock.Foreground)} size={N(textBlock.FontSize)} weight={textBlock.FontWeight}";
+        }
+
+        /// <summary>Where a line drawn from its own origin is placed on the canvas; nothing for a line drawn in canvas coordinates.</summary>
+        private static string CanvasOffset(Line line) =>
+            double.IsNaN(Canvas.GetLeft(line)) && double.IsNaN(Canvas.GetTop(line))
+                ? string.Empty
+                : $" offset ({N(Canvas.GetLeft(line))}, {N(Canvas.GetTop(line))})";
 
         private static string Box(FrameworkElement element) =>
             $"at ({N(Canvas.GetLeft(element))}, {N(Canvas.GetTop(element))}) size {N(element.Width)} x {N(element.Height)}";
@@ -158,7 +247,7 @@ namespace XncOptimizerUI.Test
             if (shape.StrokeLineJoin != PenLineJoin.Miter) parts.Add($"join={shape.StrokeLineJoin}");
             if (shape.Opacity != 1d) parts.Add($"opacity={N(shape.Opacity)}");
             if (!shape.IsHitTestVisible) parts.Add("no-hit-test");
-            if (shape.Tag is not null) parts.Add($"tag={shape.Tag.GetType().Name}");
+            if (shape.Tag is not null) parts.Add($"tag={(shape.Tag is string side ? side : shape.Tag.GetType().Name)}");
 
             return " | " + string.Join(" ", parts);
         }
