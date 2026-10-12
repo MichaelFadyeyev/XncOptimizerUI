@@ -69,7 +69,7 @@ leaves the document untouched), logs each part, and saves nothing when nothing c
 | `OptimizeMillTraversal(IList<Part> parts)` | `MillTraversalOptimizer.cs`: greedy nearest-neighbour re-sequence of straight axis-parallel passes; `*_mo.project` |
 | `SortToolDeclarations(IList<Part> parts)` | `XncToolDeclarationSorter.cs`; `*_to.project` |
 | `OffsetMillPaths(IList<Part> parts, double offset, MillOffsetSide side, MillPathKinds kinds)` | `MillPathOffsetter.cs`; `*_off.project` |
-| `CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds)` | `OutsideOperationDetector.cs`; `*_cln.project` |
+| `CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds)` | `Outside/OutsideOperationDetector.cs` (`BoreOutsideRule`, `GrooveOutsideRule`, `MillOutsideRule`); `*_cln.project` |
 
 Program text is always read and written through `Services/Xnc/XncProgramText.cs` (keeps the
 `<?xml ...?>` declaration). Element names: `Services/Xnc/XncTags.cs`; tool name prefixes
@@ -84,7 +84,7 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
   `GetTypeNameValue`/`SetTypeNameValue`, `GetCodeValue`, `GetGroupCodeValue`
 - sizes: `GetLengthDecimalValue`/`SetLengthValue`/`SetDLengthValue` (`l`/`dl`),
   `GetWidthDecimalValue`/`SetWidthValue`/`SetDWidthValue` (`w`/`dw`), `GetThicknessDecimalValue` (`t`)
-- banding: `GetElbId..GetEltId` + `...IntValue` (decode `value.Split('#')[1]`), `GetElbMat..GetEltMat`
+- banding: `GetElbIdIntValue..GetEltIdIntValue` (`GetBandingIdIntValue` decodes `value.Split('#')[1]`), `SetBandingValue`, `GetElbMatValue..GetEltMatValue`
 - material: `GetOperationMaterialIdValue` (`element.Element("material").Attribute("id")`), `GetMat`
 - XNC sub-document (`#region XNC program sub-document`): `GetProgram`/`GetProgramValue`, and
   **string** readers `GetDxValue/GetDyValue/GetDzValue/GetDValue/GetExprValue/GetXValue/GetYValue/
@@ -96,9 +96,13 @@ Static `XElement`/`XContainer` extension methods — **use these, not raw `Attri
 
 | file | role |
 |---|---|
-| `XncProgramReader.cs` | `static XncProgram Read(XElement xncOperation)` / `Parse(XElement program, bool side)`. Decodes via `XncProgramText.Load`, seeds `dx/dy/dz`, walks children, builds contours, resolves every coordinate. Unknown elements ignored. Throws `XncProgramFormatException`. |
+| `XncProgramReader.cs` | `static XncProgram Read(XElement xncOperation)`. Decodes via `XncProgramText.Load`, seeds `dx/dy/dz`, dispatches each child by tag to its `Parse*` method (one per element kind; state in a private `ReadState`), builds contours, resolves every coordinate. Unknown elements ignored. Throws `XncProgramFormatException`. |
+| `XncAttributeParsing.cs` | plain attribute values: `RequireDouble`, `RequireDimension`, `ParseInt`/`ParseBool`, `ParsePositionCode`, `IsClockwise`, `ArrayCount`, `ToolDiameter`/`ReadToolDiameters` |
+| `XncSymbols.cs` | `SeedProgramSymbols`, `DimensionSymbols`, `ProgramSymbols`, `SymbolsBefore`, `Eval` (the one evaluation wrapper), `EvalPoint`, `ExpressionAttributes`, `RenameIdentifier`/`ReferencesIdentifier` |
+| `XncNumberFormat.cs` | `FormatNumber`/`SetNumber`: how rewriters write recalculated values |
+| `Geometry/` | `Vec2`, `Primitive`, `PlanarGeometry`, `Box`, `ChordPath`, `ContourOffsetGeometry`, `MillShapeGeometry` |
 | `XncExpressionEvaluator.cs` | `Evaluate(expr, XncSymbolTable)` — recursive-descent `+ - * /`, parens, unary sign, dotted ids |
-| `XncSymbolTable.cs` | `Set` / `TryGet`, **case-insensitive**; predefined `dx, dy, dz, tool.dia` |
+| `XncSymbolTable.cs` | `Set` / `SetToolDiameter` / `TryGet`, **case-insensitive**; predefined `dx, dy, dz, tool.dia` |
 | `XncProgramFormatException.cs` | parse-error type |
 
 ## Parsed XNC model — `MVVM/Models/Xnc/` (read-only — cannot write back to XML)

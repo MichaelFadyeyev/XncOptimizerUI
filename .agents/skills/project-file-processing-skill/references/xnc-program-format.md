@@ -154,7 +154,7 @@ Any of `x y x1 y1 x2 y2 cx cy dp z t l w a r sxy` (and `<var expr>`) is **either
 | `expr` | `int`/`double`: formula evaluated against the symbol table at the point it appears; `bool`: `true`/`false`; `string`: any text |
 | `comment` | free text, e.g. `Глубина сквозного фрезерования контура` ("through-contour milling depth") |
 
-Only `int`/`double` vars become symbols (`XncProgramReader`, `XncProgramMath.SeedProgramSymbols`);
+Only `int`/`double` vars become symbols (`XncProgramReader`, `XncSymbols.SeedProgramSymbols`);
 a `string`/`bool` var is listed (`XncProgram.DeclaredVariables`, `Value = null`) but never
 evaluated, so nothing numeric may reference it.
 
@@ -162,7 +162,7 @@ evaluated, so nothing numeric may reference it.
 rewrites one attribute of the `variableIndex`-th `<var>` (rules in `Services/Xnc/XncVariableRules.cs`):
 - `name` — a letter, then letters/digits/`_`/`.`; unique in the program (any case); not
   `dx`/`dy`/`dz`/`tool.dia`. Every whole-identifier reference in the program's expression
-  attributes (`XncProgramMath.ExpressionAttributes`, incl. numeric vars' `expr`; not a string/bool
+  attributes (`XncSymbols.ExpressionAttributes`, incl. numeric vars' `expr`; not a string/bool
   var's literal) is renamed with it.
 - `type` — one of the four; the current `expr` must fit it; a var referenced by any expression
   cannot become `string`/`bool`.
@@ -328,7 +328,7 @@ For every newly created milling operation, set `in="0" out="1"` and `fwd="true"`
   one; `fwd="false"` ⇒ the reverse (last segment end back to the entry).
 - Clockwise is meant in the operator's view, which is the raw XNC frame mirrored in Y: the
   GibLab-authored circles in `TestData/td.project` use `dir="false"` (counter-clockwise) while
-  their raw math angle decreases. `Services/Xnc/ContourOffsetGeometry.cs`
+  their raw math angle decreases. `Services/Xnc/Geometry/ContourOffsetGeometry.cs`
   (`TravelsCounterClockwise`) encodes these rules for both "Offset mill path" and the part
   preview's mill overlay.
 
@@ -401,8 +401,8 @@ with `<mac>`, but its radius is explicit:
 | `dp` | optional depth at the endpoint; absent means keep the current contour depth |
 
 The centre is reconstructed from the implicit start point, endpoint, radius, and `dir`
-(`XncProgramMath.TryReconstructArcCentre`, used by both `XncProgramReader` and the mill-offset
-rewriter). Do not infer an `<ma>` centre from comments or from the face on which the operation
+(`PlanarGeometry.ArcCentreFromChord`, used by `XncProgramReader`, `XncMillElements.ReadPath` and
+the bore/mill converter). Do not infer an `<ma>` centre from comments or from the face on which the operation
 appears. An `<ma>` whose radius cannot span its chord is a format error.
 
 The reader tracks a running depth per contour: seeded from the `<ms>` entry `dp`, replaced

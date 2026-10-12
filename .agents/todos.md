@@ -74,7 +74,7 @@ per selected part. Deferred:
   (`MVVM/Views/PartPreview/MillPreviewRenderer.cs`, geometry in `MillPreviewGeometry.cs`) on
   the **Face rectangle only**: cut-off area fill (`c` right/left/pocket; through vs blind
   brush), swept strip, centre line, dashed tool path (offset via the shared
-  `Services/Xnc/ContourOffsetGeometry.cs`), start marker; click toggles red like a groove.
+  `Services/Xnc/Geometry/ContourOffsetGeometry.cs`), start marker; click toggles red like a groove.
   Still deferred for mills: edge-band projections; an open mill with an end inside the
   part gets no cut-off fill; overlapping cut-off fills stack per
   program as contours, then rectangles, then ellipses (a later blind fill can paint over an
