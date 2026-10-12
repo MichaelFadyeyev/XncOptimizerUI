@@ -5,7 +5,7 @@ namespace XncOptimizerUI.Services.Xnc.Geometry
     /// <c>&lt;me&gt;</c> ellipses - as <see cref="Primitive"/> chains in raw program millimetres (the
     /// Y-down operator's view). Built in a local frame, counter-clockwise on screen from the local
     /// <c>y-</c> side (confirmed with the user), then turned and moved by <see cref="Place"/>.
-    /// Shared by the part preview's mill overlay and <see cref="OutsideOperationDetector"/>.
+    /// Shared by the part preview's mill overlay and <see cref="Outside.OutsideOperationDetector"/>.
     /// </summary>
     internal static class MillShapeGeometry
     {

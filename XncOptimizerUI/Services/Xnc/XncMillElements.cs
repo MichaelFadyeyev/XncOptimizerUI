@@ -11,7 +11,7 @@ namespace XncOptimizerUI.Services.Xnc
     /// Finds the mills (<c>&lt;ms&gt;</c> contours with their segments, <c>&lt;mr&gt;</c>,
     /// <c>&lt;me&gt;</c>) of one decoded XNC <c>&lt;program&gt;</c> and reads a contour's centre line
     /// as <see cref="Primitive"/>s. Shared by the program rewriters that work on mills
-    /// (<see cref="MillPathOffsetter"/>, <see cref="OutsideOperationDetector"/>).
+    /// (<see cref="MillPathOffsetter"/>, <see cref="Outside.OutsideOperationDetector"/>).
     /// </summary>
     internal static class XncMillElements
     {

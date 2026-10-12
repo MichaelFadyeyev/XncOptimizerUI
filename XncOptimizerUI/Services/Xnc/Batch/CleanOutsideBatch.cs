@@ -5,11 +5,12 @@ using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Project;
 using XncOptimizerUI.Services.Xnc.Conversions;
+using XncOptimizerUI.Services.Xnc.Outside;
 
 namespace XncOptimizerUI.Services.Xnc.Batch
 {
     /// <summary>An element removed by outside cleaning, with the id of the XNC operation it came from.</summary>
-    internal readonly record struct RemovedElement(string? OperationId, OutsideOperationDetector.OutsideElement Element);
+    internal readonly record struct RemovedElement(string? OperationId, OutsideElement Element);
 
     /// <summary>Counters of outside cleaning, with every removed element for the log.</summary>
     internal readonly record struct CleanStats(ImmutableList<RemovedElement> Removed, int ToolsRemoved, int Unresolved) : IBatchStats<CleanStats>
@@ -93,7 +94,7 @@ namespace XncOptimizerUI.Services.Xnc.Batch
         #region Methods
 
         /// <summary>The element as authored, e.g. <c>&lt;bf x="-20" y="30" dp="10" name="Bore8"/&gt;</c>; a contour adds its segment count.</summary>
-        private static string Describe(OutsideOperationDetector.OutsideElement removed)
+        private static string Describe(OutsideElement removed)
         {
             var element = new XElement(removed.Element.Name, removed.Element.Attributes()).ToString(SaveOptions.DisableFormatting);
 

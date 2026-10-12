@@ -50,7 +50,7 @@ namespace XncOptimizerUI.Contracts
 
         /// <summary>
         /// Removes the elements of the selected <paramref name="kinds"/> lying outside the part (see
-        /// <see cref="Services.Xnc.OutsideOperationDetector"/>) and the tools no longer used; every removed
+        /// <see cref="Services.Xnc.Outside.OutsideOperationDetector"/>) and the tools no longer used; every removed
         /// element is logged. Saved with the <c>_cln</c> suffix.
         /// </summary>
         OperationResult CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds);
