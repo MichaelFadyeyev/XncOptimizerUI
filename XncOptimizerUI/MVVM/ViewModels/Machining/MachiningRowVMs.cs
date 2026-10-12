@@ -1,151 +1,85 @@
-using System;
-using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
-    public sealed class ToolRowVM
+    /// <summary>One row of the selected part's tools table.</summary>
+    public sealed class ToolRowVM(int number, string side, XncTool tool)
     {
-        public ToolRowVM(int number, string side, XncTool tool)
-        {
-            Number = number;
-            Side = side;
-            Tool = tool;
-        }
+        public int Number { get; } = number;
 
-        public int Number { get; }
-        public string Side { get; }
-        public XncTool Tool { get; }
+        public string Side { get; } = side;
+
+        public XncTool Tool { get; } = tool;
+
         public string Name => Tool.Name;
+
         public string Diameter => MachiningNumber.Format(Tool.Diameter);
     }
 
-    public sealed partial class MillingContourRowVM : ObservableObject
+    /// <summary>One row of the selected part's milling contours table.</summary>
+    public sealed class MillingContourRowVM(int number, string side, XncMillingContour contour, Action<XncMillingContour, bool> onSelectionChanged)
+        : MachiningRowVM<XncMillingContour>(number, side, contour, onSelectionChanged)
     {
-        private readonly Action<MillingContourRowVM, bool> _onSelectionChanged;
+        public string ToolName => Model.ToolName;
 
-        public MillingContourRowVM(
-            int number,
-            string side,
-            XncMillingContour contour,
-            Action<MillingContourRowVM, bool> onSelectionChanged)
-        {
-            Number = number;
-            Side = side;
-            Contour = contour;
-            _onSelectionChanged = onSelectionChanged;
-        }
+        public string EntryX => MachiningNumber.Format(Model.Entry.X);
 
-        public int Number { get; }
-        public string Side { get; }
-        public XncMillingContour Contour { get; }
-        public string ToolName => Contour.ToolName;
-        public string EntryX => Format(Contour.Entry.X);
-        public string EntryY => Format(Contour.Entry.Y);
-        public string ExitX => Format(Contour.Segments.Count == 0
-            ? Contour.Entry.X
-            : Contour.Segments[^1].End.X);
-        public string ExitY => Format(Contour.Segments.Count == 0
-            ? Contour.Entry.Y
-            : Contour.Segments[^1].End.Y);
-        public string Depth => Format(Contour.EntryDepth);
-        public string ToolToCenterLine => Contour.Position switch
-        {
-            ToolPosition.Center => "C",
-            ToolPosition.Left => "L",
-            ToolPosition.Right => "R",
-            ToolPosition.Pocket => "P",
-            _ => Contour.Position.ToString()
-        };
-        public int Segments => Contour.Segments.Count;
+        public string EntryY => MachiningNumber.Format(Model.Entry.Y);
 
-        [ObservableProperty]
-        private bool _isSelected;
+        public string ExitX => MachiningNumber.Format(Exit.X);
 
-        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
+        public string ExitY => MachiningNumber.Format(Exit.Y);
 
-        private static string Format(double value) => MachiningNumber.Format(value);
+        public string Depth => MachiningNumber.Format(Model.EntryDepth);
+
+        public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
+
+        public int Segments => Model.Segments.Count;
+
+        /// <summary>Where the contour ends: its last segment's end, or the entry when it has no segment.</summary>
+        private XncPoint Exit => Model.Segments.Count == 0 ? Model.Entry : Model.Segments[^1].End;
     }
 
-    public sealed partial class MillingEllipseRowVM : ObservableObject
+    /// <summary>One row of the selected part's milling ellipses table.</summary>
+    public sealed class MillingEllipseRowVM(int number, string side, XncMillingEllipse ellipse, Action<XncMillingEllipse, bool> onSelectionChanged)
+        : MachiningRowVM<XncMillingEllipse>(number, side, ellipse, onSelectionChanged)
     {
-        private readonly Action<MillingEllipseRowVM, bool> _onSelectionChanged;
+        public string ToolName => Model.ToolName;
 
-        public MillingEllipseRowVM(
-            int number,
-            string side,
-            XncMillingEllipse ellipse,
-            Action<MillingEllipseRowVM, bool> onSelectionChanged)
-        {
-            Number = number;
-            Side = side;
-            Ellipse = ellipse;
-            _onSelectionChanged = onSelectionChanged;
-        }
+        public string CenterX => MachiningNumber.Format(Model.Center.X);
 
-        public int Number { get; }
-        public string Side { get; }
-        public XncMillingEllipse Ellipse { get; }
-        public string ToolName => Ellipse.ToolName;
-        public string CenterX => Format(Ellipse.Center.X);
-        public string CenterY => Format(Ellipse.Center.Y);
-        public string Length => Format(Ellipse.Length);
-        public string Width => Format(Ellipse.Width);
-        public string Angle => Format(Ellipse.Angle);
-        public string Depth => Format(Ellipse.Depth);
-        public string ToolToCenterLine => FormatToolToCenterLine(Ellipse.Position);
+        public string CenterY => MachiningNumber.Format(Model.Center.Y);
 
-        [ObservableProperty]
-        private bool _isSelected;
+        public string Length => MachiningNumber.Format(Model.Length);
 
-        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
+        public string Width => MachiningNumber.Format(Model.Width);
 
-        private static string Format(double value) => MachiningNumber.Format(value);
+        public string Angle => MachiningNumber.Format(Model.Angle);
 
-        internal static string FormatToolToCenterLine(ToolPosition position) => position switch
-        {
-            ToolPosition.Center => "C",
-            ToolPosition.Left => "L",
-            ToolPosition.Right => "R",
-            ToolPosition.Pocket => "P",
-            _ => position.ToString()
-        };
+        public string Depth => MachiningNumber.Format(Model.Depth);
+
+        public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
     }
 
-    public sealed partial class MillingRectangleRowVM : ObservableObject
+    /// <summary>One row of the selected part's milling rectangles table.</summary>
+    public sealed class MillingRectangleRowVM(int number, string side, XncMillingRectangle rectangle, Action<XncMillingRectangle, bool> onSelectionChanged)
+        : MachiningRowVM<XncMillingRectangle>(number, side, rectangle, onSelectionChanged)
     {
-        private readonly Action<MillingRectangleRowVM, bool> _onSelectionChanged;
+        public string CenterX => MachiningNumber.Format(Model.Origin.X);
 
-        public MillingRectangleRowVM(
-            int number,
-            string side,
-            XncMillingRectangle rectangle,
-            Action<MillingRectangleRowVM, bool> onSelectionChanged)
-        {
-            Number = number;
-            Side = side;
-            Rectangle = rectangle;
-            _onSelectionChanged = onSelectionChanged;
-        }
+        public string CenterY => MachiningNumber.Format(Model.Origin.Y);
 
-        public int Number { get; }
-        public string Side { get; }
-        public XncMillingRectangle Rectangle { get; }
-        public string CenterX => Format(Rectangle.Origin.X);
-        public string CenterY => Format(Rectangle.Origin.Y);
-        public string Length => Format(Rectangle.Length);
-        public string Width => Format(Rectangle.Width);
-        public string Angle => Format(Rectangle.Angle);
-        public string CornerRadius => Format(Rectangle.CornerRadius);
-        public string Depth => Format(Rectangle.Depth);
-        public string ToolToCenterLine => MillingEllipseRowVM.FormatToolToCenterLine(Rectangle.Position);
+        public string Length => MachiningNumber.Format(Model.Length);
 
-        [ObservableProperty]
-        private bool _isSelected;
+        public string Width => MachiningNumber.Format(Model.Width);
 
-        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
+        public string Angle => MachiningNumber.Format(Model.Angle);
 
-        private static string Format(double value) => MachiningNumber.Format(value);
+        public string CornerRadius => MachiningNumber.Format(Model.CornerRadius);
+
+        public string Depth => MachiningNumber.Format(Model.Depth);
+
+        public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
     }
 }

@@ -17,7 +17,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// </summary>
     public partial class BoreRowVM : EditableRowVM
     {
-        private readonly Action<BoreRowVM, bool> _onSelectionChanged;
+        private readonly Action<XncBore, bool> _onSelectionChanged;
         private readonly Func<BoreRowVM, BoreAttribute, string, bool> _onEdited;
 
         /// <summary>Symbols drafts are validated against: the program's dx/dy/dz and declared vars.</summary>
@@ -25,7 +25,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         public BoreRowVM(
             int number, string side, string? diameter, XncBore bore, XncProgram program,
-            Action<BoreRowVM, bool> onSelectionChanged,
+            Action<XncBore, bool> onSelectionChanged,
             Func<BoreRowVM, BoreAttribute, string, bool> onEdited)
         {
             Number = number;
@@ -79,7 +79,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         [ObservableProperty]
         private bool _isSelected;
 
-        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(this, value);
+        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(Bore, value);
 
         /// <summary>Draft text of the X column editor.</summary>
         [ObservableProperty]

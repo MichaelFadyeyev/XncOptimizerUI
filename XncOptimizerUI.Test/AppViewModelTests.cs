@@ -643,7 +643,7 @@ namespace XncOptimizerUI.Test
 
             vm.SelectedPartGrooves[0].IsSelected = true;
             Assert.That(vm.CheckedGrooves, Has.Count.EqualTo(1));
-            Assert.That(vm.CheckedGrooves[0], Is.SameAs(vm.SelectedPartGrooves[0].Groove));
+            Assert.That(vm.CheckedGrooves[0], Is.SameAs(vm.SelectedPartGrooves[0].Model));
 
             vm.SelectedPartGrooves[0].IsSelected = false;
             Assert.That(vm.CheckedGrooves, Is.Empty);

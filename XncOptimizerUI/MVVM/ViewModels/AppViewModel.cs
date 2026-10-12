@@ -18,8 +18,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
 {
     public partial class AppViewModel : ObservableObject
     {
-        private const string NoProgramsInfo = "Programs: -";
-
         private const int BoundsNormalizeDelayMs = 400;
 
         private readonly string _assembly;
@@ -168,19 +166,19 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// Bores checked via the bores <c>DataGrid</c>'s checkbox column. Reset whenever the
         /// selected part changes. Not consumed by anything yet - reserved for future features.
         /// </summary>
-        public ObservableCollection<XncBore> CheckedBores { get; } = [];
+        public CheckedSet<XncBore> CheckedBores { get; } = [];
 
         /// <summary>Grooves checked via the grooves table. Reset when the selected part changes.</summary>
-        public ObservableCollection<XncGrooving> CheckedGrooves { get; } = [];
+        public CheckedSet<XncGrooving> CheckedGrooves { get; } = [];
 
         /// <summary>Contours checked via the milling contours table.</summary>
-        public ObservableCollection<XncMillingContour> CheckedMillingContours { get; } = [];
+        public CheckedSet<XncMillingContour> CheckedMillingContours { get; } = [];
 
         /// <summary>Ellipses checked via the milling ellipses table.</summary>
-        public ObservableCollection<XncMillingEllipse> CheckedMillingEllipses { get; } = [];
+        public CheckedSet<XncMillingEllipse> CheckedMillingEllipses { get; } = [];
 
         /// <summary>Rectangles checked via the milling rectangles table.</summary>
-        public ObservableCollection<XncMillingRectangle> CheckedMillingRectangles { get; } = [];
+        public CheckedSet<XncMillingRectangle> CheckedMillingRectangles { get; } = [];
         #endregion
 
         #region ObservableProperties
@@ -314,7 +312,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// <see cref="SelectedPart"/>. Refreshed whenever the selection changes.
         /// </summary>
         [ObservableProperty]
-        private string _selectedPartPrograms = NoProgramsInfo;
+        private string _selectedPartPrograms = ProgramsSummary.NoPart;
 
         /// <summary>
         /// The XNC programs attached to <see cref="SelectedPart"/>, for the preview's
@@ -1230,132 +1228,34 @@ namespace XncOptimizerUI.MVVM.ViewModels
             return bandingId == null ? string.Empty : Bands.First(b => b.Id == bandingId).ExternalSymbol;
         }
 
-        /// <summary>
-        /// Reads the selected part's XNC programs and renders them as brief lines of
-        /// the shape <c>#/type/side/&lt;params&gt;</c> (one per tool, bore, groove,
-        /// milling contour and rectangle), preceded by a <c>Programs: N</c> header.
-        /// </summary>
+        /// <summary>The "XNC List" text of the selected part's programs (see <see cref="ProgramsSummary"/>).</summary>
         private string BuildSelectedPartPrograms(
-            PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
-        {
-            if (part is null || string.IsNullOrEmpty(FullPath))
-            {
-                return NoProgramsInfo;
-            }
-
-            if (readError != null)
-            {
-                return $"Programs: <read error: {readError}>";
-            }
-
-            if (programs.Count == 0)
-            {
-                return "Programs: none";
-            }
-
-            var sb = new StringBuilder();
-            sb.Append("Programs: ").Append(programs.Count).Append('\n');
-
-            var n = 0;
-
-            foreach (var program in programs)
-            {
-                var side = program.Side ? "front" : "back";
-
-                void Line(string type, string parameters) => sb
-                    .Append(++n).Append('/').Append(type).Append('/').Append(side).Append('/')
-                    .Append(parameters).Append('\n');
-
-                Line("xnc", $"dx{Num(program.Dx)} dy{Num(program.Dy)} dz{Num(program.Dz)}");
-
-                foreach (var tool in program.Tools)
-                {
-                    Line("tool", $"{tool.Name} Ø{Num(tool.Diameter)}");
-                }
-
-                foreach (var variable in program.DeclaredVariables)
-                {
-                    Line("var", DescribeVariable(variable));
-                }
-
-                foreach (var bore in program.Bores)
-                {
-                    var through = bore.Through ? " through" : string.Empty;
-                    Line("bore", $"{bore.Surface} {bore.ToolName} "
-                        + $"({Num(bore.X)},{Num(bore.Y)},{Num(bore.Z)}) dp{Num(bore.Depth)}{through}");
-                }
-
-                foreach (var groove in program.Groovings)
-                {
-                    Line("groove", $"{groove.ToolName} "
-                        + $"({Num(groove.Start.X)},{Num(groove.Start.Y)})-({Num(groove.End.X)},{Num(groove.End.Y)}) "
-                        + $"dp{Num(groove.Depth)} w{Num(groove.Width)} {groove.Position}");
-                }
-
-                foreach (var contour in program.MillingContours)
-                {
-                    Line("mill", $"{contour.ToolName} "
-                        + $"({Num(contour.Entry.X)},{Num(contour.Entry.Y)}) dp{Num(contour.EntryDepth)} "
-                        + $"{contour.Position} {DescribeSegments(contour.Segments)}");
-                }
-
-                foreach (var rect in program.MillingRectangles)
-                {
-                    Line("rect", $"{rect.ToolName} "
-                        + $"({Num(rect.Origin.X)},{Num(rect.Origin.Y)}) {Num(rect.Length)}x{Num(rect.Width)} "
-                        + $"dp{Num(rect.Depth)} {rect.Position}");
-                }
-
-                foreach (var ellipse in program.MillingEllipses)
-                {
-                    Line("ellipse", $"{ellipse.ToolName} "
-                        + $"({Num(ellipse.Center.X)},{Num(ellipse.Center.Y)}) "
-                        + $"{Num(ellipse.Length)}x{Num(ellipse.Width)} a{Num(ellipse.Angle)} "
-                        + $"dp{Num(ellipse.Depth)} {ellipse.Position}");
-                }
-            }
-
-            return sb.ToString().TrimEnd('\n');
-        }
+            PartVM? part, IReadOnlyList<XncProgram> programs, string? readError) =>
+            part is null || string.IsNullOrEmpty(FullPath)
+                ? ProgramsSummary.NoPart
+                : ProgramsSummary.Describe(programs, readError);
 
         /// <summary>
-        /// Flattens every bore across the selected part's XNC programs into numbered,
-        /// display-ready <see cref="BoreRowVM"/> rows for the bores <c>DataGrid</c>.
+        /// One numbered row per element that <paramref name="elements"/> picks from each program,
+        /// across all of the selected part's programs in order.
         /// </summary>
-        private ObservableCollection<BoreRowVM> BuildSelectedPartBoreRows(IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<BoreRowVM>();
-            var number = 0;
+        private static ObservableCollection<TRow> BuildRows<TElement, TRow>(
+            IReadOnlyList<XncProgram> programs,
+            Func<XncProgram, IEnumerable<TElement>> elements,
+            Func<int, XncProgram, TElement, TRow> createRow) =>
+            new(programs
+                .SelectMany(program => elements(program).Select(element => (Program: program, Element: element)))
+                .Select((entry, i) => createRow(i + 1, entry.Program, entry.Element)));
 
-            foreach (var program in programs)
-            {
-                foreach (var bore in program.Bores)
-                {
-                    var side = bore.Surface switch
-                    {
-                        BoreSurface.Face => program.Side ? "Front" : "Back",
-                        BoreSurface.Top => "Top",
-                        BoreSurface.Bottom => "Bottom",
-                        BoreSurface.Left => "Left",
-                        BoreSurface.Right => "Right",
-                        _ => bore.Surface.ToString()
-                    };
-
-                    var diameter = program.Tools.FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter;
-
-                    rows.Add(new BoreRowVM(
-                        ++number,
-                        side,
-                        diameter is null ? null : Num(diameter.Value),
-                        bore,
-                        program,
-                        OnBoreRowSelectionChanged,
-                        OnBoreRowEdited));
-                }
-            }
-
-            return rows;
-        }
+        private ObservableCollection<BoreRowVM> BuildSelectedPartBoreRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.Bores, (number, program, bore) => new BoreRowVM(
+                number,
+                MachiningDisplay.BoreSide(bore, program),
+                program.Tools.FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter is { } diameter ? Num(diameter) : null,
+                bore,
+                program,
+                CheckedBores.Set,
+                OnBoreRowEdited));
 
         /// <summary>
         /// Writes one committed bore cell edit into its program, saves the file in place (together
@@ -1466,205 +1366,38 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// <summary>Refreshes one row and keeps <see cref="CheckedBores"/> pointing at its current bore.</summary>
         private void ApplyBoreRow(BoreRowVM row, XncBore bore, XncProgram program)
         {
-            var checkedAt = CheckedBores.IndexOf(row.Bore);
-
+            CheckedBores.Replace(row.Bore, bore);
             row.Apply(bore, program);
-
-            if (checkedAt >= 0)
-            {
-                CheckedBores[checkedAt] = bore;
-            }
         }
 
-        private static ObservableCollection<ToolRowVM> BuildSelectedPartToolRows(
-            IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<ToolRowVM>();
-            var number = 0;
-            foreach (var program in programs)
-            {
-                var side = program.Side ? "Front" : "Back";
-                foreach (var tool in program.Tools)
-                {
-                    rows.Add(new ToolRowVM(++number, side, tool));
-                }
-            }
+        private static ObservableCollection<ToolRowVM> BuildSelectedPartToolRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.Tools,
+                (number, program, tool) => new ToolRowVM(number, MachiningDisplay.SideName(program.Side), tool));
 
-            return rows;
-        }
-
-        /// <summary>
-        /// Flattens the <c>&lt;var&gt;</c> declarations across the selected part's XNC programs into
-        /// numbered, editable <see cref="VariableRowVM"/> rows for the Variables <c>DataGrid</c>.
-        /// </summary>
         private ObservableCollection<VariableRowVM> BuildSelectedPartVariableRows(IReadOnlyList<XncProgram> programs) =>
-            new(programs
-                .SelectMany(program => program.DeclaredVariables.Select(variable => (Variable: variable, Program: program)))
-                .Select((entry, i) => new VariableRowVM(
-                    i + 1, entry.Program.Side ? "Front" : "Back", entry.Variable, entry.Program, OnVariableRowEdited)));
+            BuildRows(programs, program => program.DeclaredVariables,
+                (number, program, variable) => new VariableRowVM(
+                    number, MachiningDisplay.SideName(program.Side), variable, program, OnVariableRowEdited));
 
-        /// <summary>
-        /// XNC list text of a variable: <c>name type = expr</c>, then <c>(= value)</c> when a
-        /// numeric expr is not a plain number, then <c>// comment</c>.
-        /// </summary>
-        private static string DescribeVariable(XncVariable variable)
-        {
-            var value = variable.Value is { } number && Num(number) != variable.Expr.Trim()
-                ? $" (= {Num(number)})"
-                : string.Empty;
-            var comment = string.IsNullOrEmpty(variable.Comment) ? string.Empty : $" // {variable.Comment}";
+        private ObservableCollection<GrooveRowVM> BuildSelectedPartGrooveRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.Groovings,
+                (number, program, groove) => new GrooveRowVM(
+                    number, MachiningDisplay.GrooveSide(groove, program), groove, CheckedGrooves.Set));
 
-            return $"{variable.Name} {variable.Type.XmlName()} = {variable.Expr}{value}{comment}";
-        }
+        private ObservableCollection<MillingContourRowVM> BuildSelectedPartMillingContourRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.MillingContours,
+                (number, program, contour) => new MillingContourRowVM(
+                    number, MachiningDisplay.SideName(program.Side), contour, CheckedMillingContours.Set));
 
-        private ObservableCollection<MillingContourRowVM> BuildSelectedPartMillingContourRows(
-            IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<MillingContourRowVM>();
-            var number = 0;
-            foreach (var program in programs)
-            {
-                var side = program.Side ? "Front" : "Back";
-                foreach (var contour in program.MillingContours)
-                {
-                    rows.Add(new MillingContourRowVM(++number, side, contour, OnMillingContourRowSelectionChanged));
-                }
-            }
+        private ObservableCollection<MillingEllipseRowVM> BuildSelectedPartMillingEllipseRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.MillingEllipses,
+                (number, program, ellipse) => new MillingEllipseRowVM(
+                    number, MachiningDisplay.SideName(program.Side), ellipse, CheckedMillingEllipses.Set));
 
-            return rows;
-        }
-
-        private void OnMillingContourRowSelectionChanged(MillingContourRowVM row, bool isSelected)
-        {
-            if (isSelected)
-            {
-                CheckedMillingContours.Add(row.Contour);
-            }
-            else
-            {
-                CheckedMillingContours.Remove(row.Contour);
-            }
-        }
-
-        private ObservableCollection<MillingEllipseRowVM> BuildSelectedPartMillingEllipseRows(
-            IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<MillingEllipseRowVM>();
-            var number = 0;
-            foreach (var program in programs)
-            {
-                var side = program.Side ? "Front" : "Back";
-                foreach (var ellipse in program.MillingEllipses)
-                {
-                    rows.Add(new MillingEllipseRowVM(++number, side, ellipse, OnMillingEllipseRowSelectionChanged));
-                }
-            }
-
-            return rows;
-        }
-
-        private ObservableCollection<MillingRectangleRowVM> BuildSelectedPartMillingRectangleRows(
-            IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<MillingRectangleRowVM>();
-            var number = 0;
-            foreach (var program in programs)
-            {
-                var side = program.Side ? "Front" : "Back";
-                foreach (var rectangle in program.MillingRectangles)
-                {
-                    rows.Add(new MillingRectangleRowVM(++number, side, rectangle, OnMillingRectangleRowSelectionChanged));
-                }
-            }
-
-            return rows;
-        }
-
-        private void OnMillingEllipseRowSelectionChanged(MillingEllipseRowVM row, bool isSelected)
-        {
-            if (isSelected)
-                CheckedMillingEllipses.Add(row.Ellipse);
-            else
-                CheckedMillingEllipses.Remove(row.Ellipse);
-        }
-
-        private void OnMillingRectangleRowSelectionChanged(MillingRectangleRowVM row, bool isSelected)
-        {
-            if (isSelected)
-                CheckedMillingRectangles.Add(row.Rectangle);
-            else
-                CheckedMillingRectangles.Remove(row.Rectangle);
-        }
-
-        private void OnBoreRowSelectionChanged(BoreRowVM row, bool isSelected)
-        {
-            if (isSelected)
-            {
-                CheckedBores.Add(row.Bore);
-            }
-            else
-            {
-                CheckedBores.Remove(row.Bore);
-            }
-        }
-
-        private ObservableCollection<GrooveRowVM> BuildSelectedPartGrooveRows(
-            IReadOnlyList<XncProgram> programs)
-        {
-            var rows = new ObservableCollection<GrooveRowVM>();
-            var number = 0;
-
-            foreach (var program in programs)
-            {
-                foreach (var groove in program.Groovings)
-                {
-                    rows.Add(new GrooveRowVM(
-                        ++number,
-                        GetGrooveSide(program.Side, groove.SideCode),
-                        Num(groove.Start.X),
-                        Num(groove.Start.Y),
-                        Num(groove.End.X),
-                        Num(groove.End.Y),
-                        Num(groove.Depth),
-                        Num(groove.Width),
-                        GetGrooveToolPosition(groove.Position),
-                        groove,
-                        OnGrooveRowSelectionChanged));
-                }
-            }
-
-            return rows;
-        }
-
-        private static string GetGrooveSide(bool programSide, int sideCode) => sideCode switch
-        {
-            0 => programSide ? "Front" : "Back",
-            1 => "Left",
-            2 => "Right",
-            3 => "Top",
-            4 => "Bottom",
-            _ => sideCode.ToString(CultureInfo.InvariantCulture)
-        };
-
-        private void OnGrooveRowSelectionChanged(GrooveRowVM row, bool isSelected)
-        {
-            if (isSelected)
-            {
-                CheckedGrooves.Add(row.Groove);
-            }
-            else
-            {
-                CheckedGrooves.Remove(row.Groove);
-            }
-        }
-
-        private static string GetGrooveToolPosition(ToolPosition position) => position switch
-        {
-            ToolPosition.Left => "L",
-            ToolPosition.Right => "R",
-            ToolPosition.Center => "C",
-            _ => position.ToString()
-        };
+        private ObservableCollection<MillingRectangleRowVM> BuildSelectedPartMillingRectangleRows(IReadOnlyList<XncProgram> programs) =>
+            BuildRows(programs, program => program.MillingRectangles,
+                (number, program, rectangle) => new MillingRectangleRowVM(
+                    number, MachiningDisplay.SideName(program.Side), rectangle, CheckedMillingRectangles.Set));
 
         /// <summary>
         /// Sets the preview's display dimensions and turn readout from the selected part's XNC
@@ -1837,18 +1570,6 @@ namespace XncOptimizerUI.MVVM.ViewModels
         }
 
         private static PartTurn ToPartTurn(int turn) => (PartTurn)(((turn % 4) + 4) % 4);
-
-        private static string DescribeSegments(IReadOnlyList<XncMillingSegment> segments)
-        {
-            var lines = segments.Count(s => s is XncLineSegment);
-            var arcs = segments.Count(s => s is XncArcSegment);
-
-            var parts = new List<string>(2);
-            if (lines > 0) parts.Add($"{lines} line");
-            if (arcs > 0) parts.Add($"{arcs} arc");
-
-            return parts.Count == 0 ? "0 seg" : string.Join("+", parts);
-        }
 
         private static string Num(double value) => MachiningNumber.Format(value);
 
