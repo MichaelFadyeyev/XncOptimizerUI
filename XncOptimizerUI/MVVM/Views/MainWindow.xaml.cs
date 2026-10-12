@@ -9,6 +9,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.MVVM.ViewModels.Parts;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 using XncOptimizerUI.MVVM.Views.PartPreview;
 
 namespace XncOptimizerUI.MVVM.Views
@@ -36,10 +37,10 @@ namespace XncOptimizerUI.MVVM.Views
             DataContext = viewModel;
             InitializeComponent();
 
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            UpdatePreviewedPartSubscription(_viewModel.SelectedPart);
+            _viewModel.Preview.PropertyChanged += OnPreviewPropertyChanged;
+            UpdatePreviewedPartSubscription(_viewModel.Preview.Part);
             PartPreviewScrollViewer.SizeChanged += PartPreviewScrollViewer_SizeChanged;
-            PartCanvas.Loaded += (_, _) => RenderPart(_viewModel.SelectedPart);
+            PartCanvas.Loaded += (_, _) => RenderPart(_viewModel.Preview.Part);
             PartPreviewScrollViewer.PreviewMouseWheel += PartCanvas_MouseWheel;
             PartPreviewScrollViewer.PreviewMouseDown += PartPreviewScrollViewer_MouseDown;
             PartPreviewScrollViewer.PreviewMouseMove += PartPreviewScrollViewer_MouseMove;
@@ -69,26 +70,27 @@ namespace XncOptimizerUI.MVVM.Views
             }), DispatcherPriority.Background);
         }
 
-        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void OnPreviewPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             // A new part or a new turn changes the drawing's aspect: back to fit-to-view.
-            if (e.PropertyName == nameof(AppViewModel.SelectedPart)
-                || e.PropertyName == nameof(AppViewModel.SelectedPartTurn))
+            if (e.PropertyName == nameof(PartPreviewVM.Part)
+                || e.PropertyName == nameof(PartPreviewVM.Turn))
             {
-                if (e.PropertyName == nameof(AppViewModel.SelectedPart))
+                if (e.PropertyName == nameof(PartPreviewVM.Part))
                 {
-                    UpdatePreviewedPartSubscription(_viewModel.SelectedPart);
+                    UpdatePreviewedPartSubscription(_viewModel.Preview.Part);
                 }
 
                 _partPreviewZoom = 1;
-                RenderPart(_viewModel.SelectedPart);
+                RenderPart(_viewModel.Preview.Part);
                 PartPreviewScrollViewer.ScrollToHome();
             }
-            else if (e.PropertyName == nameof(AppViewModel.SelectedPartDisplayLength)
-                || e.PropertyName == nameof(AppViewModel.SelectedPartDisplayWidth)
-                || e.PropertyName == nameof(AppViewModel.SelectedXncPrograms))
+            else if (e.PropertyName == nameof(PartPreviewVM.DisplayLength)
+                || e.PropertyName == nameof(PartPreviewVM.DisplayWidth)
+                || e.PropertyName == nameof(PartPreviewVM.Programs)
+                || e.PropertyName == nameof(PartPreviewVM.SheetThickness))
             {
-                RenderPart(_viewModel.SelectedPart);
+                RenderPart(_viewModel.Preview.Part);
             }
         }
 
@@ -116,7 +118,7 @@ namespace XncOptimizerUI.MVVM.Views
         {
             if (e.PropertyName == nameof(PartVM.ConsiderTexture))
             {
-                RenderPart(_viewModel.SelectedPart);
+                RenderPart(_viewModel.Preview.Part);
             }
         }
 
@@ -137,7 +139,7 @@ namespace XncOptimizerUI.MVVM.Views
             _isHandlingPreviewSizeChanged = true;
             try
             {
-                RenderPart(_viewModel.SelectedPart);
+                RenderPart(_viewModel.Preview.Part);
                 UpdateLayout();
                 ScrollPreviewToCenter(centerX, centerY);
             }
@@ -185,7 +187,7 @@ namespace XncOptimizerUI.MVVM.Views
             _partPreviewZoom = Math.Clamp(newZoom, 1, MaxPartPreviewZoom);
             if (Math.Abs(_partPreviewZoom - oldZoom) > double.Epsilon)
             {
-                RenderPart(_viewModel.SelectedPart);
+                RenderPart(_viewModel.Preview.Part);
                 UpdateLayout();
 
                 var newOffsetX = relativeX * PartCanvas.ActualWidth - mousePosition.X;
@@ -263,8 +265,8 @@ namespace XncOptimizerUI.MVVM.Views
 
             // Display size follows the first applied XNC program's dx/dy (already in the turned
             // machine frame); with no program it falls back to the part's own length/width.
-            var partLength = _viewModel.SelectedPartDisplayLength; // X, horizontal
-            var partWidth = _viewModel.SelectedPartDisplayWidth;   // Y, vertical (points down)
+            var partLength = _viewModel.Preview.DisplayLength; // X, horizontal
+            var partWidth = _viewModel.Preview.DisplayWidth;   // Y, vertical (points down)
 
             if (part is null
                 || partLength <= 0
@@ -285,9 +287,7 @@ namespace XncOptimizerUI.MVVM.Views
 
             // Sheet thickness (mm) is the depth of every side view. Missing / zero
             // sheet -> the bands collapse to the min visible thickness below.
-            var sheetThickness = (double)(_viewModel.Sheets
-                .FirstOrDefault(s => s.Id == part.SheetId)?.Thickness ?? 0m);
-            sheetThickness = Math.Max(sheetThickness, 0);
+            var sheetThickness = _viewModel.Preview.SheetThickness;
 
             var availableWidth = canvasWidth - (2 * margin);
             var availableHeight = canvasHeight - (2 * margin);
@@ -382,18 +382,18 @@ namespace XncOptimizerUI.MVVM.Views
                 boreBrushes);
 
             // Mills first: their cut-off fills cover the face, so bores and grooves go on top.
-            MillPreviewRenderer.DrawMills(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, millBrushes);
-            BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
-            GroovePreviewRenderer.DrawGrooves(PartCanvas, _viewModel.SelectedXncPrograms, boreLayout, boreBrushes);
+            MillPreviewRenderer.DrawMills(PartCanvas, _viewModel.Preview.Programs, boreLayout, millBrushes);
+            BorePreviewRenderer.DrawBores(PartCanvas, _viewModel.Preview.Programs, boreLayout, boreBrushes);
+            GroovePreviewRenderer.DrawGrooves(PartCanvas, _viewModel.Preview.Programs, boreLayout, boreBrushes);
 
             if (part.ConsiderTexture)
             {
-                var programTurn = _viewModel.SelectedXncPrograms.Count > 0 ? _viewModel.SelectedXncPrograms[0].Turn : 0;
+                var programTurn = _viewModel.Preview.Programs.Count > 0 ? _viewModel.Preview.Programs[0].Turn : 0;
                 DrawTextureIndicator(originX, originY, faceWidth, faceHeight, programTurn);
             }
 
             DrawAxisGlyph(margin);
-            DrawTurnLabel(_viewModel.SelectedPartTurnText);
+            DrawTurnLabel(_viewModel.Preview.TurnText);
         }
 
         private void DrawTextureIndicator(

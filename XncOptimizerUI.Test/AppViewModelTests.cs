@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
@@ -36,13 +35,8 @@ namespace XncOptimizerUI.Test
             _config.GetLastLabelToProcessSelected().Returns("поріз.2х40");
         }
 
-        private AppViewModel CreateViewModel() => new(
-            _projectService.Services,
-            _config,
-            _dialogs,
-            "TestAssembly",
-            new ObservableCollection<string>(_config.LabelsToProcess),
-            _config.GetLastLabelToProcessSelected());
+        private AppViewModel CreateViewModel(TimeProvider? clock = null) =>
+            TestViewModels.Create(_projectService.Services, _config, _dialogs, clock);
 
         [Test]
         public void Constructor_SeedsLabelsFromConfig_WithoutWritingBack()
@@ -51,8 +45,8 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LabelsToProcess, Is.EquivalentTo(new[] { "поріз.2х40" }));
-                Assert.That(vm.SelectedLabel, Is.EqualTo("поріз.2х40"));
+                Assert.That(vm.Preparation.Labels.LabelsToProcess, Is.EquivalentTo(new[] { "поріз.2х40" }));
+                Assert.That(vm.Preparation.Labels.SelectedLabel, Is.EqualTo("поріз.2х40"));
             });
 
             // Seeding must assign the backing fields; going through the generated
@@ -74,17 +68,17 @@ namespace XncOptimizerUI.Test
             _config.LabelsToProcess.Returns(["поріз.2х40"], ["поріз.2х40", "новий"]);
 
             var vm = CreateViewModel();
-            vm.NewLabelToProcess = "новий";
+            vm.Preparation.Labels.NewLabelToProcess = "новий";
 
-            vm.AddNewLabelCommand.Execute(null);
+            vm.Preparation.Labels.AddNewLabelCommand.Execute(null);
 
             _config.Received(1).AddLabelToProcess("новий");
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LabelsToProcess, Does.Contain("новий"));
-                Assert.That(vm.SelectedLabel, Is.EqualTo("новий"));
-                Assert.That(vm.NewLabelToProcess, Is.Empty);
+                Assert.That(vm.Preparation.Labels.LabelsToProcess, Does.Contain("новий"));
+                Assert.That(vm.Preparation.Labels.SelectedLabel, Is.EqualTo("новий"));
+                Assert.That(vm.Preparation.Labels.NewLabelToProcess, Is.Empty);
             });
         }
 
@@ -92,9 +86,9 @@ namespace XncOptimizerUI.Test
         public void AddNewLabel_WithEmptyInput_DoesNothing()
         {
             var vm = CreateViewModel();
-            vm.NewLabelToProcess = string.Empty;
+            vm.Preparation.Labels.NewLabelToProcess = string.Empty;
 
-            vm.AddNewLabelCommand.Execute(null);
+            vm.Preparation.Labels.AddNewLabelCommand.Execute(null);
 
             _config.DidNotReceive().AddLabelToProcess(Arg.Any<string>());
         }
@@ -107,7 +101,7 @@ namespace XncOptimizerUI.Test
             vm.CopyPartsListCommand.Execute(null);
 
             _dialogs.DidNotReceive().SetClipboardText(Arg.Any<string>());
-            Assert.That(vm.Log, Does.Contain("No parts to copy!"));
+            Assert.That(vm.Log.Text, Does.Contain("No parts to copy!"));
         }
 
         [Test]
@@ -196,7 +190,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.FilterName = "Бокова";
+            vm.Filter.FilterName = "Бокова";
 
             vm.CopyPartsListCommand.Execute(null);
 
@@ -231,13 +225,10 @@ namespace XncOptimizerUI.Test
             var dialogs = Substitute.For<IDialogService>();
             dialogs.ShowOpenProjectDialog().Returns(sourcePath);
 
-            var vm = new AppViewModel(
-                realService, config, dialogs, "TestAssembly",
-                new ObservableCollection<string>(config.LabelsToProcess),
-                config.GetLastLabelToProcessSelected());
+            var vm = TestViewModels.Create(realService, config, dialogs);
 
             vm.OpenFileCommand.Execute(null);
-            vm.ExecuteOptimizeCommand.Execute(null);
+            vm.Preparation.ExecuteOptimizeCommand.Execute(null);
 
             // Re-open the same original source file, as a user comparing source vs. result would.
             vm.OpenFileCommand.Execute(null);
@@ -259,7 +250,7 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.ExecuteOptimizeCommand.Execute(null);
+            vm.Preparation.ExecuteOptimizeCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning(
                 "File seems to be already optimized or contains no XNC.",
@@ -287,10 +278,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.ExecuteOptimizeCommand.Execute(null);
+            vm.Preparation.ExecuteOptimizeCommand.Execute(null);
 
             _dialogs.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
-            Assert.That(vm.Log, Does.Contain("Stored to:"));
+            Assert.That(vm.Log.Text, Does.Contain("Stored to:"));
         }
 
         [Test]
@@ -298,11 +289,11 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.ExecuteOptimizeCommand.Execute(null);
+            vm.Preparation.ExecuteOptimizeCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -345,7 +336,7 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            Assert.That(vm.SelectedPart, Is.SameAs(vm.Parts[0]));
+            Assert.That(vm.PartsList.SelectedPart, Is.SameAs(vm.PartsList.Parts[0]));
         }
 
         [Test]
@@ -356,7 +347,7 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            Assert.That(vm.SelectedPart, Is.Null);
+            Assert.That(vm.PartsList.SelectedPart, Is.Null);
         }
 
         [Test]
@@ -367,16 +358,35 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.SelectedPart = vm.Parts[0];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
             _projectService.Calls.Clear();
 
-            vm.SelectedPart = vm.Parts[1];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
 
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(1));
-                Assert.That(vm.Log, Does.Contain("Updates saved"));
+                Assert.That(vm.Log.Text, Does.Contain("Updates saved"));
+            });
+        }
+
+        [Test]
+        public void SaveTimes_AreLoggedFromTheInjectedClock()
+        {
+            SeedTwoParts();
+            var now = new DateTimeOffset(2026, 8, 30, 13, 45, 0, TimeSpan.Zero);
+
+            var vm = CreateViewModel(new FakeTimeProvider(now));
+            vm.OpenFileCommand.Execute(null);
+
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
+            vm.SaveFileCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Log.Text, Does.Contain($"Updates saved: {now.DateTime}\n"));
+                Assert.That(vm.Log.Text, Does.Contain($"Saved file: {vm.Workspace.FullPath} at {now.DateTime}\n"));
             });
         }
 
@@ -389,8 +399,8 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.SelectedPart = vm.Parts[0];
-            vm.SelectedPart = vm.Parts[1];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
 
             Assert.That(_projectService.SaveCount, Is.Zero);
         }
@@ -405,12 +415,12 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.BandOptions.Select(o => o.Id), Is.EqualTo(new int?[] { null, 1, 2 }));
-                Assert.That(vm.BandOptions.Select(o => o.InternalSymbol), Is.EqualTo(new[] { "", "i1", "i2" }),
+                Assert.That(vm.Catalog.BandOptions.Select(o => o.Id), Is.EqualTo(new int?[] { null, 1, 2 }));
+                Assert.That(vm.Catalog.BandOptions.Select(o => o.InternalSymbol), Is.EqualTo(new[] { "", "i1", "i2" }),
                     "the select shows each band's internal symbol");
-                Assert.That(vm.BandOptions[1].Caption, Is.EqualTo("i1 " + vm.Bands[0].Name),
+                Assert.That(vm.Catalog.BandOptions[1].Caption, Is.EqualTo("i1 " + vm.Catalog.Bands[0].Name),
                     "symbol and band name separated by a space");
-                Assert.That(vm.BandOptions[0].Caption, Is.Empty, "the remove option is an empty row");
+                Assert.That(vm.Catalog.BandOptions[0].Caption, Is.Empty, "the remove option is an empty row");
             });
         }
 
@@ -424,16 +434,16 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.SelectedPart = vm.Parts[0];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
             _projectService.Calls.Clear();
 
-            typeof(PartVM).GetProperty(edge)!.SetValue(vm.Parts[1], (int?)2);
+            typeof(PartVM).GetProperty(edge)!.SetValue(vm.PartsList.Parts[1], (int?)2);
 
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(1));
-                Assert.That(vm.Log, Does.Contain("Updates saved"));
+                Assert.That(vm.Log.Text, Does.Contain("Updates saved"));
             });
         }
 
@@ -446,7 +456,7 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.Parts[0].TopBandingId = null;
+            vm.PartsList.Parts[0].TopBandingId = null;
 
             Assert.That(_projectService.SaveCount, Is.EqualTo(1));
         }
@@ -460,7 +470,7 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.Parts[1].ConsiderTexture = !vm.Parts[1].ConsiderTexture;
+            vm.PartsList.Parts[1].ConsiderTexture = !vm.PartsList.Parts[1].ConsiderTexture;
 
             Assert.That(_projectService.SaveCount, Is.EqualTo(1));
         }
@@ -508,16 +518,16 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.SelectedPart = vm.Parts[0];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartPrograms, Does.StartWith("Programs: 1"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/xnc/front/dx1380 dy600 dz19"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/tool/front/Bore8 Ø8"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/bore/front/Left Bore8 (0,65,10) dp34"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/groove/front/Cut3.2 (-10,565)-(1390,565) dp4 w10 Center"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/mill/front/Mill6 (250,382.5) dp21 Left 2 arc"));
+                Assert.That(vm.Machining.ProgramsText, Does.StartWith("Programs: 1"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/xnc/front/dx1380 dy600 dz19"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/tool/front/Bore8 Ø8"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/bore/front/Left Bore8 (0,65,10) dp34"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/groove/front/Cut3.2 (-10,565)-(1390,565) dp4 w10 Center"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/mill/front/Mill6 (250,382.5) dp21 Left 2 arc"));
             });
         }
 
@@ -572,20 +582,20 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartTools, Has.Count.EqualTo(1));
-                Assert.That(vm.SelectedPartMillingContours, Has.Count.EqualTo(1));
-                Assert.That(vm.SelectedPartMillingContours[0].ExitX, Is.EqualTo("70"));
-                Assert.That(vm.SelectedPartMillingContours[0].ExitY, Is.EqualTo("80"));
-                Assert.That(vm.SelectedPartMillingContours[0].ToolToCenterLine, Is.EqualTo("C"));
-                Assert.That(vm.SelectedPartMillingEllipses, Has.Count.EqualTo(1));
-                Assert.That(vm.SelectedPartMillingRectangles, Has.Count.EqualTo(1));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/ellipse/front/Mill6 (30,40) 20x10 a0 dp2 Center"));
+                Assert.That(vm.Machining.Tools, Has.Count.EqualTo(1));
+                Assert.That(vm.Machining.MillingContours, Has.Count.EqualTo(1));
+                Assert.That(vm.Machining.MillingContours[0].ExitX, Is.EqualTo("70"));
+                Assert.That(vm.Machining.MillingContours[0].ExitY, Is.EqualTo("80"));
+                Assert.That(vm.Machining.MillingContours[0].ToolToCenterLine, Is.EqualTo("C"));
+                Assert.That(vm.Machining.MillingEllipses, Has.Count.EqualTo(1));
+                Assert.That(vm.Machining.MillingRectangles, Has.Count.EqualTo(1));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/ellipse/front/Mill6 (30,40) 20x10 a0 dp2 Center"));
             });
 
-            vm.SelectedPartMillingContours[0].IsSelected = true;
-            Assert.That(vm.CheckedMillingContours, Has.Count.EqualTo(1));
-            vm.SelectedPartMillingContours[0].IsSelected = false;
-            Assert.That(vm.CheckedMillingContours, Is.Empty);
+            vm.Machining.MillingContours[0].IsSelected = true;
+            Assert.That(vm.Machining.CheckedMillingContours, Has.Count.EqualTo(1));
+            vm.Machining.MillingContours[0].IsSelected = false;
+            Assert.That(vm.Machining.CheckedMillingContours, Is.Empty);
         }
 
         [Test]
@@ -626,27 +636,27 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartGrooves, Has.Count.EqualTo(6));
-                Assert.That(vm.SelectedPartGrooves.Select(g => g.Number),
+                Assert.That(vm.Machining.Grooves, Has.Count.EqualTo(6));
+                Assert.That(vm.Machining.Grooves.Select(g => g.Number),
                     Is.EqualTo(Enumerable.Range(1, 6)));
-                Assert.That(vm.SelectedPartGrooves.Select(g => g.Side),
+                Assert.That(vm.Machining.Grooves.Select(g => g.Side),
                     Is.EqualTo(new[] { "Front", "Left", "Right", "Top", "Bottom", "Back" }));
-                Assert.That(vm.SelectedPartGrooves[0].StartX, Is.EqualTo("1"));
-                Assert.That(vm.SelectedPartGrooves[0].EndY, Is.EqualTo("4"));
-                Assert.That(vm.SelectedPartGrooves[0].Depth, Is.EqualTo("5"));
-                Assert.That(vm.SelectedPartGrooves[0].Width, Is.EqualTo("6"));
-                Assert.That(vm.SelectedPartGrooves[0].ToolToCenterLine, Is.EqualTo("C"));
-                Assert.That(vm.SelectedPartGrooves[1].ToolToCenterLine, Is.EqualTo("L"));
-                Assert.That(vm.SelectedPartGrooves[2].ToolToCenterLine, Is.EqualTo("R"));
-                Assert.That(vm.HasSelectedPartGrooves, Is.True);
+                Assert.That(vm.Machining.Grooves[0].StartX, Is.EqualTo("1"));
+                Assert.That(vm.Machining.Grooves[0].EndY, Is.EqualTo("4"));
+                Assert.That(vm.Machining.Grooves[0].Depth, Is.EqualTo("5"));
+                Assert.That(vm.Machining.Grooves[0].Width, Is.EqualTo("6"));
+                Assert.That(vm.Machining.Grooves[0].ToolToCenterLine, Is.EqualTo("C"));
+                Assert.That(vm.Machining.Grooves[1].ToolToCenterLine, Is.EqualTo("L"));
+                Assert.That(vm.Machining.Grooves[2].ToolToCenterLine, Is.EqualTo("R"));
+                Assert.That(vm.Machining.HasGrooves, Is.True);
             });
 
-            vm.SelectedPartGrooves[0].IsSelected = true;
-            Assert.That(vm.CheckedGrooves, Has.Count.EqualTo(1));
-            Assert.That(vm.CheckedGrooves[0], Is.SameAs(vm.SelectedPartGrooves[0].Model));
+            vm.Machining.Grooves[0].IsSelected = true;
+            Assert.That(vm.Machining.CheckedGrooves, Has.Count.EqualTo(1));
+            Assert.That(vm.Machining.CheckedGrooves[0], Is.SameAs(vm.Machining.Grooves[0].Model));
 
-            vm.SelectedPartGrooves[0].IsSelected = false;
-            Assert.That(vm.CheckedGrooves, Is.Empty);
+            vm.Machining.Grooves[0].IsSelected = false;
+            Assert.That(vm.Machining.CheckedGrooves, Is.Empty);
         }
 
         [Test]
@@ -658,9 +668,9 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.SelectedPart = vm.Parts[0];
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
 
-            Assert.That(vm.SelectedPartPrograms, Is.EqualTo("Programs: none"));
+            Assert.That(vm.Machining.ProgramsText, Is.EqualTo("Programs: none"));
         }
 
         [Test]
@@ -672,11 +682,11 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.SelectedPart = vm.Parts[0];
-            Assert.That(vm.SelectedPartPrograms, Does.Contain("/xnc/back/dx800 dy300 dz16"));
+            vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
+            Assert.That(vm.Machining.ProgramsText, Does.Contain("/xnc/back/dx800 dy300 dz16"));
 
-            vm.SelectedPart = null;
-            Assert.That(vm.SelectedPartPrograms, Is.EqualTo("Programs: -"));
+            vm.PartsList.SelectedPart = null;
+            Assert.That(vm.Machining.ProgramsText, Is.EqualTo("Programs: -"));
         }
 
         [Test]
@@ -694,10 +704,10 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(400)); // first program's dx, not Part.Length
-                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(800));  // first program's dy
-                Assert.That(vm.SelectedPartTurn, Is.EqualTo(1));
-                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("90°"));
+                Assert.That(vm.Preview.DisplayLength, Is.EqualTo(400)); // first program's dx, not Part.Length
+                Assert.That(vm.Preview.DisplayWidth, Is.EqualTo(800));  // first program's dy
+                Assert.That(vm.Preview.Turn, Is.EqualTo(1));
+                Assert.That(vm.Preview.TurnText, Is.EqualTo("90°"));
             });
         }
 
@@ -712,10 +722,10 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(600));
-                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(400));
-                Assert.That(vm.SelectedPartTurn, Is.Null);       // no XNC program -> no turn code
-                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("0°")); // preview still reads 0°
+                Assert.That(vm.Preview.DisplayLength, Is.EqualTo(600));
+                Assert.That(vm.Preview.DisplayWidth, Is.EqualTo(400));
+                Assert.That(vm.Preview.Turn, Is.Null);       // no XNC program -> no turn code
+                Assert.That(vm.Preview.TurnText, Is.EqualTo("0°")); // preview still reads 0°
             });
         }
 
@@ -730,8 +740,8 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg180));
-                Assert.That(vm.CanRotateSelectedPart, Is.True);
+                Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg180));
+                Assert.That(vm.Preview.CanRotate, Is.True);
                 Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.RotatePart)));
             });
         }
@@ -747,8 +757,8 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.CanRotateSelectedPart, Is.False);
-                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg0));
+                Assert.That(vm.Preview.CanRotate, Is.False);
+                Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg0));
             });
         }
 
@@ -763,18 +773,18 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             var savesBefore = _projectService.SaveCount;
 
-            vm.SelectedPartRotation = PartTurn.Deg90;
+            vm.Preview.Rotation = PartTurn.Deg90;
 
             Assert.Multiple(() =>
             {
-                Assert.That(_projectService.LastRotatePartId, Is.EqualTo(vm.SelectedPart!.Id));
+                Assert.That(_projectService.LastRotatePartId, Is.EqualTo(vm.PartsList.SelectedPart!.Id));
                 Assert.That(_projectService.LastRotateTargetTurn, Is.EqualTo(1));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
-                Assert.That(vm.SelectedPartDisplayLength, Is.EqualTo(800));
-                Assert.That(vm.SelectedPartDisplayWidth, Is.EqualTo(400));
-                Assert.That(vm.SelectedPartTurnText, Is.EqualTo("90°"));
-                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg90));
-                Assert.That(vm.Log, Does.Contain("rotated to 90°, saved"));
+                Assert.That(vm.Preview.DisplayLength, Is.EqualTo(800));
+                Assert.That(vm.Preview.DisplayWidth, Is.EqualTo(400));
+                Assert.That(vm.Preview.TurnText, Is.EqualTo("90°"));
+                Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg90));
+                Assert.That(vm.Log.Text, Does.Contain("rotated to 90°, saved"));
             });
         }
 
@@ -788,11 +798,11 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.SelectedPartRotation = PartTurn.Deg90;
+            vm.Preview.Rotation = PartTurn.Deg90;
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.NeverFlipTclOnTurn, Is.EqualTo(neverFlip));
+                Assert.That(vm.Preview.NeverFlipTclOnTurn, Is.EqualTo(neverFlip));
                 Assert.That(_projectService.LastRotateFlipEdgeGrooveTcl, Is.EqualTo(expectedFlip));
             });
         }
@@ -802,7 +812,7 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.NeverFlipTclOnTurn = true;
+            vm.Preview.NeverFlipTclOnTurn = true;
 
             _config.Received(1).UpdateNeverFlipTclOnTurn(true);
         }
@@ -843,8 +853,8 @@ namespace XncOptimizerUI.Test
         {
             var vm = OpenWithBores();
             _projectService.XncProgramsAfterUpdateBore = [ProgramWithBores((368, "dx-32"), (200, "200"))];
-            var row = vm.SelectedPartBores[0];
-            vm.SelectedBore = row;
+            var row = vm.Machining.Bores[0];
+            vm.Machining.SelectedBore = row;
             row.IsSelected = true;
             var savesBefore = _projectService.SaveCount;
 
@@ -857,13 +867,13 @@ namespace XncOptimizerUI.Test
                 Assert.That(committed, Is.True);
                 Assert.That(_projectService.LastUpdateBore, Is.EqualTo((5, 0, BoreAttribute.X, "dx-32")));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
-                Assert.That(vm.SelectedPartBores[0], Is.SameAs(row));
-                Assert.That(vm.SelectedBore, Is.SameAs(row));
+                Assert.That(vm.Machining.Bores[0], Is.SameAs(row));
+                Assert.That(vm.Machining.SelectedBore, Is.SameAs(row));
                 Assert.That(row.X, Is.EqualTo("368"));
                 Assert.That(row.XInput, Is.EqualTo("dx-32"));
-                Assert.That(vm.CheckedBores, Is.EqualTo(new[] { row.Bore }));
-                Assert.That(vm.SelectedXncPrograms.Single().Bores[0].X, Is.EqualTo(368));
-                Assert.That(vm.Log, Does.Contain("Bore #1 x = \"dx-32\", saved"));
+                Assert.That(vm.Machining.CheckedBores, Is.EqualTo(new[] { row.Bore }));
+                Assert.That(vm.Machining.Programs.Single().Bores[0].X, Is.EqualTo(368));
+                Assert.That(vm.Log.Text, Does.Contain("Bore #1 x = \"dx-32\", saved"));
             });
         }
 
@@ -893,9 +903,9 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.HasSelectedPartVariables, Is.True);
-                Assert.That(vm.SelectedPartVariables.Single().Name, Is.EqualTo("depth"));
-                Assert.That(vm.SelectedPartPrograms, Does.Contain("/var/front/depth double = dz+2 (= 21) // Глибина"));
+                Assert.That(vm.Machining.HasVariables, Is.True);
+                Assert.That(vm.Machining.Variables.Single().Name, Is.EqualTo("depth"));
+                Assert.That(vm.Machining.ProgramsText, Does.Contain("/var/front/depth double = dz+2 (= 21) // Глибина"));
             });
         }
 
@@ -908,7 +918,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var row = vm.SelectedPartVariables.Single();
+            var row = vm.Machining.Variables.Single();
             var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
@@ -920,10 +930,10 @@ namespace XncOptimizerUI.Test
                 Assert.That(committed, Is.True);
                 Assert.That(_projectService.LastUpdateVariable, Is.EqualTo((5, 0, XncVariableAttribute.Expr, "dz+4")));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore + 1));
-                Assert.That(vm.SelectedPartVariables.Single(), Is.SameAs(row));
+                Assert.That(vm.Machining.Variables.Single(), Is.SameAs(row));
                 Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "23")));
-                Assert.That(vm.SelectedPartBores.Single().Depth, Is.EqualTo("23"));
-                Assert.That(vm.Log, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
+                Assert.That(vm.Machining.Bores.Single().Depth, Is.EqualTo("23"));
+                Assert.That(vm.Log.Text, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
             });
         }
 
@@ -936,7 +946,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var row = vm.SelectedPartVariables.Single();
+            var row = vm.Machining.Variables.Single();
             var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
@@ -953,7 +963,7 @@ namespace XncOptimizerUI.Test
         public void EditingBore_InvalidInput_HasErrorAndRefusesCommit()
         {
             var vm = OpenWithBores();
-            var row = vm.SelectedPartBores[0];
+            var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
             row.XInput = "2*-3";
@@ -971,7 +981,7 @@ namespace XncOptimizerUI.Test
         public void EditingBore_Cancel_RestoresCommittedTextAndClearsError()
         {
             var vm = OpenWithBores();
-            var row = vm.SelectedPartBores[0];
+            var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
             row.XInput = "1,5";
@@ -988,7 +998,7 @@ namespace XncOptimizerUI.Test
         public void EditingBore_UnchangedText_CommitsWithoutWriting()
         {
             var vm = OpenWithBores();
-            var row = vm.SelectedPartBores[0];
+            var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
             row.XInput = " 100 ";
@@ -1005,7 +1015,7 @@ namespace XncOptimizerUI.Test
         {
             var vm = OpenWithBores();
             _projectService.UpdateBoreResult = false;
-            var row = vm.SelectedPartBores[0];
+            var row = vm.Machining.Bores[0];
             var savesBefore = _projectService.SaveCount;
 
             row.BeginCellEdit();
@@ -1031,11 +1041,11 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             var savesBefore = _projectService.SaveCount;
 
-            vm.SelectedPartRotation = PartTurn.Deg270;
+            vm.Preview.Rotation = PartTurn.Deg270;
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartRotation, Is.EqualTo(PartTurn.Deg0));
+                Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg0));
                 Assert.That(_projectService.SaveCount, Is.EqualTo(savesBefore));
             });
         }
@@ -1048,14 +1058,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.SelectedPart = null;
+            vm.PartsList.SelectedPart = null;
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.SelectedPartDisplayLength, Is.Zero);
-                Assert.That(vm.SelectedPartDisplayWidth, Is.Zero);
-                Assert.That(vm.SelectedPartTurn, Is.Null);
-                Assert.That(vm.SelectedPartTurnText, Is.Empty);
+                Assert.That(vm.Preview.DisplayLength, Is.Zero);
+                Assert.That(vm.Preview.DisplayWidth, Is.Zero);
+                Assert.That(vm.Preview.Turn, Is.Null);
+                Assert.That(vm.Preview.TurnText, Is.Empty);
             });
         }
 
@@ -1074,9 +1084,9 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("Discordance in xnc programs turn corner for parts: Полиця, Кришка"));
-                Assert.That(vm.Log, Does.Contain("turn discordance: Полиця"));
-                Assert.That(vm.Log, Does.Contain("turn discordance: Кришка"));
+                Assert.That(vm.Log.Text, Does.Contain("Discordance in xnc programs turn corner for parts: Полиця, Кришка"));
+                Assert.That(vm.Log.Text, Does.Contain("turn discordance: Полиця"));
+                Assert.That(vm.Log.Text, Does.Contain("turn discordance: Кришка"));
             });
         }
 
@@ -1100,12 +1110,12 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.GrooveMillDirection = GrooveMillDirection.MillsToGrooves;
-            vm.ProcessPockets = true;
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.GrooveMill.GrooveMillDirection = GrooveMillDirection.MillsToGrooves;
+            vm.GrooveMill.ProcessPockets = true;
             _projectService.Calls.Clear();
 
-            vm.ConvertGroovesAndMillsCommand.Execute(null);
+            vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
@@ -1127,10 +1137,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.ConvertGroovesAndMillsCommand.Execute(null);
+            vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No grooves converted (ignored 2).", Arg.Any<string>());
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertGroovesAndMills) }),
@@ -1146,11 +1156,11 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.ConvertGroovesAndMillsCommand.Execute(null);
+            vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No parts checked"));
+                Assert.That(vm.Log.Text, Does.Contain("No parts checked"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1160,11 +1170,11 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.ConvertGroovesAndMillsCommand.Execute(null);
+            vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1176,12 +1186,12 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.BoreMillDirection = BoreMillDirection.MillsToBores;
-            vm.ConvertBoresToEllipses = true;
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.BoreMill.BoreMillDirection = BoreMillDirection.MillsToBores;
+            vm.BoreMill.ConvertBoresToEllipses = true;
             _projectService.Calls.Clear();
 
-            vm.ConvertBoresAndMillsCommand.Execute(null);
+            vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
@@ -1201,8 +1211,8 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.BoreMillDirection, Is.EqualTo(BoreMillDirection.BoresToMills));
-                Assert.That(vm.ConvertBoresToEllipses, Is.False);
+                Assert.That(vm.BoreMill.BoreMillDirection, Is.EqualTo(BoreMillDirection.BoresToMills));
+                Assert.That(vm.BoreMill.ConvertBoresToEllipses, Is.False);
             });
         }
 
@@ -1215,10 +1225,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.ConvertBoresAndMillsCommand.Execute(null);
+            vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No bores converted (ignored 0).", Arg.Any<string>());
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertBoresAndMills) }),
@@ -1234,11 +1244,11 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.ConvertBoresAndMillsCommand.Execute(null);
+            vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No parts checked"));
+                Assert.That(vm.Log.Text, Does.Contain("No parts checked"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1248,11 +1258,11 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.ConvertBoresAndMillsCommand.Execute(null);
+            vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1264,10 +1274,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.OptimizeMillTraversalCommand.Execute(null);
+            vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
@@ -1287,10 +1297,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.OptimizeMillTraversalCommand.Execute(null);
+            vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No mill passes reordered (ignored 0).", Arg.Any<string>());
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OptimizeMillTraversal) }),
@@ -1306,11 +1316,11 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.OptimizeMillTraversalCommand.Execute(null);
+            vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No parts checked for mill order optimization!"));
+                Assert.That(vm.Log.Text, Does.Contain("No parts checked for mill order optimization!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1322,10 +1332,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
@@ -1343,10 +1353,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.SortToolsGlobally = true;
+            vm.SortTools.SortToolsGlobally = true;
             _projectService.Calls.Clear();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EquivalentTo(new[] { 100, 101 }));
         }
@@ -1358,13 +1368,13 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var hidden = vm.Parts.Single(p => p.Id == 101);
+            var hidden = vm.PartsList.Parts.Single(p => p.Id == 101);
             hidden.IsSelected = true;
-            vm.FilterName = vm.Parts.Single(p => p.Id == 100).Name;
-            vm.SortToolsGlobally = true;
+            vm.Filter.FilterName = vm.PartsList.Parts.Single(p => p.Id == 100).Name;
+            vm.SortTools.SortToolsGlobally = true;
             _projectService.Calls.Clear();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.That(_projectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }),
                 "the filter decides the scope; a checked part hidden by the filter is not sorted");
@@ -1379,10 +1389,10 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             _projectService.Calls.Clear();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No tool declarations reordered (skipped 0 program(s)).", Arg.Any<string>());
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.SortToolDeclarations) }),
@@ -1398,11 +1408,11 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             _projectService.Calls.Clear();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No parts checked for tool sorting!"));
+                Assert.That(vm.Log.Text, Does.Contain("No parts checked for tool sorting!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1412,11 +1422,11 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.SortToolDeclarationsCommand.Execute(null);
+            vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1428,17 +1438,17 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[1].IsSelected = true;
-            vm.MillOffset = "2.5";
-            vm.MillOffsetSide = MillOffsetSide.Left;
+            vm.PartsList.Parts[1].IsSelected = true;
+            vm.MillOffset.MillOffset = "2.5";
+            vm.MillOffset.MillOffsetSide = MillOffsetSide.Left;
             _projectService.Calls.Clear();
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.OffsetMillPaths)));
-                Assert.That(_projectService.LastMillOffsetParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.Parts[1].Id }));
+                Assert.That(_projectService.LastMillOffsetParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.PartsList.Parts[1].Id }));
                 Assert.That(_projectService.LastMillOffset, Is.EqualTo(2.5d));
                 Assert.That(_projectService.LastMillOffsetSide, Is.EqualTo(MillOffsetSide.Left));
                 Assert.That(_projectService.LastMillOffsetKinds, Is.EqualTo(MillPathKinds.All));
@@ -1454,10 +1464,10 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.MillOffset, Is.Empty);
-                Assert.That(vm.MillOffsetSide, Is.EqualTo(MillOffsetSide.Right));
-                Assert.That(vm.OffsetOpenMillPaths, Is.True);
-                Assert.That(vm.OffsetClosedMillPaths, Is.True);
+                Assert.That(vm.MillOffset.MillOffset, Is.Empty);
+                Assert.That(vm.MillOffset.MillOffsetSide, Is.EqualTo(MillOffsetSide.Right));
+                Assert.That(vm.MillOffset.OffsetOpenMillPaths, Is.True);
+                Assert.That(vm.MillOffset.OffsetClosedMillPaths, Is.True);
             });
         }
 
@@ -1468,9 +1478,9 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.CleanOutsideBores, Is.True);
-                Assert.That(vm.CleanOutsideGrooves, Is.True);
-                Assert.That(vm.CleanOutsideMills, Is.True);
+                Assert.That(vm.CleanOutside.CleanOutsideBores, Is.True);
+                Assert.That(vm.CleanOutside.CleanOutsideGrooves, Is.True);
+                Assert.That(vm.CleanOutside.CleanOutsideMills, Is.True);
             });
         }
 
@@ -1481,15 +1491,15 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[1].IsSelected = true;
-            vm.CleanOutsideGrooves = false;
+            vm.PartsList.Parts[1].IsSelected = true;
+            vm.CleanOutside.CleanOutsideGrooves = false;
             _projectService.Calls.Clear();
 
-            vm.CleanOutsideOperationsCommand.Execute(null);
+            vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.Parts[1].Id }));
+                Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.PartsList.Parts[1].Id }));
                 Assert.That(_projectService.LastCleanOutsideKinds, Is.EqualTo(OutsideOperationKinds.Bores | OutsideOperationKinds.Mills));
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
                     "a successful cleaning reloads the project");
@@ -1503,9 +1513,9 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.FilterName = vm.Parts[0].Name;
+            vm.Filter.FilterName = vm.PartsList.Parts[0].Name;
 
-            vm.CleanOutsideOperationsCommand.Execute(null);
+            vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
             Assert.That(_projectService.LastCleanOutsideParts!.Select(p => p.Id),
                 Is.EquivalentTo(_projectService.Parts.Select(p => p.Id)), "all parts of the project, not only the filtered ones");
@@ -1518,16 +1528,16 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.CleanOutsideBores = false;
-            vm.CleanOutsideGrooves = false;
-            vm.CleanOutsideMills = false;
+            vm.CleanOutside.CleanOutsideBores = false;
+            vm.CleanOutside.CleanOutsideGrooves = false;
+            vm.CleanOutside.CleanOutsideMills = false;
             _projectService.Calls.Clear();
 
-            vm.CleanOutsideOperationsCommand.Execute(null);
+            vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("Select bores, grooves and/or mills to clean!"));
+                Assert.That(vm.Log.Text, Does.Contain("Select bores, grooves and/or mills to clean!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1542,7 +1552,7 @@ namespace XncOptimizerUI.Test
             _projectService.CleanOutsideOperationsResult = false;
             _projectService.Calls.Clear();
 
-            vm.CleanOutsideOperationsCommand.Execute(null);
+            vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.CleanOutsideOperations) }));
         }
@@ -1555,12 +1565,12 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.MillOffset = "3";
-            vm.OffsetOpenMillPaths = open;
-            vm.OffsetClosedMillPaths = closed;
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.MillOffset.MillOffset = "3";
+            vm.MillOffset.OffsetOpenMillPaths = open;
+            vm.MillOffset.OffsetClosedMillPaths = closed;
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.That(_projectService.LastMillOffsetKinds, Is.EqualTo(expected));
         }
@@ -1572,17 +1582,17 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.MillOffset = "3";
-            vm.OffsetOpenMillPaths = false;
-            vm.OffsetClosedMillPaths = false;
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.MillOffset.MillOffset = "3";
+            vm.MillOffset.OffsetOpenMillPaths = false;
+            vm.MillOffset.OffsetClosedMillPaths = false;
             _projectService.Calls.Clear();
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("Select open and/or closed mill paths to offset!"));
+                Assert.That(vm.Log.Text, Does.Contain("Select open and/or closed mill paths to offset!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1598,15 +1608,15 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.MillOffset = offset;
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.MillOffset.MillOffset = offset;
             _projectService.Calls.Clear();
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("Enter a mill path offset greater than 0!"));
+                Assert.That(vm.Log.Text, Does.Contain("Enter a mill path offset greater than 0!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1618,14 +1628,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.MillOffset = "3";
+            vm.MillOffset.MillOffset = "3";
             _projectService.Calls.Clear();
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No parts checked for mill path offset!"));
+                Assert.That(vm.Log.Text, Does.Contain("No parts checked for mill path offset!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1639,11 +1649,11 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.Parts[0].IsSelected = true;
-            vm.MillOffset = "3";
+            vm.PartsList.Parts[0].IsSelected = true;
+            vm.MillOffset.MillOffset = "3";
             _projectService.Calls.Clear();
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No mill paths offset (ignored 2).", Arg.Any<string>());
             Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OffsetMillPaths) }),
@@ -1654,13 +1664,13 @@ namespace XncOptimizerUI.Test
         public void OffsetMillPaths_WithNoFileOpen_LogsAndDoesNothing()
         {
             var vm = CreateViewModel();
-            vm.MillOffset = "3";
+            vm.MillOffset.MillOffset = "3";
 
-            vm.OffsetMillPathsCommand.Execute(null);
+            vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1670,11 +1680,11 @@ namespace XncOptimizerUI.Test
         {
             var vm = CreateViewModel();
 
-            vm.OptimizeMillTraversalCommand.Execute(null);
+            vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Log, Does.Contain("No file selected!"));
+                Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
                 Assert.That(_projectService.Calls, Is.Empty);
             });
         }
@@ -1687,12 +1697,12 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.CheckAllCommand.Execute(null);
+            vm.PartsList.CheckAllCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Parts.Select(p => p.IsSelected), Is.All.True);
-                Assert.That(vm.CheckedCount, Is.EqualTo(2));
+                Assert.That(vm.PartsList.Parts.Select(p => p.IsSelected), Is.All.True);
+                Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(2));
             });
         }
 
@@ -1703,14 +1713,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.CheckAllCommand.Execute(null);
+            vm.PartsList.CheckAllCommand.Execute(null);
 
-            vm.UncheckAllCommand.Execute(null);
+            vm.PartsList.UncheckAllCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Parts.Select(p => p.IsSelected), Is.All.False);
-                Assert.That(vm.CheckedCount, Is.EqualTo(0));
+                Assert.That(vm.PartsList.Parts.Select(p => p.IsSelected), Is.All.False);
+                Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(0));
             });
         }
 
@@ -1723,20 +1733,20 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
 
             var raised = 0;
-            vm.PropertyChanged += (_, e) =>
+            vm.PartsList.PropertyChanged += (_, e) =>
             {
-                if (e.PropertyName == nameof(AppViewModel.CheckedCount)) raised++;
+                if (e.PropertyName == nameof(PartsListVM.CheckedCount)) raised++;
             };
 
-            vm.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsSelected = true;
             Assert.Multiple(() =>
             {
-                Assert.That(vm.CheckedCount, Is.EqualTo(1));
+                Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(1));
                 Assert.That(raised, Is.GreaterThanOrEqualTo(1));
             });
 
-            vm.Parts[0].IsSelected = false;
-            Assert.That(vm.CheckedCount, Is.EqualTo(0));
+            vm.PartsList.Parts[0].IsSelected = false;
+            Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -1747,14 +1757,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.FilterName = "Полиця"; // setter runs FilterParts -> only part 100 stays visible
-            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+            vm.Filter.FilterName = "Полиця"; // setter runs FilterParts -> only part 100 stays visible
+            Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(1));
 
-            vm.CheckAllCommand.Execute(null);
-            Assert.That(vm.CheckedCount, Is.EqualTo(1), "the filtered-out part must not be checked");
+            vm.PartsList.CheckAllCommand.Execute(null);
+            Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(1), "the filtered-out part must not be checked");
 
-            vm.ClearFiltersCommand.Execute(null);
-            var reappeared = vm.Parts.Single(p => p.Name == "Бокова");
+            vm.Filter.ClearFiltersCommand.Execute(null);
+            var reappeared = vm.PartsList.Parts.Single(p => p.Name == "Бокова");
             Assert.That(reappeared.IsSelected, Is.False);
         }
 
@@ -1766,9 +1776,9 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "700";
+            vm.Filter.LengthMin = "700";
 
-            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
+            Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
         }
 
         [Test]
@@ -1779,10 +1789,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "550";
-            vm.LengthMax = "650";
+            vm.Filter.LengthMin = "550";
+            vm.Filter.LengthMax = "650";
 
-            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
+            Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
         }
 
         [Test]
@@ -1793,9 +1803,9 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.WidthMax = "350";
+            vm.Filter.WidthMax = "350";
 
-            Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
+            Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
         }
 
         [Test]
@@ -1806,13 +1816,13 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.FilterName = "Бокова";
-            vm.LengthMin = "100";
-            vm.LengthMax = "900";
-            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+            vm.Filter.FilterName = "Бокова";
+            vm.Filter.LengthMin = "100";
+            vm.Filter.LengthMax = "900";
+            Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(1));
 
-            vm.LengthMax = "500"; // Бокова is 800 long -> now excluded
-            Assert.That(vm.Parts, Is.Empty);
+            vm.Filter.LengthMax = "500"; // Бокова is 800 long -> now excluded
+            Assert.That(vm.PartsList.Parts, Is.Empty);
         }
 
         [Test]
@@ -1823,21 +1833,21 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "550";
-            vm.LengthMax = "650";
-            vm.WidthMin = "100";
-            vm.WidthMax = "450";
-            Assert.That(vm.Parts, Has.Count.EqualTo(1));
+            vm.Filter.LengthMin = "550";
+            vm.Filter.LengthMax = "650";
+            vm.Filter.WidthMin = "100";
+            vm.Filter.WidthMax = "450";
+            Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(1));
 
-            vm.ClearFiltersCommand.Execute(null);
+            vm.Filter.ClearFiltersCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Parts, Has.Count.EqualTo(2));
-                Assert.That(vm.LengthMin, Is.Empty);
-                Assert.That(vm.LengthMax, Is.Empty);
-                Assert.That(vm.WidthMin, Is.Empty);
-                Assert.That(vm.WidthMax, Is.Empty);
+                Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(2));
+                Assert.That(vm.Filter.LengthMin, Is.Empty);
+                Assert.That(vm.Filter.LengthMax, Is.Empty);
+                Assert.That(vm.Filter.WidthMin, Is.Empty);
+                Assert.That(vm.Filter.WidthMax, Is.Empty);
             });
         }
 
@@ -1849,9 +1859,9 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "abc";
+            vm.Filter.LengthMin = "abc";
 
-            Assert.That(vm.Parts, Has.Count.EqualTo(2), "unparseable bound must not filter anything");
+            Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(2), "unparseable bound must not filter anything");
         }
 
         [Test]
@@ -1862,12 +1872,12 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "700.5";
+            vm.Filter.LengthMax = "700.5";
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMax, Is.EqualTo("700.5"), "typed text is kept verbatim");
-                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }),
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("700.5"), "typed text is kept verbatim");
+                Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }),
                     "700.5 must parse as a decimal, so only the 600-long part passes");
             });
         }
@@ -1880,12 +1890,12 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "700,5";
+            vm.Filter.LengthMax = "700,5";
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMax, Is.EqualTo("700,5"), "comma is left verbatim, never rewritten to a dot");
-                Assert.That(vm.Parts, Has.Count.EqualTo(2), "\"700,5\" does not parse, so it filters nothing");
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("700,5"), "comma is left verbatim, never rewritten to a dot");
+                Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(2), "\"700,5\" does not parse, so it filters nothing");
             });
         }
 
@@ -1897,12 +1907,12 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "18."; // mid-typing "18.5"
+            vm.Filter.LengthMin = "18."; // mid-typing "18.5"
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("18."), "trailing separator must survive the setter so the next digit lands; truncation is commit-time only");
-                Assert.That(vm.Parts, Has.Count.EqualTo(2), "\"18.\" parses as 18, both parts are longer");
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("18."), "trailing separator must survive the setter so the next digit lands; truncation is commit-time only");
+                Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(2), "\"18.\" parses as 18, both parts are longer");
             });
         }
 
@@ -1914,10 +1924,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "18,5";
-            vm.NormalizeRangeBounds(); // canonicalization must not touch the comma either
+            vm.Filter.LengthMin = "18,5";
+            vm.Filter.NormalizeRangeBounds(); // canonicalization must not touch the comma either
 
-            Assert.That(vm.LengthMin, Is.EqualTo("18,5"));
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("18,5"));
         }
 
         [Test]
@@ -1928,11 +1938,11 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "18.";
-            Assert.That(vm.LengthMin, Is.EqualTo("18."), "not yet - still mid-edit");
+            vm.Filter.LengthMin = "18.";
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("18."), "not yet - still mid-edit");
 
-            vm.NormalizeRangeBounds();
-            Assert.That(vm.LengthMin, Is.EqualTo("18"));
+            vm.Filter.NormalizeRangeBounds();
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("18"));
         }
 
         [Test]
@@ -1943,14 +1953,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "0.500";
-            vm.WidthMax = "350.00"; // -> "350", trailing "." also gone
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "0.500";
+            vm.Filter.WidthMax = "350.00"; // -> "350", trailing "." also gone
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("0.5"));
-                Assert.That(vm.WidthMax, Is.EqualTo("350"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("0.5"));
+                Assert.That(vm.Filter.WidthMax, Is.EqualTo("350"));
             });
         }
 
@@ -1962,13 +1972,13 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = " 700 ";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMax = " 700 ";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMax, Is.EqualTo("700"));
-                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("700"));
+                Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
             });
         }
 
@@ -1980,13 +1990,13 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.WidthMax = " 350. ";
-            vm.NormalizeRangeBounds();
+            vm.Filter.WidthMax = " 350. ";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.WidthMax, Is.EqualTo("350"));
-                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
+                Assert.That(vm.Filter.WidthMax, Is.EqualTo("350"));
+                Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Бокова" }));
             });
         }
 
@@ -1998,10 +2008,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = ".5";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = ".5";
+            vm.Filter.NormalizeRangeBounds();
 
-            Assert.That(vm.LengthMin, Is.EqualTo("0.5"));
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("0.5"));
         }
 
         [Test]
@@ -2012,10 +2022,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "-.5";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "-.5";
+            vm.Filter.NormalizeRangeBounds();
 
-            Assert.That(vm.LengthMin, Is.EqualTo("-0.5"));
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("-0.5"));
         }
 
         [Test]
@@ -2026,13 +2036,13 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "0700";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMax = "0700";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMax, Is.EqualTo("700"));
-                Assert.That(vm.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("700"));
+                Assert.That(vm.PartsList.Parts.Select(p => p.Name), Is.EqualTo(new[] { "Полиця" }));
             });
         }
 
@@ -2045,14 +2055,14 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
 
             // one bound per pair, sibling blank -> canonicalization only, no equalize snap
-            vm.LengthMin = "005";
-            vm.WidthMax = "00.5";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "005";
+            vm.Filter.WidthMax = "00.5";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("5"));
-                Assert.That(vm.WidthMax, Is.EqualTo("0.5"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("5"));
+                Assert.That(vm.Filter.WidthMax, Is.EqualTo("0.5"));
             });
         }
 
@@ -2064,10 +2074,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "000";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "000";
+            vm.Filter.NormalizeRangeBounds();
 
-            Assert.That(vm.LengthMin, Is.EqualTo("0"));
+            Assert.That(vm.Filter.LengthMin, Is.EqualTo("0"));
         }
 
 
@@ -2079,14 +2089,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "500";
-            vm.LengthMin = "700";
-            vm.NormalizeRangeBounds(); // debounce timer would do this after typing pauses
+            vm.Filter.LengthMax = "500";
+            vm.Filter.LengthMin = "700";
+            vm.Filter.NormalizeRangeBounds(); // debounce timer would do this after typing pauses
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("700"));
-                Assert.That(vm.LengthMax, Is.EqualTo("700"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("700"));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("700"));
             });
         }
 
@@ -2098,14 +2108,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "500";
-            vm.LengthMax = "300";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "500";
+            vm.Filter.LengthMax = "300";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("300"));
-                Assert.That(vm.LengthMax, Is.EqualTo("300"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("300"));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("300"));
             });
         }
 
@@ -2117,14 +2127,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.WidthMax = "200";
-            vm.WidthMin = "450";
-            vm.NormalizeRangeBounds();
+            vm.Filter.WidthMax = "200";
+            vm.Filter.WidthMin = "450";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.WidthMin, Is.EqualTo("450"));
-                Assert.That(vm.WidthMax, Is.EqualTo("450"));
+                Assert.That(vm.Filter.WidthMin, Is.EqualTo("450"));
+                Assert.That(vm.Filter.WidthMax, Is.EqualTo("450"));
             });
         }
 
@@ -2136,10 +2146,10 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "700"; // LengthMax left blank -> no snap
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "700"; // LengthMax left blank -> no snap
+            vm.Filter.NormalizeRangeBounds();
 
-            Assert.That(vm.LengthMax, Is.Empty);
+            Assert.That(vm.Filter.LengthMax, Is.Empty);
         }
 
         [Test]
@@ -2150,11 +2160,11 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "500";
-            vm.LengthMin = "700"; // both snap to 700 -> nothing is exactly 700 long
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMax = "500";
+            vm.Filter.LengthMin = "700"; // both snap to 700 -> nothing is exactly 700 long
+            vm.Filter.NormalizeRangeBounds();
 
-            Assert.That(vm.Parts, Is.Empty);
+            Assert.That(vm.PartsList.Parts, Is.Empty);
         }
 
         [Test]
@@ -2165,15 +2175,15 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "100";
-            vm.LengthMax = "5";  // first digit while typing "50"
-            vm.LengthMax = "50"; // full value
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "100";
+            vm.Filter.LengthMax = "5";  // first digit while typing "50"
+            vm.Filter.LengthMax = "50"; // full value
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("50"), "min must snap to the full max, not the first digit");
-                Assert.That(vm.LengthMax, Is.EqualTo("50"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("50"), "min must snap to the full max, not the first digit");
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("50"));
             });
         }
 
@@ -2185,15 +2195,15 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMax = "40";
-            vm.LengthMin = "9";
-            vm.LengthMin = "90";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMax = "40";
+            vm.Filter.LengthMin = "9";
+            vm.Filter.LengthMin = "90";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("90"));
-                Assert.That(vm.LengthMax, Is.EqualTo("90"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("90"));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("90"));
             });
         }
 
@@ -2205,14 +2215,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "100";
-            vm.LengthMax = "500";
-            vm.NormalizeRangeBounds();
+            vm.Filter.LengthMin = "100";
+            vm.Filter.LengthMax = "500";
+            vm.Filter.NormalizeRangeBounds();
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.EqualTo("100"));
-                Assert.That(vm.LengthMax, Is.EqualTo("500"));
+                Assert.That(vm.Filter.LengthMin, Is.EqualTo("100"));
+                Assert.That(vm.Filter.LengthMax, Is.EqualTo("500"));
             });
         }
 
@@ -2224,19 +2234,19 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
 
-            vm.LengthMin = "700";
-            vm.LengthMax = "500"; // inverted, snap still pending (timer not fired)
+            vm.Filter.LengthMin = "700";
+            vm.Filter.LengthMax = "500"; // inverted, snap still pending (timer not fired)
 
-            vm.ClearFiltersCommand.Execute(null);
-            vm.NormalizeRangeBounds(); // pending edge was cleared -> no-op
+            vm.Filter.ClearFiltersCommand.Execute(null);
+            vm.Filter.NormalizeRangeBounds(); // pending edge was cleared -> no-op
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.LengthMin, Is.Empty);
-                Assert.That(vm.LengthMax, Is.Empty);
-                Assert.That(vm.WidthMin, Is.Empty);
-                Assert.That(vm.WidthMax, Is.Empty);
-                Assert.That(vm.Parts, Has.Count.EqualTo(2));
+                Assert.That(vm.Filter.LengthMin, Is.Empty);
+                Assert.That(vm.Filter.LengthMax, Is.Empty);
+                Assert.That(vm.Filter.WidthMin, Is.Empty);
+                Assert.That(vm.Filter.WidthMax, Is.Empty);
+                Assert.That(vm.PartsList.Parts, Has.Count.EqualTo(2));
             });
         }
 
@@ -2247,11 +2257,11 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.CheckAllCommand.Execute(null);
+            vm.PartsList.CheckAllCommand.Execute(null);
 
             vm.CloseFileCommand.Execute(null);
 
-            Assert.That(vm.CheckedCount, Is.EqualTo(0));
+            Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -2267,10 +2277,10 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(_projectService.Calls, Does.Contain(nameof(FakeProjectService.Close)));
-                Assert.That(vm.FullPath, Is.Empty);
-                Assert.That(vm.Parts, Is.Empty);
-                Assert.That(vm.Bands, Is.Empty);
-                Assert.That(vm.SelectedPart, Is.Null);
+                Assert.That(vm.Workspace.FullPath, Is.Empty);
+                Assert.That(vm.PartsList.Parts, Is.Empty);
+                Assert.That(vm.Catalog.Bands, Is.Empty);
+                Assert.That(vm.PartsList.SelectedPart, Is.Null);
                 Assert.That(vm.WindowTitle, Does.EndWith("No file selected"));
             });
         }

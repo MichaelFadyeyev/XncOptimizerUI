@@ -1,9 +1,12 @@
-using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
+using XncOptimizerUI.MVVM.ViewModels.Panels;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 using XncOptimizerUI.MVVM.Views;
 using XncOptimizerUI.Services;
 using XncOptimizerUI.Services.Project;
@@ -50,17 +53,8 @@ namespace XncOptimizerUI
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IDialogService, DialogService>();
             AddProjectServices(services);
-            services.AddSingleton<AppViewModel>(serviceProvider =>
-            {
-                var project = serviceProvider.GetRequiredService<ProjectServices>();
-                var config = serviceProvider.GetRequiredService<IConfigService>();
-                var dialog = serviceProvider.GetRequiredService<IDialogService>();
-                var assembly = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
-                var labels = new ObservableCollection<string>(config.LabelsToProcess);
-                var selectedLabel = config.GetLastLabelToProcessSelected();
-
-                return new AppViewModel(project, config, dialog, assembly, labels, selectedLabel);
-            });
+            services.AddSingleton(new ApplicationInfo(Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty));
+            AddViewModels(services);
             services.AddSingleton<MainWindow>();
 
             return services;
@@ -77,6 +71,33 @@ namespace XncOptimizerUI
             services.AddSingleton<IProjectRestructuring, ProjectRestructuring>();
             services.AddSingleton<IXncBatchOperations, XncBatchOperations>();
             services.AddSingleton<ProjectServices>();
+        }
+
+        /// <summary>
+        /// The main window's view models: one instance of each, sharing the log, the open
+        /// project and the parts list.
+        /// </summary>
+        internal static void AddViewModels(IServiceCollection services)
+        {
+            services.AddSingleton<ActivityLog>();
+            services.AddSingleton<PartEditSaver>();
+            services.AddSingleton<ProjectCatalogVM>();
+            services.AddSingleton<PartsListVM>();
+            services.AddSingleton<PartsFilterVM>();
+            services.AddSingleton<ProjectWorkspace>();
+            services.AddSingleton<SelectedPartMachiningVM>();
+            services.AddSingleton<PartPreviewVM>();
+            services.AddSingleton<BatchCommandRunner>();
+            services.AddSingleton<LabelsVM>();
+            services.AddSingleton<SourcePartVM>();
+            services.AddSingleton<PreparationPanelVM>();
+            services.AddSingleton<CleanOutsidePanelVM>();
+            services.AddSingleton<SortToolsPanelVM>();
+            services.AddSingleton<GrooveMillPanelVM>();
+            services.AddSingleton<BoreMillPanelVM>();
+            services.AddSingleton<MillOffsetPanelVM>();
+            services.AddSingleton<MillOrderPanelVM>();
+            services.AddSingleton<AppViewModel>();
         }
 
         protected override void OnExit(ExitEventArgs e)

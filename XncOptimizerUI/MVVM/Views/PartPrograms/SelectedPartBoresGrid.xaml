@@ -5,8 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
-    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
@@ -19,13 +19,13 @@
         helpers:DataGridCellEditBehavior.CommitToRow="True"
         AutoGenerateColumns="False"
         CanUserAddRows="False"
-        ItemsSource="{Binding SelectedPartBores}"
+        ItemsSource="{Binding Bores}"
         SelectedItem="{Binding SelectedBore}"
         SelectionMode="Extended"
         SelectionUnit="FullRow">
         <DataGrid.Columns>
 
-            <!--  Check: feeds AppViewModel.CheckedBores  -->
+            <!--  Check: feeds SelectedPartMachiningVM.CheckedBores  -->
             <DataGridTemplateColumn
                 x:Name="BoresCheckColumn"
                 Width="Auto"

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -50,9 +49,10 @@ namespace XncOptimizerUI.Test
             var dialogs = Substitute.For<IDialogService>();
             dialogs.ShowOpenProjectDialog().Returns(path);
 
-            var vm = new AppViewModel(
-                TestProject.Create(config, TimeProvider.System), config, dialogs, "Test",
-                new ObservableCollection<string>(["label"]), "label");
+            config.LabelsToProcess.Returns(["label"]);
+            config.GetLastLabelToProcessSelected().Returns("label");
+
+            var vm = TestViewModels.Create(TestProject.Create(config, TimeProvider.System), config, dialogs);
             vm.OpenFileCommand.Execute(null);
 
             return vm;
@@ -61,7 +61,7 @@ namespace XncOptimizerUI.Test
         /// <summary>Shows <paramref name="control"/> below an "outside" button; returns its grid named <paramref name="gridName"/>.</summary>
         protected static (Window Window, DataGrid Grid, Button Outside) Show(UserControl control, AppViewModel vm, string gridName)
         {
-            control.DataContext = vm;
+            control.DataContext = vm.Machining;
             var outside = new Button { Content = "outside" };
             var panel = new StackPanel();
             panel.Children.Add(outside);

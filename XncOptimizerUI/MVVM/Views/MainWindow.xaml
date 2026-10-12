@@ -178,7 +178,7 @@
                     <CheckBox
                         x:Name="NeverFlipTclOnTurnCheckBox"
                         Margin="2,4,2,0"
-                        IsChecked="{Binding NeverFlipTclOnTurn}">
+                        IsChecked="{Binding Preview.NeverFlipTclOnTurn}">
                         <TextBlock Style="{StaticResource TextWrappingStyle}" Text="Never flips TCL on program turning (keep GibLab behavior)" />
                     </CheckBox>
                 </StackPanel>
@@ -196,7 +196,7 @@
             <StackPanel Margin="2,2,2,2">
                 <Button
                     Margin="0,0,0,5"
-                    Command="{Binding ExecuteOptimizeCommand}"
+                    Command="{Binding Preparation.ExecuteOptimizeCommand}"
                     Content="Group by XNC"
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
@@ -206,7 +206,7 @@
                 <StackPanel>
 
                     <Button
-                        Command="{Binding ExecutePrepForSplitAlongXCommand}"
+                        Command="{Binding Preparation.ExecutePrepForSplitAlongXCommand}"
                         Content="Prep. For Split Along X"
                         Style="{StaticResource CommandButtonStyle}" />
 
@@ -227,11 +227,11 @@
                         <TextBox
                             Grid.Column="0"
                             Height="24"
-                            Text="{Binding NewLabelToProcess, UpdateSourceTrigger=PropertyChanged}" />
+                            Text="{Binding Preparation.Labels.NewLabelToProcess, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Button
                             Grid.Column="1"
-                            Command="{Binding AddNewLabelCommand}"
+                            Command="{Binding Preparation.Labels.AddNewLabelCommand}"
                             Content="ADD"
                             Style="{StaticResource SetOptionButtonStyle}" />
                     </Grid>
@@ -253,12 +253,12 @@
                         <ComboBox
                             Grid.Column="0"
                             Height="24"
-                            ItemsSource="{Binding LabelsToProcess}"
-                            SelectedItem="{Binding SelectedLabel}" />
+                            ItemsSource="{Binding Preparation.Labels.LabelsToProcess}"
+                            SelectedItem="{Binding Preparation.Labels.SelectedLabel}" />
 
                         <Button
                             Grid.Column="1"
-                            Command="{Binding DeleteLabelCommand}"
+                            Command="{Binding Preparation.Labels.DeleteLabelCommand}"
                             Content="DEL"
                             Style="{StaticResource SetOptionButtonStyle}" />
 
@@ -271,7 +271,7 @@
                 <StackPanel x:Name="CleanOperationsStack">
                     <Button
                         x:Name="CleanOperationsButton"
-                        Command="{Binding CleanOutsideOperationsCommand}"
+                        Command="{Binding CleanOutside.CleanOutsideOperationsCommand}"
                         Content="Clean operations"
                         Style="{StaticResource CommandButtonStyle}"
                         ToolTip="Remove operations lying outside the part from the checked parts (all parts when none is checked)" />
@@ -292,7 +292,7 @@
                             VerticalContentAlignment="Center"
                             Content="Bores"
                             FontSize="10"
-                            IsChecked="{Binding CleanOutsideBores}" />
+                            IsChecked="{Binding CleanOutside.CleanOutsideBores}" />
 
                         <CheckBox
                             x:Name="CleanOutsideGroovesCheckBox"
@@ -301,7 +301,7 @@
                             VerticalContentAlignment="Center"
                             Content="Grooves"
                             FontSize="10"
-                            IsChecked="{Binding CleanOutsideGrooves}" />
+                            IsChecked="{Binding CleanOutside.CleanOutsideGrooves}" />
 
                         <CheckBox
                             x:Name="CleanOutsideMillsCheckBox"
@@ -310,7 +310,7 @@
                             VerticalContentAlignment="Center"
                             Content="Mills"
                             FontSize="10"
-                            IsChecked="{Binding CleanOutsideMills}"
+                            IsChecked="{Binding CleanOutside.CleanOutsideMills}"
                             ToolTip="Milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
                     </StackPanel>
                 </StackPanel>
@@ -321,7 +321,7 @@
                 <StackPanel>
                     <Button
                         x:Name="SortToolDeclarationsButton"
-                        Command="{Binding SortToolDeclarationsCommand}"
+                        Command="{Binding SortTools.SortToolDeclarationsCommand}"
                         Content="Sort tools"
                         Style="{StaticResource CommandButtonStyle}"
                         ToolTip="Move tool declarations to the program start, ordered Bore - Cut - Mill, then by Ø ascending" />
@@ -334,7 +334,7 @@
                         VerticalContentAlignment="Center"
                         Content="Apply globally / filtered"
                         FontSize="10"
-                        IsChecked="{Binding SortToolsGlobally}"
+                        IsChecked="{Binding SortTools.SortToolsGlobally}"
                         ToolTip="Sort tools in every part passing the filter (all parts when no filter is set), not only the checked ones" />
                 </StackPanel>
             </Border>
@@ -344,7 +344,7 @@
 
                 <StackPanel>
                     <Button
-                        Command="{Binding ReplaceXNCsCommand}"
+                        Command="{Binding SourcePart.ReplaceXNCsCommand}"
                         Content="Replace XNCs"
                         Style="{StaticResource CommandButtonStyle}" />
 
@@ -373,21 +373,21 @@
                             Height="60"
                             VerticalAlignment="Center"
                             FontSize="10"
-                            Text="{Binding SourcePartInfo}"
+                            Text="{Binding SourcePart.SourcePartInfo}"
                             TextTrimming="CharacterEllipsis"
-                            ToolTip="{Binding SourcePartInfo}" />
+                            ToolTip="{Binding SourcePart.SourcePartInfo}" />
 
                         <Button
                             Grid.Row="1"
                             Grid.Column="0"
-                            Command="{Binding SetSourcePartCommand}"
+                            Command="{Binding SourcePart.SetSourcePartCommand}"
                             Content="SET"
                             Style="{StaticResource SetOptionButtonStyle2}" />
 
                         <Button
                             Grid.Row="1"
                             Grid.Column="1"
-                            Command="{Binding ResetSourcePartCommand}"
+                            Command="{Binding SourcePart.ResetSourcePartCommand}"
                             Content="RESET"
                             Style="{StaticResource SetOptionButtonStyle2}" />
 
@@ -399,7 +399,7 @@
             <Border Style="{StaticResource MenuGroupBorder}">
                 <StackPanel>
                     <Button
-                        Command="{Binding ConvertGroovesAndMillsCommand}"
+                        Command="{Binding GrooveMill.ConvertGroovesAndMillsCommand}"
                         Content="Convert grooves / mills"
                         Style="{StaticResource CommandButtonStyle}" />
 
@@ -422,7 +422,7 @@
                             Content="Grooves → Mills"
                             FontSize="10"
                             GroupName="GrooveMillDir"
-                            IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}" />
+                            IsChecked="{Binding GrooveMill.GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}" />
 
                         <RadioButton
                             Grid.Row="1"
@@ -432,7 +432,7 @@
                             Content="Mills → Grooves"
                             FontSize="10"
                             GroupName="GrooveMillDir"
-                            IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}" />
+                            IsChecked="{Binding GrooveMill.GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}" />
 
                         <CheckBox
                             Grid.Row="1"
@@ -442,8 +442,8 @@
                             VerticalAlignment="Center"
                             Content="incl. pockets"
                             FontSize="10"
-                            IsChecked="{Binding ProcessPockets}"
-                            IsEnabled="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
+                            IsChecked="{Binding GrooveMill.ProcessPockets}"
+                            IsEnabled="{Binding GrooveMill.GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Also convert axis-parallel rectangular pockets (&lt;mr&gt;) to grooves" />
 
                     </Grid>
@@ -455,7 +455,7 @@
             <Border Style="{StaticResource MenuGroupBorder}">
                 <StackPanel>
                     <Button
-                        Command="{Binding ConvertBoresAndMillsCommand}"
+                        Command="{Binding BoreMill.ConvertBoresAndMillsCommand}"
                         Content="Convert bores / mills"
                         Style="{StaticResource CommandButtonStyle}" />
 
@@ -477,7 +477,7 @@
                             Content="Bores → Mills"
                             FontSize="10"
                             GroupName="BoreMillDir"
-                            IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}" />
+                            IsChecked="{Binding BoreMill.BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}" />
 
                         <CheckBox
                             Grid.Row="0"
@@ -487,8 +487,8 @@
                             VerticalAlignment="Center"
                             Content="as ellipses"
                             FontSize="10"
-                            IsChecked="{Binding ConvertBoresToEllipses}"
-                            IsEnabled="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}"
+                            IsChecked="{Binding BoreMill.ConvertBoresToEllipses}"
+                            IsEnabled="{Binding BoreMill.BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.BoresToMills}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Bores → Mills: emit an elliptical mill (&lt;me&gt;) per bore instead of a closed two-arc path" />
 
                         <RadioButton
@@ -499,7 +499,7 @@
                             Content="Mills → Bores"
                             FontSize="10"
                             GroupName="BoreMillDir"
-                            IsChecked="{Binding BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.MillsToBores}, Converter={StaticResource EnumToBool}}" />
+                            IsChecked="{Binding BoreMill.BoreMillDirection, ConverterParameter={x:Static xnc:BoreMillDirection.MillsToBores}, Converter={StaticResource EnumToBool}}" />
 
                     </Grid>
                 </StackPanel>
@@ -511,7 +511,7 @@
                 <StackPanel>
                     <Button
                         x:Name="OffsetMillPathsButton"
-                        Command="{Binding OffsetMillPathsCommand}"
+                        Command="{Binding MillOffset.OffsetMillPathsCommand}"
                         Content="Offset mill path"
                         Style="{StaticResource CommandButtonStyle}" />
 
@@ -540,7 +540,7 @@
                                 <Binding
                                     Mode="TwoWay"
                                     NotifyOnValidationError="True"
-                                    Path="MillOffset"
+                                    Path="MillOffset.MillOffset"
                                     UpdateSourceTrigger="PropertyChanged"
                                     ValidatesOnDataErrors="True">
                                     <Binding.ValidationRules>
@@ -566,7 +566,7 @@
                             Content="R"
                             FontSize="10"
                             GroupName="MillOffsetSide"
-                            IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Right}, Converter={StaticResource EnumToBool}}"
+                            IsChecked="{Binding MillOffset.MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Right}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Offset to the right of the traversal direction" />
 
                         <RadioButton
@@ -578,7 +578,7 @@
                             Content="L"
                             FontSize="10"
                             GroupName="MillOffsetSide"
-                            IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Left}, Converter={StaticResource EnumToBool}}"
+                            IsChecked="{Binding MillOffset.MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Left}, Converter={StaticResource EnumToBool}}"
                             ToolTip="Offset to the left of the traversal direction" />
 
                         <!--  Mill path types to process  -->
@@ -592,7 +592,7 @@
                             VerticalContentAlignment="Center"
                             Content="open paths"
                             FontSize="10"
-                            IsChecked="{Binding OffsetOpenMillPaths}"
+                            IsChecked="{Binding MillOffset.OffsetOpenMillPaths}"
                             ToolTip="Offset open milling contours (&lt;ms&gt; paths that do not return to the entry point)" />
 
                         <CheckBox
@@ -604,7 +604,7 @@
                             VerticalContentAlignment="Center"
                             Content="closed paths / rect. / ellipses"
                             FontSize="10"
-                            IsChecked="{Binding OffsetClosedMillPaths}"
+                            IsChecked="{Binding MillOffset.OffsetClosedMillPaths}"
                             ToolTip="Offset closed milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
 
                     </Grid>
@@ -615,7 +615,7 @@
             <!--  Optimize Mill Traversal panel  -->
             <StackPanel Margin="2,2,2,2">
                 <Button
-                    Command="{Binding OptimizeMillTraversalCommand}"
+                    Command="{Binding MillOrder.OptimizeMillTraversalCommand}"
                     Content="Optimize mill order"
                     Style="{StaticResource CommandButtonStyle}" />
             </StackPanel>
@@ -669,7 +669,7 @@
                                 HorizontalAlignment="Left"
                                 Orientation="Horizontal">
                                 <Label VerticalAlignment="Center" Content="Checked no:" />
-                                <Label VerticalAlignment="Center" Content="{Binding CheckedCount}" />
+                                <Label VerticalAlignment="Center" Content="{Binding PartsList.CheckedCount}" />
                             </StackPanel>
 
                             <StackPanel
@@ -679,7 +679,7 @@
                                 HorizontalAlignment="Right"
                                 Orientation="Horizontal">
                                 <Label VerticalAlignment="Center" Content="Filtered no:" />
-                                <Label VerticalAlignment="Center" Content="{Binding Parts.Count}" />
+                                <Label VerticalAlignment="Center" Content="{Binding PartsList.Parts.Count}" />
                             </StackPanel>
 
                             <Button
@@ -689,7 +689,7 @@
                                 Height="20"
                                 Margin="2,0,0,0"
                                 Padding="0,2"
-                                Command="{Binding CheckAllCommand}"
+                                Command="{Binding PartsList.CheckAllCommand}"
                                 Content="Check all" />
                             <Button
                                 x:Name="UncheckAllButton"
@@ -698,7 +698,7 @@
                                 Height="20"
                                 Margin="2,0,0,0"
                                 Padding="0,2"
-                                Command="{Binding UncheckAllCommand}"
+                                Command="{Binding PartsList.UncheckAllCommand}"
                                 Content="Uncheck all" />
 
                             <TextBox
@@ -711,7 +711,7 @@
                                     <Binding
                                         Mode="TwoWay"
                                         NotifyOnValidationError="True"
-                                        Path="LengthMin"
+                                        Path="Filter.LengthMin"
                                         UpdateSourceTrigger="PropertyChanged"
                                         ValidatesOnDataErrors="True">
                                         <Binding.ValidationRules>
@@ -738,7 +738,7 @@
                                     <Binding
                                         Mode="TwoWay"
                                         NotifyOnValidationError="True"
-                                        Path="LengthMax"
+                                        Path="Filter.LengthMax"
                                         UpdateSourceTrigger="PropertyChanged"
                                         ValidatesOnDataErrors="True">
                                         <Binding.ValidationRules>
@@ -758,7 +758,7 @@
                                     <Binding
                                         Mode="TwoWay"
                                         NotifyOnValidationError="True"
-                                        Path="WidthMin"
+                                        Path="Filter.WidthMin"
                                         UpdateSourceTrigger="PropertyChanged"
                                         ValidatesOnDataErrors="True">
                                         <Binding.ValidationRules>
@@ -785,7 +785,7 @@
                                     <Binding
                                         Mode="TwoWay"
                                         NotifyOnValidationError="True"
-                                        Path="WidthMax"
+                                        Path="Filter.WidthMax"
                                         UpdateSourceTrigger="PropertyChanged"
                                         ValidatesOnDataErrors="True">
                                         <Binding.ValidationRules>
@@ -799,7 +799,7 @@
                                 Grid.Row="1"
                                 Grid.Column="8"
                                 Style="{StaticResource FilterInputStyle}"
-                                Text="{Binding FilterName}"
+                                Text="{Binding Filter.FilterName}"
                                 ToolTip="Name contains" />
 
                             <Button
@@ -808,7 +808,7 @@
                                 Height="20"
                                 Margin="2,0,0,0"
                                 Padding="0,2"
-                                Command="{Binding ApplyFilterCommand}"
+                                Command="{Binding Filter.ApplyFilterCommand}"
                                 Content="Filter" />
 
                             <Button
@@ -817,7 +817,7 @@
                                 Height="20"
                                 Margin="2,0,0,0"
                                 Padding="0,2"
-                                Command="{Binding ClearFiltersCommand}"
+                                Command="{Binding Filter.ClearFiltersCommand}"
                                 Content="Clear" />
 
                         </Grid>
@@ -828,8 +828,8 @@
                             AutoGenerateColumns="False"
                             CanUserAddRows="False"
                             EnableRowVirtualization="True"
-                            ItemsSource="{Binding Parts, UpdateSourceTrigger=PropertyChanged}"
-                            SelectedItem="{Binding SelectedPart}"
+                            ItemsSource="{Binding PartsList.Parts, UpdateSourceTrigger=PropertyChanged}"
+                            SelectedItem="{Binding PartsList.SelectedPart}"
                             VirtualizingPanel.VirtualizationMode="Recycling">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Width="Auto" Header="Check">
@@ -882,7 +882,7 @@
                                                 <TextBlock.Text>
                                                     <MultiBinding Converter="{StaticResource BandCaption}">
                                                         <Binding Path="TopBandingId" />
-                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                        <Binding Path="DataContext.Catalog.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
                                                     </MultiBinding>
                                                 </TextBlock.Text>
                                             </TextBlock>
@@ -909,7 +909,7 @@
                                                 <TextBlock.Text>
                                                     <MultiBinding Converter="{StaticResource BandCaption}">
                                                         <Binding Path="BottomBandingId" />
-                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                        <Binding Path="DataContext.Catalog.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
                                                     </MultiBinding>
                                                 </TextBlock.Text>
                                             </TextBlock>
@@ -936,7 +936,7 @@
                                                 <TextBlock.Text>
                                                     <MultiBinding Converter="{StaticResource BandCaption}">
                                                         <Binding Path="LeftBandingId" />
-                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                        <Binding Path="DataContext.Catalog.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
                                                     </MultiBinding>
                                                 </TextBlock.Text>
                                             </TextBlock>
@@ -963,7 +963,7 @@
                                                 <TextBlock.Text>
                                                     <MultiBinding Converter="{StaticResource BandCaption}">
                                                         <Binding Path="RightBandingId" />
-                                                        <Binding Path="DataContext.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                                        <Binding Path="DataContext.Catalog.BandOptions" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
                                                     </MultiBinding>
                                                 </TextBlock.Text>
                                             </TextBlock>
@@ -1042,6 +1042,7 @@
                             <partPreview:PartRotationPanel
                                 x:Name="PartRotationPanel"
                                 Grid.Column="1"
+                                DataContext="{Binding Preview}"
                                 Margin="0,4,0,0"
                                 VerticalAlignment="Top" />
                         </Grid>
@@ -1076,12 +1077,13 @@
                                                 HorizontalAlignment="Left"
                                                 Content="Bores"
                                                 FontSize="12"
-                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
+                                                Visibility="{Binding Machining.HasBores, Converter={StaticResource BoolToVis}}" />
                                             <partPrograms:SelectedPartBoresGrid
                                                 x:Name="SelectedPartBoresGrid"
                                                 MaxHeight="250"
                                                 Margin="0,0,0,4"
-                                                Visibility="{Binding HasSelectedPartBores, Converter={StaticResource BoolToVis}}" />
+                                                DataContext="{Binding Machining}"
+                                                Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}" />
 
                                             <!--  Selected Part Grooves List  -->
                                             <Label
@@ -1091,17 +1093,17 @@
                                                 HorizontalAlignment="Left"
                                                 Content="Grooves"
                                                 FontSize="12"
-                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
+                                                Visibility="{Binding Machining.HasGrooves, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
                                                 x:Name="SelectedPartGroovesGrid"
                                                 MaxHeight="250"
                                                 Margin="0,0,0,4"
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartGrooves}"
+                                                ItemsSource="{Binding Machining.Grooves}"
                                                 SelectionMode="Extended"
                                                 SelectionUnit="FullRow"
-                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}">
+                                                Visibility="{Binding Machining.HasGrooves, Converter={StaticResource BoolToVis}}">
                                                 <DataGrid.Columns>
                                                     <DataGridTemplateColumn Width="Auto" Header="Check">
                                                         <DataGridTemplateColumn.CellTemplate>
@@ -1162,16 +1164,16 @@
                                                 Margin="5,0,0,4"
                                                 Foreground="Gray"
                                                 Text="TCL is grooving tool to center line position"
-                                                Visibility="{Binding HasSelectedPartGrooves, Converter={StaticResource BoolToVis}}" />
+                                                Visibility="{Binding Machining.HasGrooves, Converter={StaticResource BoolToVis}}" />
 
-                                            <Label Content="Milling contours" Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}" />
+                                            <Label Content="Milling contours" Visibility="{Binding Machining.HasMillingContours, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartMillingContours}"
+                                                ItemsSource="{Binding Machining.MillingContours}"
                                                 SelectionMode="Extended"
                                                 SelectionUnit="FullRow"
-                                                Visibility="{Binding HasSelectedPartMillingContours, Converter={StaticResource BoolToVis}}">
+                                                Visibility="{Binding Machining.HasMillingContours, Converter={StaticResource BoolToVis}}">
                                                 <DataGrid.Columns>
                                                     <DataGridTemplateColumn Width="Auto" Header="Check">
                                                         <DataGridTemplateColumn.CellTemplate>
@@ -1192,12 +1194,12 @@
                                                 </DataGrid.Columns>
                                             </DataGrid>
 
-                                            <Label Content="Milling ellipses" Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}" />
+                                            <Label Content="Milling ellipses" Visibility="{Binding Machining.HasMillingEllipses, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartMillingEllipses}"
-                                                Visibility="{Binding HasSelectedPartMillingEllipses, Converter={StaticResource BoolToVis}}">
+                                                ItemsSource="{Binding Machining.MillingEllipses}"
+                                                Visibility="{Binding Machining.HasMillingEllipses, Converter={StaticResource BoolToVis}}">
                                                 <DataGrid.Columns>
                                                     <DataGridTemplateColumn Width="Auto" Header="Check">
                                                         <DataGridTemplateColumn.CellTemplate>
@@ -1254,12 +1256,12 @@
                                                 </DataGrid.Columns>
                                             </DataGrid>
 
-                                            <Label Content="Milling rectangles" Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                                            <Label Content="Milling rectangles" Visibility="{Binding Machining.HasMillingRectangles, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartMillingRectangles}"
-                                                Visibility="{Binding HasSelectedPartMillingRectangles, Converter={StaticResource BoolToVis}}">
+                                                ItemsSource="{Binding Machining.MillingRectangles}"
+                                                Visibility="{Binding Machining.HasMillingRectangles, Converter={StaticResource BoolToVis}}">
                                                 <DataGrid.Columns>
                                                     <DataGridTemplateColumn Width="Auto" Header="Check">
                                                         <DataGridTemplateColumn.CellTemplate>
@@ -1327,12 +1329,12 @@
                                 <TabItem Width="100" Header="Tools">
                                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                         <StackPanel>
-                                            <Label Content="Tools" Visibility="{Binding HasSelectedPartTools, Converter={StaticResource BoolToVis}}" />
+                                            <Label Content="Tools" Visibility="{Binding Machining.HasTools, Converter={StaticResource BoolToVis}}" />
                                             <DataGrid
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
-                                                ItemsSource="{Binding SelectedPartTools}"
-                                                Visibility="{Binding HasSelectedPartTools, Converter={StaticResource BoolToVis}}">
+                                                ItemsSource="{Binding Machining.Tools}"
+                                                Visibility="{Binding Machining.HasTools, Converter={StaticResource BoolToVis}}">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Binding="{Binding Number}" Header="#" />
                                                     <DataGridTextColumn Binding="{Binding Side}" Header="Side" />
@@ -1352,7 +1354,8 @@
                                     <partPrograms:SelectedPartVariablesGrid
                                         x:Name="SelectedPartVariablesGrid"
                                         VerticalAlignment="Top"
-                                        Visibility="{Binding HasSelectedPartVariables, Converter={StaticResource BoolToVis}}" />
+                                        DataContext="{Binding Machining}"
+                                        Visibility="{Binding HasVariables, Converter={StaticResource BoolToVis}}" />
                                 </TabItem>
 
                                 <!--  Selected Part Programs List  -->
@@ -1361,7 +1364,7 @@
                                         x:Name="ProgramsTextBox"
                                         HorizontalScrollBarVisibility="Auto"
                                         IsReadOnly="True"
-                                        Text="{Binding SelectedPartPrograms, Mode=OneWay}"
+                                        Text="{Binding Machining.ProgramsText, Mode=OneWay}"
                                         TextWrapping="NoWrap"
                                         VerticalScrollBarVisibility="Auto" />
                                 </TabItem>
@@ -1387,7 +1390,7 @@
                             <DataGrid
                                 MaxHeight="450"
                                 AutoGenerateColumns="False"
-                                ItemsSource="{Binding Products}"
+                                ItemsSource="{Binding Catalog.Products}"
                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn
@@ -1417,7 +1420,7 @@
                             <DataGrid
                                 MaxHeight="450"
                                 AutoGenerateColumns="False"
-                                ItemsSource="{Binding Sheets}"
+                                ItemsSource="{Binding Catalog.Sheets}"
                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn
@@ -1444,9 +1447,9 @@
                                 MaxHeight="450"
                                 HorizontalContentAlignment="Right"
                                 AutoGenerateColumns="False"
-                                ItemsSource="{Binding Bands}"
+                                ItemsSource="{Binding Catalog.Bands}"
                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                SelectedItem="{Binding SelectedBand}">
+                                SelectedItem="{Binding Catalog.SelectedBand}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn
                                         Width="10*"
@@ -1480,7 +1483,7 @@
             Grid.Column="1"
             Grid.ColumnSpan="2"
             Height="60"
-            Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}"
+            Text="{Binding Log.Text, UpdateSourceTrigger=PropertyChanged}"
             TextWrapping="WrapWithOverflow"
             VerticalScrollBarVisibility="Auto" />
 

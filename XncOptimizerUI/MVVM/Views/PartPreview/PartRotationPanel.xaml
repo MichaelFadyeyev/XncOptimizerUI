@@ -5,9 +5,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Preview"
     xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
-    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+    d:DataContext="{d:DesignInstance Type=viewmodels:PartPreviewVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
@@ -18,14 +18,14 @@
     <!--  Rotation buttons: absolute part turn, one checked at a time  -->
     <StackPanel
         x:Name="PartRotationButtons"
-        IsEnabled="{Binding CanRotateSelectedPart}"
+        IsEnabled="{Binding CanRotate}"
         Orientation="Vertical">
 
         <RadioButton
             x:Name="Rotate0Button"
             Content="0°"
             GroupName="PartRotation"
-            IsChecked="{Binding SelectedPartRotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg0}}"
+            IsChecked="{Binding Rotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg0}}"
             Style="{StaticResource RotationToggleRadioStyle}"
             ToolTip="Turn part to 0° and save" />
 
@@ -33,7 +33,7 @@
             x:Name="Rotate90Button"
             Content="90°"
             GroupName="PartRotation"
-            IsChecked="{Binding SelectedPartRotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg90}}"
+            IsChecked="{Binding Rotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg90}}"
             Style="{StaticResource RotationToggleRadioStyle}"
             ToolTip="Turn part 90° clockwise and save" />
 
@@ -41,7 +41,7 @@
             x:Name="Rotate180Button"
             Content="180°"
             GroupName="PartRotation"
-            IsChecked="{Binding SelectedPartRotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg180}}"
+            IsChecked="{Binding Rotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg180}}"
             Style="{StaticResource RotationToggleRadioStyle}"
             ToolTip="Turn part 180° and save" />
 
@@ -49,7 +49,7 @@
             x:Name="Rotate270Button"
             Content="270°"
             GroupName="PartRotation"
-            IsChecked="{Binding SelectedPartRotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg270}}"
+            IsChecked="{Binding Rotation, Mode=TwoWay, Converter={StaticResource EnumToBool}, ConverterParameter={x:Static xnc:PartTurn.Deg270}}"
             Style="{StaticResource RotationToggleRadioStyle}"
             ToolTip="Turn part 270° clockwise and save" />
     </StackPanel>

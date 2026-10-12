@@ -27,7 +27,7 @@ namespace XncOptimizerUI.Test
         {
             var vm = OpenProject("td-bores-displaying.project");
             var (window, grid, outside) = Show(new SelectedPartBoresGrid(), vm, "BoresDataGrid");
-            var row = vm.SelectedPartBores[0];
+            var row = vm.Machining.Bores[0];
 
             try
             {
@@ -38,7 +38,7 @@ namespace XncOptimizerUI.Test
                 {
                     Assert.That(InputOf(row, column), Is.EqualTo(expectedInput));
                     Assert.That(FindDescendant<TextBox>(grid), Is.Null, "cell left edit mode");
-                    Assert.That(vm.Log, expectedLog is null ? Does.Not.Contain("Bore #") : Does.Contain(expectedLog));
+                    Assert.That(vm.Log.Text, expectedLog is null ? Does.Not.Contain("Bore #") : Does.Contain(expectedLog));
                 });
             }
             finally
