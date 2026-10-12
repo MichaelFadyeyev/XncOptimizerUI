@@ -1,3 +1,4 @@
+using System.Xml;
 using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
@@ -197,6 +198,22 @@ namespace XncOptimizerUI.Test
             Assert.That(CopiedText(), Is.EqualTo("800\t300\t4\t\t\t\t\tБокова\t"));
         }
 
+        /// <summary>
+        /// A failed operation ran once and was not followed by reopening or saving the project; the
+        /// selected part is read again, as it is selected again.
+        /// </summary>
+        private void AssertNotReloadedAfter(string operation)
+        {
+            var after = _projectService.Calls.SkipWhile(call => call != operation).Skip(1).ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_projectService.Calls.Count(call => call == operation), Is.EqualTo(1), $"{operation} runs once");
+                Assert.That(after, Has.None.EqualTo(nameof(FakeProjectService.Open)).And.None.EqualTo(nameof(FakeProjectService.Save)),
+                    "a failed operation must not reload or save the project");
+            });
+        }
+
         private string? CopiedText() =>
             (string?)_dialogs.ReceivedCalls()
                 .Single(c => c.GetMethodInfo().Name == nameof(IDialogService.SetClipboardText))
@@ -239,6 +256,55 @@ namespace XncOptimizerUI.Test
                 "re-opening the source file after Execute Optimize must not rename its first part");
         }
 
+        /// <summary>
+        /// The selected part used to keep its old width: reopening the <c>_spl</c> result released
+        /// the selection, which saved the selected part's view model - still holding the source
+        /// file's width - into the result file. Part 1 of td.project: w=263, kerf 4.
+        /// </summary>
+        [Test]
+        public void ExecutePrepForSplitAlongX_ResizesTheSelectedPartToo()
+        {
+            var config = Substitute.For<IConfigService>();
+            config.SawWidth.Returns(4.0m);
+            config.LabelsToProcess.Returns(["401.01.00.01.СТН-ФРН"]);
+            config.GetLastLabelToProcessSelected().Returns("401.01.00.01.СТН-ФРН");
+
+            var dialogs = Substitute.For<IDialogService>();
+            dialogs.ShowOpenProjectDialog().Returns(CopyFixture("td.project"));
+
+            var vm = TestViewModels.Create(TestProject.Create(config, TimeProvider.System), config, dialogs);
+
+            vm.OpenFileCommand.Execute(null);
+            Assert.That(vm.PartsList.SelectedPart?.Id, Is.EqualTo(1), "opening selects the first part");
+
+            vm.Preparation.ExecutePrepForSplitAlongXCommand.Execute(null);
+
+            var part = XDocument.Load(vm.Workspace.FullPath).Descendants("part").Single(p => (string?)p.Attribute("id") == "1" && p.Attribute("w") is not null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Workspace.FullPath, Does.EndWith("td_spl.project"));
+                Assert.That((XmlConvert.ToDecimal(part.Attribute("w")!.Value), XmlConvert.ToDecimal(part.Attribute("dw")!.Value)), Is.EqualTo((530m, 530m)));
+                Assert.That(vm.PartsList.Parts.Single(p => p.Id == 1).Width, Is.EqualTo(530m));
+            });
+        }
+
+        [Test]
+        public void BatchCommand_WhenNothingChanged_KeepsTheSelectedPart()
+        {
+            SeedTwoParts();
+            _projectService.GroupIdenticalElementsResult = false;
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var selected = vm.PartsList.Parts[1];
+            vm.PartsList.SelectedPart = selected;
+
+            vm.Preparation.ExecuteOptimizeCommand.Execute(null);
+
+            Assert.That(vm.PartsList.SelectedPart, Is.SameAs(selected));
+        }
+
         [Test]
         public void ExecuteOptimize_WhenServiceFails_WarnsWithTheTextTheServiceLogged()
         {
@@ -256,16 +322,10 @@ namespace XncOptimizerUI.Test
                 "File seems to be already optimized or contains no XNC.",
                 Arg.Any<string>());
 
-            // Releasing the stale SelectedPart before the service call may auto-save it
-            // (UpdatePart/SaveProject) — that's expected. What must NOT happen is a
+            // Releasing the SelectedPart before the service call may auto-save it
+            // (UpdatePart/Save) — that's expected. What must NOT happen is a
             // reload of the project after a failed GroupIdenticalElements call.
-            Assert.Multiple(() =>
-            {
-                Assert.That(_projectService.Calls[^1], Is.EqualTo(nameof(FakeProjectService.GroupIdenticalElements)),
-                    "nothing should run after the failed GroupIdenticalElements call");
-                Assert.That(_projectService.Calls, Does.Not.Contain(nameof(FakeProjectService.Open)),
-                    "a failed optimize should not reload the project");
-            });
+            AssertNotReloadedAfter(nameof(FakeProjectService.GroupIdenticalElements));
         }
 
         [Test]
@@ -1143,8 +1203,7 @@ namespace XncOptimizerUI.Test
             vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No grooves converted (ignored 2).", Arg.Any<string>());
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertGroovesAndMills) }),
-                "a failed conversion should not reload the project");
+            AssertNotReloadedAfter(nameof(FakeProjectService.ConvertGroovesAndMills));
         }
 
         [Test]
@@ -1231,8 +1290,7 @@ namespace XncOptimizerUI.Test
             vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No bores converted (ignored 0).", Arg.Any<string>());
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.ConvertBoresAndMills) }),
-                "a failed conversion should not reload the project");
+            AssertNotReloadedAfter(nameof(FakeProjectService.ConvertBoresAndMills));
         }
 
         [Test]
@@ -1303,8 +1361,7 @@ namespace XncOptimizerUI.Test
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No mill passes reordered (ignored 0).", Arg.Any<string>());
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OptimizeMillTraversal) }),
-                "a failed optimization should not reload the project");
+            AssertNotReloadedAfter(nameof(FakeProjectService.OptimizeMillTraversal));
         }
 
         [Test]
@@ -1395,8 +1452,7 @@ namespace XncOptimizerUI.Test
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No tool declarations reordered (skipped 0 program(s)).", Arg.Any<string>());
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.SortToolDeclarations) }),
-                "a failed sort should not reload the project");
+            AssertNotReloadedAfter(nameof(FakeProjectService.SortToolDeclarations));
         }
 
         [Test]
@@ -1554,7 +1610,7 @@ namespace XncOptimizerUI.Test
 
             vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.CleanOutsideOperations) }));
+            AssertNotReloadedAfter(nameof(FakeProjectService.CleanOutsideOperations));
         }
 
         [TestCase(true, false, MillPathKinds.Open)]
@@ -1656,8 +1712,7 @@ namespace XncOptimizerUI.Test
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             _dialogs.Received(1).ShowWarning("No mill paths offset (ignored 2).", Arg.Any<string>());
-            Assert.That(_projectService.Calls, Is.EqualTo(new[] { nameof(FakeProjectService.OffsetMillPaths) }),
-                "a failed offset should not reload the project");
+            AssertNotReloadedAfter(nameof(FakeProjectService.OffsetMillPaths));
         }
 
         [Test]

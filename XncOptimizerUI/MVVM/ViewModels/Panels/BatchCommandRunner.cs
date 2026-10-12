@@ -1,5 +1,6 @@
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Panels
 {
@@ -8,7 +9,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Panels
     /// open project or when a check fails, pick the parts, run the operation, log its report, and
     /// then open the saved file - or, when it changed nothing, show its messages as a warning.
     /// </summary>
-    public sealed class BatchCommandRunner(ProjectWorkspace workspace, ActivityLog log, IDialogService dialogs)
+    public sealed class BatchCommandRunner(ProjectWorkspace workspace, PartsListVM parts, ActivityLog log, IDialogService dialogs)
     {
         private const string NoFileMessage = "No file selected!";
 
@@ -65,14 +66,26 @@ namespace XncOptimizerUI.MVVM.ViewModels.Panels
 
         private void Refuse(string message) => log.Append($"{message}\n");
 
+        /// <summary>
+        /// Runs <paramref name="operation"/> with no part selected: releasing the selection first
+        /// saves the selected part's pending grid edits into the open file, before the operation
+        /// reads it. Otherwise reopening the saved file would release the selection then, saving the
+        /// part's view model - still holding the values of the file it was read from - into the
+        /// new file and undoing what the operation changed in that part. When nothing changed, the
+        /// file stays open and the part is selected again.
+        /// </summary>
         private bool RunSaving(Func<OperationResult> operation)
         {
+            var selected = parts.SelectedPart;
+            parts.SelectedPart = null;
+
             var result = operation();
 
             log.Append(result);
 
             if (!result.Changed)
             {
+                parts.SelectedPart = selected;
                 WarnAbout(result);
                 return false;
             }

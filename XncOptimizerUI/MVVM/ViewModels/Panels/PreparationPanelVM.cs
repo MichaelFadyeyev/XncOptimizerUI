@@ -19,13 +19,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Panels
         #region Commands
         [RelayCommand]
         private void ExecuteOptimize() =>
-            runner.Run(() =>
-            {
-                // Flush the selected part's pending grid edits before the parts are regrouped.
-                parts.SelectedPart = null;
-
-                return project.Restructuring.GroupIdenticalElements();
-            });
+            runner.Run(project.Restructuring.GroupIdenticalElements);
 
         [RelayCommand]
         private void ExecutePrepForSplitAlongX() =>

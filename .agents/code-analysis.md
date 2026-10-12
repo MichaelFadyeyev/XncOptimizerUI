@@ -202,7 +202,7 @@ then a per-part and a total summary. Nothing removed ⇒ returns `false`, saves 
 `IXncBatchOperations.CleanOutsideOperations(IList<Part> parts, OutsideOperationKinds kinds)`;
 covered by `CleanOutsideOperationsTests` on `TestData/td-clean-outside.project` and `AppViewModelTests.CleanOutsideOperations_*`.
 
-**Prep for split along X** — two variants (same core algorithm): (1) hardcoded text label `"_поріз.2х40мм"` (button 1), (2) user-selected label from config (button 2). Algorithm: double width by `2× + SawWidth`, halve count rounding up, double/mirror the drill program's bores. Saw-kerf width is configurable via `ConfigService.SawWidth` (injected, default 4.0). The part's XNC operations are found by part id; saved as `_spl.project` (`SplitAlongXPreparer`).
+**Prep for split along X** — two variants (same core algorithm): (1) hardcoded text label `"_поріз.2х40мм"` (button 1), (2) user-selected label from config (button 2). Algorithm: double width by `2× + SawWidth` (`w`, `cw` and `dw` all become the new width; `jw` = new width − the part's banding shrink `w − jw`), halve count rounding up, double/mirror the drill program's bores. Saw-kerf width is configurable via `ConfigService.SawWidth` (injected, default 4.0). The part's XNC operations are found by part id; saved as `_spl.project` (`SplitAlongXPreparer`). Like every menu command that saves a new file, it runs with the selection released first (`BatchCommandRunner`), so reopening the result cannot save the selected part's stale view model over it.
 
 **Export parts list** — builds tab- or semicolon-separated list (length, width, count, banding external symbols, name) with blank separator row after parts on sheets named `"Сращ.(2)"` (spliced/joined marker). Outputs to CSV file or clipboard.
 
