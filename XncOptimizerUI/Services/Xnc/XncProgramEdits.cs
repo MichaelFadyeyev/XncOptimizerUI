@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {

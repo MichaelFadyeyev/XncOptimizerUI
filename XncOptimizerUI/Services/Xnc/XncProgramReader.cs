@@ -1,8 +1,8 @@
-using System.Globalization;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Geometry;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -28,13 +28,8 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static XncProgram Parse(XElement program, int operationId, bool side, int turn)
         {
-            var symbols = new XncSymbolTable();
-            var dx = RequireDouble(program.GetDxValue(), "<program> @dx");
-            var dy = RequireDouble(program.GetDyValue(), "<program> @dy");
-            var dz = RequireDouble(program.GetDzValue(), "<program> @dz");
-            symbols.Set("dx", dx);
-            symbols.Set("dy", dy);
-            symbols.Set("dz", dz);
+            var symbols = XncSymbols.DimensionSymbols(program);
+            var (dx, dy, dz) = (Sym("dx"), Sym("dy"), Sym("dz"));
 
             var tools = new List<XncTool>();
             var toolsByName = new Dictionary<string, XncTool>(StringComparer.OrdinalIgnoreCase);
@@ -57,10 +52,7 @@ namespace XncOptimizerUI.Services.Xnc
                 }
             }
 
-            double Eval(string? expression, string where) =>
-                XncExpressionEvaluator.Evaluate(
-                    expression ?? throw new XncProgramFormatException($"Missing value for {where}."),
-                    symbols);
+            double Eval(string? expression, string where) => XncSymbols.Eval(expression, symbols, where);
 
             double EvalOr(string? expression, double fallback) =>
                 expression is { } e ? XncExpressionEvaluator.Evaluate(e, symbols) : fallback;
@@ -74,7 +66,7 @@ namespace XncOptimizerUI.Services.Xnc
                     throw new XncProgramFormatException($"{where} references unknown tool '{toolName}'.");
                 }
 
-                symbols.Set("tool.dia", tool.Diameter);
+                symbols.SetToolDiameter(tool.Diameter);
             }
 
             foreach (var element in program.Elements())
@@ -135,7 +127,7 @@ namespace XncOptimizerUI.Services.Xnc
                             ToolName = element.GetNameValue() ?? string.Empty,
                             Entry = new XncPoint(Eval(element.GetXValue(), "<ms> @x"), Eval(element.GetYValue(), "<ms> @y")),
                             EntryDepth = entryDepth,
-                            Position = ParsePosition(element.GetCValue()),
+                            Position = ParsePositionCode(element.GetCValue()),
                             Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
@@ -210,7 +202,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Width = Eval(element.GetTValue(), "<gr> @t"),
                             SideCode = ParseInt(element.GetPValue()),
                             Z = EvalOr(element.GetZValue(), 0d),
-                            Position = ParsePosition(element.GetCValue()),
+                            Position = ParsePositionCode(element.GetCValue()),
                             Comment = element.GetCommentValue() ?? string.Empty
                         });
                         break;
@@ -230,7 +222,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Width = Eval(element.GetWidthValue(), "<me> @w"),
                             Angle = Eval(element.GetAValue(), "<me> @a"),
                             Depth = Eval(element.GetDpValue(), "<me> @dp"),
-                            Position = ParsePosition(element.GetCValue()),
+                            Position = ParsePositionCode(element.GetCValue()),
                             Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
@@ -254,7 +246,7 @@ namespace XncOptimizerUI.Services.Xnc
                             Angle = Eval(element.GetAValue(), "<mr> @a"),
                             CornerRadius = Eval(element.GetRValue(), "<mr> @r"),
                             Depth = Eval(element.GetDpValue(), "<mr> @dp"),
-                            Position = ParsePosition(element.GetCValue()),
+                            Position = ParsePositionCode(element.GetCValue()),
                             Forward = ParseBool(element.GetFwdValue(), true),
                             LeadIn = ParseInt(element.GetInValue()),
                             LeadOut = ParseInt(element.GetOutValue()),
@@ -350,23 +342,6 @@ namespace XncOptimizerUI.Services.Xnc
                 DeclaredVariables = declaredVariables
             };
         }
-
-        private static double RequireDouble(string? raw, string where) =>
-            double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-                ? value
-                : throw new XncProgramFormatException($"{where} is missing or not a number (was '{raw}').");
-
-        private static int ParseInt(string? raw) =>
-            int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : 0;
-
-        private static bool ParseBool(string? raw, bool fallback) =>
-            bool.TryParse(raw, out var value) ? value : fallback;
-
-        private static ToolPosition ParsePosition(string? raw) =>
-            int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
-                && Enum.IsDefined(typeof(ToolPosition), code)
-                    ? (ToolPosition)code
-                    : ToolPosition.Center;
 
         private sealed class ContourBuilder
         {

@@ -1,11 +1,11 @@
-using System.Globalization;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
 using static XncOptimizerUI.Services.Xnc.XncMillElements;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -76,9 +76,9 @@ namespace XncOptimizerUI.Services.Xnc
             var symbols = SeedProgramSymbols(program);
             var tools = ReadToolDiameters(program);
             var part = new PartVolume(
-                RequireProgramDouble(program.GetDxValue(), "dx"),
-                RequireProgramDouble(program.GetDyValue(), "dy"),
-                RequireProgramDouble(program.GetDzValue(), "dz"));
+                RequireDimension(program, "dx"),
+                RequireDimension(program, "dy"),
+                RequireDimension(program, "dz"));
 
             var verdicts = Candidates(program, kinds)
                 .Select(candidate => (Candidate: candidate, Verdict: Judge(candidate, part, symbols, tools)))
@@ -126,7 +126,7 @@ namespace XncOptimizerUI.Services.Xnc
                 }
 
                 // tool.dia resolves to the element's own tool, as XncProgramReader does.
-                symbols.Set("tool.dia", diameter.Value);
+                symbols.SetToolDiameter(diameter.Value);
 
                 bool? outside = candidate.Kind switch
                 {
@@ -158,7 +158,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static bool? IsBoreOutside(XElement bore, PartVolume part, XncSymbolTable symbols)
         {
-            if (!(EvalXnc(bore.GetDpValue(), symbols) > 0d))
+            if (!(Eval(bore.GetDpValue(), symbols) > 0d))
             {
                 return false; // a hole that does not go in is not judged as outside
             }
@@ -177,11 +177,11 @@ namespace XncOptimizerUI.Services.Xnc
 
             var z = bool.TryParse(bore.GetMValue(), out var middle) && middle
                 ? part.Dz / 2d
-                : EvalXnc(bore.GetZValue(), symbols);
+                : Eval(bore.GetZValue(), symbols);
 
             return tag is "bl" or "br"
-                ? IsCentreOutside(new Vec2(EvalXnc(bore.GetYValue(), symbols), z), Box.Of(part.Dy, part.Dz))
-                : IsCentreOutside(new Vec2(EvalXnc(bore.GetXValue(), symbols), z), Box.Of(part.Dx, part.Dz));
+                ? IsCentreOutside(new Vec2(Eval(bore.GetYValue(), symbols), z), Box.Of(part.Dy, part.Dz))
+                : IsCentreOutside(new Vec2(Eval(bore.GetXValue(), symbols), z), Box.Of(part.Dx, part.Dz));
         }
 
         /// <summary>Every hole of a face bore: <c>ac</c> holes <c>as</c> apart along X, or along Y for <c>av="true"</c>.</summary>
@@ -200,16 +200,11 @@ namespace XncOptimizerUI.Services.Xnc
                 return [first];
             }
 
-            var step = EvalXnc(bore.Attribute("as")?.Value, symbols);
+            var step = Eval(bore.Attribute("as")?.Value, symbols);
             var direction = bool.TryParse(bore.GetAvValue(), out var vertical) && vertical ? new Vec2(0d, 1d) : new Vec2(1d, 0d);
 
             return Enumerable.Range(0, holes).Select(i => first + (direction * (step * i))).ToList();
         }
-
-        /// <summary>The bore array count <c>ac</c> (absent = 1), or <c>null</c> when it is not a positive integer.</summary>
-        private static int? ArrayCount(XElement bore) => bore.Attribute("ac")?.Value is not { } raw
-            ? 1
-            : int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) && count > 0 ? count : null;
 
         /// <summary>The bore centre lies outside the box; a centre on a side counts as inside.</summary>
         private static bool IsCentreOutside(Vec2 centre, Box box) => box.DistanceTo(centre) > Tolerance;
@@ -220,14 +215,14 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static bool? IsGrooveOutside(XElement groove, PartVolume part, XncSymbolTable symbols)
         {
-            if (!(EvalXnc(groove.GetDpValue(), symbols) > 0d))
+            if (!(Eval(groove.GetDpValue(), symbols) > 0d))
             {
                 return false;
             }
 
-            var start = new Vec2(EvalXnc(groove.GetX1Value(), symbols), EvalXnc(groove.GetY1Value(), symbols));
-            var end = new Vec2(EvalXnc(groove.GetX2Value(), symbols), EvalXnc(groove.GetY2Value(), symbols));
-            var width = EvalXnc(groove.GetTValue(), symbols);
+            var start = new Vec2(Eval(groove.GetX1Value(), symbols), Eval(groove.GetY1Value(), symbols));
+            var end = new Vec2(Eval(groove.GetX2Value(), symbols), Eval(groove.GetY2Value(), symbols));
+            var width = Eval(groove.GetTValue(), symbols);
 
             if (!(width > 0d))
             {
@@ -237,15 +232,14 @@ namespace XncOptimizerUI.Services.Xnc
             return ParsePlane(groove.GetPValue()) switch
             {
                 0 => IsFaceGrooveOutside(start, end, width, ParsePositionCode(groove.GetCValue()), part.Face),
-                1 or 2 => IsEdgeGrooveOutside(start.Y, end.Y, part.Dy, EvalXnc(groove.GetZValue(), symbols), width, part.Dz),
-                3 or 4 => IsEdgeGrooveOutside(start.X, end.X, part.Dx, EvalXnc(groove.GetZValue(), symbols), width, part.Dz),
+                1 or 2 => IsEdgeGrooveOutside(start.Y, end.Y, part.Dy, Eval(groove.GetZValue(), symbols), width, part.Dz),
+                3 or 4 => IsEdgeGrooveOutside(start.X, end.X, part.Dx, Eval(groove.GetZValue(), symbols), width, part.Dz),
                 _ => null,
             };
         }
 
-        private static int? ParsePlane(string? raw) => raw is null
-            ? 0
-            : int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var plane) ? plane : null;
+        /// <summary>The groove plane <c>p</c> (absent = 0, the face), or <c>null</c> when it is not an integer.</summary>
+        private static int? ParsePlane(string? raw) => raw is null ? 0 : TryParseInt(raw);
 
         /// <summary>The groove footprint (same geometry as the part preview) is separated from the face.</summary>
         private static bool? IsFaceGrooveOutside(Vec2 start, Vec2 end, double width, ToolPosition position, Box face)
@@ -290,7 +284,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var head = mill.Element;
 
-            if (!(EvalXnc(head.GetDpValue(), symbols) > 0d) && !mill.Segments.Any(s => s.GetDpValue() is { } dp && EvalXnc(dp, symbols) > 0d))
+            if (!(Eval(head.GetDpValue(), symbols) > 0d) && !mill.Segments.Any(s => s.GetDpValue() is { } dp && Eval(dp, symbols) > 0d))
             {
                 return false;
             }
@@ -320,8 +314,8 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static CentreLine? RectangleCentreLine(XElement mr, XncSymbolTable symbols)
         {
-            var halfLength = EvalXnc(mr.GetLengthValue(), symbols) / 2d;
-            var halfWidth = EvalXnc(mr.GetWidthValue(), symbols) / 2d;
+            var halfLength = Eval(mr.GetLengthValue(), symbols) / 2d;
+            var halfWidth = Eval(mr.GetWidthValue(), symbols) / 2d;
 
             if (halfLength <= Tolerance || halfWidth <= Tolerance)
             {
@@ -329,7 +323,7 @@ namespace XncOptimizerUI.Services.Xnc
             }
 
             var radius = mr.GetRValue() is { } rawRadius
-                ? Math.Clamp(EvalXnc(rawRadius, symbols), 0d, Math.Min(halfLength, halfWidth))
+                ? Math.Clamp(Eval(rawRadius, symbols), 0d, Math.Min(halfLength, halfWidth))
                 : 0d;
 
             var path = MillShapeGeometry.RoundedRectangle(halfLength, halfWidth, radius)
@@ -342,8 +336,8 @@ namespace XncOptimizerUI.Services.Xnc
         private static CentreLine? EllipseCentreLine(XElement me, XncSymbolTable symbols)
         {
             // <me> l/w are semi-axes.
-            var semiX = EvalXnc(me.GetLengthValue(), symbols);
-            var semiY = EvalXnc(me.GetWidthValue(), symbols);
+            var semiX = Eval(me.GetLengthValue(), symbols);
+            var semiY = Eval(me.GetWidthValue(), symbols);
 
             if (semiX <= Tolerance || semiY <= Tolerance)
             {
@@ -358,7 +352,7 @@ namespace XncOptimizerUI.Services.Xnc
         }
 
         private static double ReadAngle(XElement head, XncSymbolTable symbols) =>
-            head.GetAValue() is { } angle ? EvalXnc(angle, symbols) : 0d;
+            head.GetAValue() is { } angle ? Eval(angle, symbols) : 0d;
 
         /// <summary>
         /// What the mill removes: a closed pocket (<c>c="3"</c>) the area inside its contour; any other

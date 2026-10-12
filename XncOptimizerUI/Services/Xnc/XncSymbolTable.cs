@@ -11,6 +11,9 @@ namespace XncOptimizerUI.Services.Xnc
 
         public void Set(string name, double value) => _values[name] = value;
 
+        /// <summary>Makes <c>tool.dia</c> resolve to the diameter of the tool the next element names.</summary>
+        public void SetToolDiameter(double diameter) => Set("tool.dia", diameter);
+
         public bool TryGet(string name, out double value) => _values.TryGetValue(name, out value);
     }
 }

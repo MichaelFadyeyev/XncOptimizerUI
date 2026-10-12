@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 
@@ -108,9 +107,6 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static string ToolName(XElement tool) => tool.GetNameValue() ?? string.Empty;
 
-        private static double? ParseDiameter(XElement tool) =>
-            double.TryParse(tool.GetDValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out var diameter)
-                ? diameter
-                : null;
+        private static double? ParseDiameter(XElement tool) => XncAttributeParsing.ToolDiameter(tool);
     }
 }

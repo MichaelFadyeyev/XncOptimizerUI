@@ -32,7 +32,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
             Side = side;
             Diameter = diameter;
             _bore = bore;
-            _symbols = XncProgramMath.ProgramSymbols(program);
+            _symbols = XncSymbols.ProgramSymbols(program);
             _onSelectionChanged = onSelectionChanged;
             _onEdited = onEdited;
             ResetInputs();
@@ -106,7 +106,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// <summary>Refreshes the row in place from the re-read program after a successful save.</summary>
         public void Apply(XncBore bore, XncProgram program)
         {
-            _symbols = XncProgramMath.ProgramSymbols(program);
+            _symbols = XncSymbols.ProgramSymbols(program);
             Bore = bore;
             ResetInputs();
         }

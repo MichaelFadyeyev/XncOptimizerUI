@@ -4,7 +4,8 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Batch;
 using XncOptimizerUI.Services.Xnc.Conversions;
 using XncOptimizerUI.Services.Xnc.Geometry;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {

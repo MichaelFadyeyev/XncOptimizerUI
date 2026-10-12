@@ -179,7 +179,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         private static ElementOutcome ConvertContour(XncMillElements.Mill mill, bool processPockets, double groovingToolDiameter, ConversionContext context)
         {
             var (start, segments) = (mill.Head, mill.Segments);
-            var isPocket = XncProgramMath.ParsePositionCode(start.GetCValue()) == ToolPosition.Pocket;
+            var isPocket = XncAttributeParsing.ParsePositionCode(start.GetCValue()) == ToolPosition.Pocket;
 
             // A closed axis-parallel rectangular pocket contour becomes a groove, like an <mr> pocket.
             if (processPockets
@@ -250,7 +250,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         private static ElementOutcome ConvertRectanglePocket(XElement rectangle, bool processPockets, double groovingToolDiameter, ConversionContext context)
         {
             if (!processPockets
-                || XncProgramMath.ParsePositionCode(rectangle.GetCValue()) != ToolPosition.Pocket
+                || XncAttributeParsing.ParsePositionCode(rectangle.GetCValue()) != ToolPosition.Pocket
                 || (rectangle.GetAValue() is { } angle && Math.Abs(context.Eval(angle)) > AxisEpsilon)
                 || context.Eval(rectangle.GetDpValue()) >= context.Dz)
             {

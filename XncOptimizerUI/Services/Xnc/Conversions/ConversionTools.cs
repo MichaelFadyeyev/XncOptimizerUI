@@ -24,7 +24,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
             public HashSet<string> Added { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-            public static ToolSet Of(XElement program) => new(XncProgramMath.ReadToolDiameters(program));
+            public static ToolSet Of(XElement program) => new(XncAttributeParsing.ReadToolDiameters(program));
         }
 
         /// <summary>

@@ -139,7 +139,7 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// <summary>The drafted expr checked for the drafted type, worded for the column it is shown in.</summary>
         private string? CheckExpr(string property)
         {
-            if (XncVariableRules.TryCheckExpr(ExprInput, DraftType, XncProgramMath.SymbolsBefore(_program, Variable), out _, out var error))
+            if (XncVariableRules.TryCheckExpr(ExprInput, DraftType, XncSymbols.SymbolsBefore(_program, Variable), out _, out var error))
             {
                 return null;
             }

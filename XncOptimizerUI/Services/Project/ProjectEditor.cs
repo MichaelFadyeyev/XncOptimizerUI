@@ -5,7 +5,6 @@ using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Project
 {

@@ -4,7 +4,9 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
 using static XncOptimizerUI.Services.Xnc.XncMillElements;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
+using static XncOptimizerUI.Services.Xnc.XncNumberFormat;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -44,8 +46,8 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var symbols = SeedProgramSymbols(program);
             var outline = new Vec2(
-                RequireProgramDouble(program.GetDxValue(), "dx"),
-                RequireProgramDouble(program.GetDyValue(), "dy"));
+                RequireDimension(program, "dx"),
+                RequireDimension(program, "dy"));
 
             var outcomes = CollectMills(program)
                 .Select(mill => TryOffsetMill(mill, symbols, outline, distance, side, kinds))
@@ -100,9 +102,9 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var growth = OutwardSign(TravelsCounterClockwise(ReadForward(mr), isRectangleOrEllipse: true), side) * distance;
 
-            var length = EvalXnc(mr.GetLengthValue(), symbols);
-            var width = EvalXnc(mr.GetWidthValue(), symbols);
-            var radius = mr.GetRValue() is { } rawRadius ? EvalXnc(rawRadius, symbols) : 0d;
+            var length = Eval(mr.GetLengthValue(), symbols);
+            var width = Eval(mr.GetWidthValue(), symbols);
+            var radius = mr.GetRValue() is { } rawRadius ? Eval(rawRadius, symbols) : 0d;
 
             var newLength = length + (2d * growth);
             var newWidth = width + (2d * growth);
@@ -124,8 +126,8 @@ namespace XncOptimizerUI.Services.Xnc
             var growth = OutwardSign(TravelsCounterClockwise(ReadForward(me), isRectangleOrEllipse: true), side) * distance;
 
             // <me> l/w are semi-axes, so they move by the offset itself.
-            var length = EvalXnc(me.GetLengthValue(), symbols);
-            var width = EvalXnc(me.GetWidthValue(), symbols);
+            var length = Eval(me.GetLengthValue(), symbols);
+            var width = Eval(me.GetWidthValue(), symbols);
 
             var newLength = length + growth;
             var newWidth = width + growth;

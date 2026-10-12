@@ -41,7 +41,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         private ConversionContext(XElement program)
         {
             Program = program;
-            Symbols = XncProgramMath.SeedProgramSymbols(program);
+            Symbols = XncSymbols.SeedProgramSymbols(program);
             Tools = ConversionTools.ToolSet.Of(program);
             Dx = Symbol("dx");
             Dy = Symbol("dy");
@@ -65,7 +65,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
         public static ConversionContext Of(XElement program) => new(program);
 
-        public double Eval(string? expression) => XncProgramMath.EvalXnc(expression, Symbols);
+        public double Eval(string? expression) => XncSymbols.Eval(expression, Symbols);
 
         /// <summary>The element's <c>x</c>/<c>y</c> point.</summary>
         public Vec2 Point(XElement element) => new(Eval(element.GetXValue()), Eval(element.GetYValue()));

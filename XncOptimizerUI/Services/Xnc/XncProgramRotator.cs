@@ -3,7 +3,9 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.Services.Xnc.Geometry;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
+using static XncOptimizerUI.Services.Xnc.XncNumberFormat;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -19,7 +21,7 @@ namespace XncOptimizerUI.Services.Xnc
     /// </para>
     /// <para>
     /// Values are resolved against the program's original symbols. A coordinate whose value
-    /// changes is written as a number (<see cref="XncProgramMath.FormatNumber"/>); every other
+    /// changes is written as a number (<see cref="XncNumberFormat.FormatNumber"/>); every other
     /// value keeps its authored text. On an odd number of steps every expression gets its
     /// <c>dx</c>/<c>dy</c> identifiers swapped, so it still evaluates to the same length in the
     /// turned frame (e.g. <c>dp="dx"</c> becomes <c>dp="dy"</c>).
@@ -61,8 +63,8 @@ namespace XncOptimizerUI.Services.Xnc
             }
 
             var frame = new Frame(
-                RequireProgramDouble(program.GetDxValue(), "dx"),
-                RequireProgramDouble(program.GetDyValue(), "dy"),
+                RequireDimension(program, "dx"),
+                RequireDimension(program, "dy"),
                 steps);
             var context = new RotationContext(frame, SeedProgramSymbols(program), flipEdgeGrooveTcl);
 
@@ -135,7 +137,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var start = context.ReadPoint(bore, "x", "y");
             var step = ReadFaceArrayStep(bore, context);
-            var (newStart, newStep) = RotateArray(start, step, ArrayCount(bore), context.Frame);
+            var (newStart, newStep) = RotateArray(start, step, HoleCount(bore), context.Frame);
 
             WritePoint(bore, "x", "y", newStart, start);
 
@@ -157,7 +159,7 @@ namespace XncOptimizerUI.Services.Xnc
             var along = context.Eval(bore.Attribute(alongAttribute)?.Value, $"<{tag}> @{alongAttribute}");
             var point = EdgePoint(tag, along, context.Frame.Dx, context.Frame.Dy);
             var step = ReadEdgeArrayStep(bore, tag, context);
-            var (newPoint, newStep) = RotateArray(point, step, ArrayCount(bore), context.Frame);
+            var (newPoint, newStep) = RotateArray(point, step, HoleCount(bore), context.Frame);
 
             var newTag = NextInCycle(EdgeBoreCycle, tag, context.Frame.Steps);
             var newAlongAttribute = AlongAttributeOf(newTag);
@@ -218,7 +220,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var step = bore.Attribute("as")?.Value;
 
-            if (ArrayCount(bore) <= 1 || string.IsNullOrWhiteSpace(step) || step == "null")
+            if (HoleCount(bore) <= 1 || string.IsNullOrWhiteSpace(step) || step == "null")
             {
                 return null;
             }
@@ -228,8 +230,8 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static bool IsVerticalArray(XElement bore) => bool.TryParse(bore.GetAvValue(), out var av) && av;
 
-        private static int ArrayCount(XElement bore) =>
-            int.TryParse(bore.Attribute("ac")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) ? count : 1;
+        /// <summary>The array count <c>ac</c>; anything but a positive integer reads as a single hole.</summary>
+        private static int HoleCount(XElement bore) => ArrayCount(bore) ?? 1;
 
         /// <summary>
         /// Rotates an array's first hole and step; a step that would point backwards (negative
@@ -283,8 +285,7 @@ namespace XncOptimizerUI.Services.Xnc
             WritePoint(groove, "x1", "y1", newStart, start);
             WritePoint(groove, "x2", "y2", newEnd, end);
 
-            if (!int.TryParse(groove.GetPValue(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var plane)
-                || Array.IndexOf(GroovePlaneCycle, plane) < 0)
+            if (TryParseInt(groove.GetPValue()) is not { } plane || Array.IndexOf(GroovePlaneCycle, plane) < 0)
             {
                 return;
             }
@@ -388,7 +389,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static void SwapDxDyInExpressions(XElement element)
         {
-            foreach (var attribute in element.Attributes().Where(a => XncProgramMath.ExpressionAttributes.Contains(a.Name.LocalName)))
+            foreach (var attribute in element.Attributes().Where(a => ExpressionAttributes.Contains(a.Name.LocalName)))
             {
                 attribute.Value = SwapDxDyIdentifiers(attribute.Value);
             }
@@ -453,8 +454,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             public void RegisterTool(XElement tool)
             {
-                if (tool.GetNameValue() is { } name
-                    && double.TryParse(tool.GetDValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out var diameter))
+                if (tool.GetNameValue() is { } name && ToolDiameter(tool) is { } diameter)
                 {
                     _toolDiameters[name] = diameter;
                 }
@@ -465,14 +465,11 @@ namespace XncOptimizerUI.Services.Xnc
             {
                 if (element.GetNameValue() is { } name && _toolDiameters.TryGetValue(name, out var diameter))
                 {
-                    symbols.Set("tool.dia", diameter);
+                    symbols.SetToolDiameter(diameter);
                 }
             }
 
-            public double Eval(string? expression, string where) =>
-                XncExpressionEvaluator.Evaluate(
-                    expression ?? throw new XncProgramFormatException($"Missing value for {where}."),
-                    symbols);
+            public double Eval(string? expression, string where) => XncSymbols.Eval(expression, symbols, where);
 
             public Vec2 ReadPoint(XElement element, string xAttribute, string yAttribute)
             {

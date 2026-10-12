@@ -2,7 +2,8 @@ using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
+using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
+using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -62,7 +63,7 @@ namespace XncOptimizerUI.Services.Xnc
         }
 
         internal static Vec2 ReadPoint(XElement element, XncSymbolTable symbols) =>
-            new(EvalXnc(element.GetXValue(), symbols), EvalXnc(element.GetYValue(), symbols));
+            new(Eval(element.GetXValue(), symbols), Eval(element.GetYValue(), symbols));
 
         private static Primitive? ReadPrimitive(Vec2 start, XElement segment, XncSymbolTable symbols)
         {
@@ -78,23 +79,21 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static Primitive? ReadCentreArc(Vec2 start, Vec2 end, XElement mac, XncSymbolTable symbols)
         {
-            var centre = new Vec2(EvalXnc(mac.GetCxValue(), symbols), EvalXnc(mac.GetCyValue(), symbols));
+            var centre = new Vec2(Eval(mac.GetCxValue(), symbols), Eval(mac.GetCyValue(), symbols));
             var radius = start.DistanceTo(centre);
 
             return radius > PlanarGeometry.Tolerance && Math.Abs(end.DistanceTo(centre) - radius) <= PlanarGeometry.Tolerance
-                ? Primitive.Arc(start, end, centre, radius, IsClockwiseDir(mac))
+                ? Primitive.Arc(start, end, centre, radius, IsClockwise(mac))
                 : null;
         }
 
         private static Primitive? ReadRadiusArc(Vec2 start, Vec2 end, XElement ma, XncSymbolTable symbols)
         {
-            var radius = EvalXnc(ma.GetRValue(), symbols);
+            var radius = Eval(ma.GetRValue(), symbols);
 
-            return PlanarGeometry.ArcCentreFromChord(start, end, radius, IsClockwiseDir(ma)) is { } centre
-                ? Primitive.Arc(start, end, centre, radius, IsClockwiseDir(ma))
+            return PlanarGeometry.ArcCentreFromChord(start, end, radius, IsClockwise(ma)) is { } centre
+                ? Primitive.Arc(start, end, centre, radius, IsClockwise(ma))
                 : null;
         }
-
-        private static bool IsClockwiseDir(XElement arc) => ParseDirSign(arc.GetDirValue()) > 0;
     }
 }

@@ -241,7 +241,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
             var radius = context.Eval(arc.GetRValue());
 
-            return PlanarGeometry.ArcCentreFromChord(start, end, radius, XncProgramMath.ParseDirSign(arc.GetDirValue()) > 0) is { } arcCentre
+            return PlanarGeometry.ArcCentreFromChord(start, end, radius, XncAttributeParsing.IsClockwise(arc)) is { } arcCentre
                 ? (arcCentre, radius)
                 : null;
         }
