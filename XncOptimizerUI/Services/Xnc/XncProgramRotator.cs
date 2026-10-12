@@ -29,13 +29,8 @@ namespace XncOptimizerUI.Services.Xnc
     /// </summary>
     internal static class XncProgramRotator
     {
-        private const string BoreTop = "bt";
-        private const string BoreRight = "br";
-        private const string BoreBottom = "bb";
-        private const string BoreLeft = "bl";
-
         /// <summary>Edge-bore tags in clockwise order (top → right → bottom → left).</summary>
-        private static readonly string[] EdgeBoreCycle = [BoreTop, BoreRight, BoreBottom, BoreLeft];
+        private static readonly string[] EdgeBoreCycle = [XncTags.TopBore, XncTags.RightBore, XncTags.BottomBore, XncTags.LeftBore];
 
         /// <summary>Groove plane codes <c>p</c> in clockwise order (top → right → bottom → left).</summary>
         private static readonly int[] GroovePlaneCycle = [3, 2, 4, 1];
@@ -96,7 +91,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var tag = element.Name.LocalName;
 
-            if (tag == "tool")
+            if (tag == XncTags.Tool)
             {
                 context.RegisterTool(element);
                 return;
@@ -106,23 +101,23 @@ namespace XncOptimizerUI.Services.Xnc
 
             switch (tag)
             {
-                case "bf":
+                case XncTags.FaceBore:
                     RotateFaceBore(element, context);
                     break;
-                case BoreTop or BoreRight or BoreBottom or BoreLeft:
+                case XncTags.TopBore or XncTags.RightBore or XncTags.BottomBore or XncTags.LeftBore:
                     RotateEdgeBore(element, context);
                     break;
-                case "gr":
+                case XncTags.Groove:
                     RotateGroove(element, context);
                     break;
-                case "ms" or "ml" or "ma":
+                case XncTags.ContourStart or XncTags.Line or XncTags.RadiusArc:
                     RotatePointAttributes(element, "x", "y", context);
                     break;
-                case "mac":
+                case XncTags.CentreArc:
                     RotatePointAttributes(element, "x", "y", context);
                     RotatePointAttributes(element, "cx", "cy", context);
                     break;
-                case "mr" or "me":
+                case XncTags.Rectangle or XncTags.Ellipse:
                     RotatePointAttributes(element, "x", "y", context);
                     SwapLengthAndWidth(element, context.Frame);
                     break;
@@ -175,15 +170,15 @@ namespace XncOptimizerUI.Services.Xnc
             }
         }
 
-        private static string AlongAttributeOf(string edgeTag) => edgeTag is BoreTop or BoreBottom ? "x" : "y";
+        private static string AlongAttributeOf(string edgeTag) => edgeTag is XncTags.TopBore or XncTags.BottomBore ? "x" : "y";
 
-        private static double AlongValueOf(string edgeTag, Vec2 point) => edgeTag is BoreTop or BoreBottom ? point.X : point.Y;
+        private static double AlongValueOf(string edgeTag, Vec2 point) => edgeTag is XncTags.TopBore or XncTags.BottomBore ? point.X : point.Y;
 
         private static Vec2 EdgePoint(string edgeTag, double along, double dx, double dy) => edgeTag switch
         {
-            BoreTop => new Vec2(along, 0d),
-            BoreBottom => new Vec2(along, dy),
-            BoreLeft => new Vec2(0d, along),
+            XncTags.TopBore => new Vec2(along, 0d),
+            XncTags.BottomBore => new Vec2(along, dy),
+            XncTags.LeftBore => new Vec2(0d, along),
             _ => new Vec2(dx, along),
         };
 

@@ -86,9 +86,9 @@ namespace XncOptimizerUI.Services.Project
         /// </summary>
         private static XElement MirroredBore(XElement bore, decimal newWidth)
         {
-            if (bore.Name.LocalName is "bt" or "bb")
+            if (bore.Name.LocalName is XncTags.TopBore or XncTags.BottomBore)
             {
-                return new XElement(bore.Name.LocalName == "bt" ? "bb" : "bt", bore.Attributes());
+                return new XElement(bore.Name.LocalName == XncTags.TopBore ? XncTags.BottomBore : XncTags.TopBore, bore.Attributes());
             }
 
             var copy = new XElement(bore);

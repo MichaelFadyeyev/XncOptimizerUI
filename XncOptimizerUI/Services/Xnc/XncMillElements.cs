@@ -25,16 +25,16 @@ namespace XncOptimizerUI.Services.Xnc
 
             return elements
                 .Select((element, index) => (element, index))
-                .Where(e => e.element.Name.LocalName is "ms" or "mr" or "me")
+                .Where(e => XncTags.IsMillHead(e.element.Name.LocalName))
                 .Select(e => new Mill(
                     e.element,
-                    e.element.Name.LocalName == "ms"
+                    e.element.Name.LocalName == XncTags.ContourStart
                         ? elements.Skip(e.index + 1).TakeWhile(IsContourSegment).ToList()
                         : []))
                 .ToList();
         }
 
-        internal static bool IsContourSegment(XElement element) => element.Name.LocalName is "ml" or "mac" or "ma";
+        internal static bool IsContourSegment(XElement element) => XncTags.IsContourSegment(element.Name.LocalName);
 
         /// <summary>The mill's <c>fwd</c>; absent or unparseable reads as <c>true</c>.</summary>
         internal static bool ReadForward(XElement head) => !bool.TryParse(head.GetFwdValue(), out var forward) || forward;
@@ -71,8 +71,8 @@ namespace XncOptimizerUI.Services.Xnc
 
             return segment.Name.LocalName switch
             {
-                "ml" => start.DistanceTo(end) > PlanarGeometry.Tolerance ? Primitive.Line(start, end) : null,
-                "mac" => ReadCentreArc(start, end, segment, symbols),
+                XncTags.Line => start.DistanceTo(end) > PlanarGeometry.Tolerance ? Primitive.Line(start, end) : null,
+                XncTags.CentreArc => ReadCentreArc(start, end, segment, symbols),
                 _ => ReadRadiusArc(start, end, segment, symbols),
             };
         }

@@ -81,8 +81,8 @@ namespace XncOptimizerUI.Services.Xnc
             {
                 return mill.Head.Name.LocalName switch
                 {
-                    "mr" => closedSelected ? ToOutcome(TryOffsetRectangle(mill.Head, symbols, distance, side)) : Outcome.Skipped,
-                    "me" => closedSelected ? ToOutcome(TryOffsetEllipse(mill.Head, symbols, distance, side)) : Outcome.Skipped,
+                    XncTags.Rectangle => closedSelected ? ToOutcome(TryOffsetRectangle(mill.Head, symbols, distance, side)) : Outcome.Skipped,
+                    XncTags.Ellipse => closedSelected ? ToOutcome(TryOffsetEllipse(mill.Head, symbols, distance, side)) : Outcome.Skipped,
                     _ => TryOffsetContour(mill, symbols, outline, distance, side, kinds),
                 };
             }
@@ -193,7 +193,7 @@ namespace XncOptimizerUI.Services.Xnc
 
                 SetPoint(segment, layout.Primitives[i].End, path[i].End);
 
-                if (segment.Name.LocalName == "ma")
+                if (segment.Name.LocalName == XncTags.RadiusArc)
                 {
                     SetNumber(segment, "r", layout.Primitives[i].Radius, path[i].Radius);
                 }
@@ -205,7 +205,7 @@ namespace XncOptimizerUI.Services.Xnc
             }
         }
 
-        private static XElement MakeCentreArc(Primitive arc) => new("mac",
+        private static XElement MakeCentreArc(Primitive arc) => new(XncTags.CentreArc,
             new XAttribute("x", FormatNumber(arc.End.X)),
             new XAttribute("y", FormatNumber(arc.End.Y)),
             new XAttribute("cx", FormatNumber(arc.Centre!.Value.X)),

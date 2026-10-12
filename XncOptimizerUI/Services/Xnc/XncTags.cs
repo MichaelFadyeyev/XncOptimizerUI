@@ -3,6 +3,7 @@ namespace XncOptimizerUI.Services.Xnc
     /// <summary>Element names of an XNC <c>&lt;program&gt;</c> (format: <c>xnc-program-format.md</c>).</summary>
     internal static class XncTags
     {
+        public const string Program = "program";
         public const string Tool = "tool";
         public const string Variable = "var";
 

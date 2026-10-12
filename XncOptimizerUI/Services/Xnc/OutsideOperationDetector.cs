@@ -43,8 +43,6 @@ namespace XncOptimizerUI.Services.Xnc
 
         private const double Tolerance = PlanarGeometry.Tolerance;
 
-        private static readonly string[] BoreTags = ["bf", "bt", "bb", "bl", "br"];
-
         /// <summary>One element found outside the part, with the contour segments removed along with it.</summary>
         internal sealed record OutsideElement(XElement Element, IReadOnlyList<XElement> Segments, OutsideOperationKinds Kind);
 
@@ -99,11 +97,11 @@ namespace XncOptimizerUI.Services.Xnc
         private static IEnumerable<OutsideElement> Candidates(XElement program, OutsideOperationKinds kinds)
         {
             var bores = kinds.HasFlag(OutsideOperationKinds.Bores)
-                ? program.Elements().Where(e => BoreTags.Contains(e.Name.LocalName)).Select(e => new OutsideElement(e, [], OutsideOperationKinds.Bores))
+                ? program.Elements().Where(e => XncTags.IsBore(e.Name.LocalName)).Select(e => new OutsideElement(e, [], OutsideOperationKinds.Bores))
                 : [];
 
             var grooves = kinds.HasFlag(OutsideOperationKinds.Grooves)
-                ? program.Elements("gr").Select(e => new OutsideElement(e, [], OutsideOperationKinds.Grooves))
+                ? program.Elements(XncTags.Groove).Select(e => new OutsideElement(e, [], OutsideOperationKinds.Grooves))
                 : [];
 
             var mills = kinds.HasFlag(OutsideOperationKinds.Mills)
@@ -165,7 +163,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             var tag = bore.Name.LocalName;
 
-            if (tag == "bf")
+            if (tag == XncTags.FaceBore)
             {
                 return FaceBoreCentres(bore, symbols)?.All(c => IsCentreOutside(c, part.Face));
             }
@@ -179,7 +177,7 @@ namespace XncOptimizerUI.Services.Xnc
                 ? part.Dz / 2d
                 : Eval(bore.GetZValue(), symbols);
 
-            return tag is "bl" or "br"
+            return tag is XncTags.LeftBore or XncTags.RightBore
                 ? IsCentreOutside(new Vec2(Eval(bore.GetYValue(), symbols), z), Box.Of(part.Dy, part.Dz))
                 : IsCentreOutside(new Vec2(Eval(bore.GetXValue(), symbols), z), Box.Of(part.Dx, part.Dz));
         }
@@ -291,8 +289,8 @@ namespace XncOptimizerUI.Services.Xnc
 
             var centreLine = head.Name.LocalName switch
             {
-                "mr" => RectangleCentreLine(head, symbols),
-                "me" => EllipseCentreLine(head, symbols),
+                XncTags.Rectangle => RectangleCentreLine(head, symbols),
+                XncTags.Ellipse => EllipseCentreLine(head, symbols),
                 _ => ContourCentreLine(mill, symbols),
             };
 
@@ -403,7 +401,7 @@ namespace XncOptimizerUI.Services.Xnc
             }
 
             var forward = ReadForward(head);
-            var reversed = head.Name.LocalName == "ms"
+            var reversed = head.Name.LocalName == XncTags.ContourStart
                 ? !IsClosed(path) && !forward
                 : (OperatorSignedArea(path) > 0d) != TravelsCounterClockwise(forward, isRectangleOrEllipse: true);
 

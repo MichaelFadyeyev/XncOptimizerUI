@@ -18,10 +18,6 @@ namespace XncOptimizerUI.Services.Xnc
     {
         private static readonly string[] KindPrefixes = XncToolKinds.Ordered;
 
-        private static readonly HashSet<string> ContourParts = ["ms", "ml", "mac", "ma"];
-
-        private static readonly HashSet<string> ContourSegments = ["ml", "mac", "ma"];
-
         /// <summary>Outcome for one program: whether it was rewritten, and why it was skipped if so.</summary>
         public readonly record struct Result(bool Sorted, IReadOnlyList<string> Problems)
         {
@@ -35,7 +31,7 @@ namespace XncOptimizerUI.Services.Xnc
         /// </summary>
         public static Result SortInProgram(XElement program)
         {
-            var tools = program.Elements("tool").ToList();
+            var tools = program.Elements(XncTags.Tool).ToList();
             var problems = FindProblems(tools);
 
             if (problems.Count > 0)
@@ -79,11 +75,11 @@ namespace XncOptimizerUI.Services.Xnc
         /// </summary>
         private static bool SplitsContour(XElement tool) =>
             tool.ElementsBeforeSelf().LastOrDefault(IsNotTool) is { } previous
-            && ContourParts.Contains(previous.Name.LocalName)
+            && (previous.Name.LocalName == XncTags.ContourStart || XncTags.IsContourSegment(previous.Name.LocalName))
             && tool.ElementsAfterSelf().FirstOrDefault(IsNotTool) is { } next
-            && ContourSegments.Contains(next.Name.LocalName);
+            && XncTags.IsContourSegment(next.Name.LocalName);
 
-        private static bool IsNotTool(XElement element) => element.Name.LocalName != "tool";
+        private static bool IsNotTool(XElement element) => element.Name.LocalName != XncTags.Tool;
 
         private static List<XElement> OrderDeclarations(IEnumerable<XElement> tools) =>
             tools

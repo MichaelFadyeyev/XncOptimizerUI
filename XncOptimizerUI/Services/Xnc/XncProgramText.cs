@@ -39,7 +39,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         /// <summary>The <c>&lt;program&gt;</c> element of a loaded program document.</summary>
         public static XElement Root(XDocument document) =>
-            document.Element("program")
+            document.Element(XncTags.Program)
                 ?? throw new XncProgramFormatException("XNC program has no <program> root element.");
 
         /// <summary>Program text to store in the <c>program</c> attribute: the declaration (when present) plus the root.</summary>
