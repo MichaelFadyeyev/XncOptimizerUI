@@ -13,6 +13,29 @@ namespace XncOptimizerUI.Services.Xnc
     /// </summary>
     public static class XncProgramReader
     {
+        /// <summary>
+        /// One parser per known element. Unknown elements are ignored (see
+        /// <c>xnc-program-format.md</c> §9); every known element but a contour segment ends the open contour.
+        /// </summary>
+        private static readonly IReadOnlyDictionary<string, Action<XElement, ReadState>> Parsers =
+            new Dictionary<string, Action<XElement, ReadState>>
+            {
+                [XncTags.Tool] = ParseTool,
+                [XncTags.Variable] = ParseVariable,
+                [XncTags.ContourStart] = ParseContourStart,
+                [XncTags.Line] = ParseLine,
+                [XncTags.CentreArc] = ParseCentreArc,
+                [XncTags.RadiusArc] = ParseRadiusArc,
+                [XncTags.Groove] = ParseGroove,
+                [XncTags.Ellipse] = ParseEllipse,
+                [XncTags.Rectangle] = ParseRectangle,
+                [XncTags.FaceBore] = ParseBore,
+                [XncTags.TopBore] = ParseBore,
+                [XncTags.BottomBore] = ParseBore,
+                [XncTags.LeftBore] = ParseBore,
+                [XncTags.RightBore] = ParseBore,
+            };
+
         /// <summary>Parses the machining program carried by <paramref name="xncOperation"/>.</summary>
         /// <exception cref="XncProgramFormatException">The <c>program</c> attribute is missing, not valid XML, or contains values that cannot be resolved.</exception>
         public static XncProgram Read(XElement xncOperation)
@@ -28,319 +51,377 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static XncProgram Parse(XElement program, int operationId, bool side, int turn)
         {
-            var symbols = XncSymbols.DimensionSymbols(program);
-            var (dx, dy, dz) = (Sym("dx"), Sym("dy"), Sym("dz"));
-
-            var tools = new List<XncTool>();
-            var toolsByName = new Dictionary<string, XncTool>(StringComparer.OrdinalIgnoreCase);
-            var variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-            var declaredVariables = new List<XncVariable>();
-            var bores = new List<XncBore>();
-            var groovings = new List<XncGrooving>();
-            var contours = new List<XncMillingContour>();
-            var ellipses = new List<XncMillingEllipse>();
-            var rectangles = new List<XncMillingRectangle>();
-
-            ContourBuilder? contour = null;
-
-            void CloseContour()
-            {
-                if (contour is not null)
-                {
-                    contours.Add(contour.Build());
-                    contour = null;
-                }
-            }
-
-            double Eval(string? expression, string where) => XncSymbols.Eval(expression, symbols, where);
-
-            double EvalOr(string? expression, double fallback) =>
-                expression is { } e ? XncExpressionEvaluator.Evaluate(e, symbols) : fallback;
-
-            double Sym(string name) => symbols.TryGet(name, out var value) ? value : 0d;
-
-            void SetToolDia(string? toolName, string where)
-            {
-                if (toolName is null || !toolsByName.TryGetValue(toolName, out var tool))
-                {
-                    throw new XncProgramFormatException($"{where} references unknown tool '{toolName}'.");
-                }
-
-                symbols.SetToolDiameter(tool.Diameter);
-            }
+            var state = new ReadState(program);
 
             foreach (var element in program.Elements())
             {
                 var tag = element.Name.LocalName;
 
-                switch (tag)
+                if (Parsers.TryGetValue(tag, out var parse))
                 {
-                    case "tool":
+                    if (!XncTags.IsContourSegment(tag))
                     {
-                        CloseContour();
-                        var tool = new XncTool
-                        {
-                            Name = element.GetNameValue() ?? string.Empty,
-                            Diameter = RequireDouble(element.GetDValue(), "<tool> @d")
-                        };
-                        tools.Add(tool);
-                        toolsByName[tool.Name] = tool;
-                        break;
+                        state.CloseContour();
                     }
 
-                    case "var":
-                    {
-                        CloseContour();
-                        var name = element.GetNameValue()
-                            ?? throw new XncProgramFormatException("<var> has no name.");
-                        var type = XncVariableTypes.Parse(element.GetTypeValue());
-
-                        // Only int/double vars are arithmetic symbols; a string/bool var's expr is
-                        // not a number and nothing numeric may reference it.
-                        double? value = type.IsNumeric() ? Eval(element.GetExprValue(), $"<var> '{name}'") : null;
-
-                        if (value is { } number)
-                        {
-                            symbols.Set(name, number);
-                            variables[name] = number;
-                        }
-
-                        declaredVariables.Add(new XncVariable
-                        {
-                            Index = declaredVariables.Count,
-                            Name = name,
-                            Type = type,
-                            Expr = element.GetExprValue() ?? string.Empty,
-                            Comment = element.GetCommentValue(),
-                            Value = value
-                        });
-                        break;
-                    }
-
-                    case "ms":
-                    {
-                        CloseContour();
-                        SetToolDia(element.GetNameValue(), "<ms>");
-                        var entryDepth = Eval(element.GetDpValue(), "<ms> @dp");
-                        contour = new ContourBuilder
-                        {
-                            ToolName = element.GetNameValue() ?? string.Empty,
-                            Entry = new XncPoint(Eval(element.GetXValue(), "<ms> @x"), Eval(element.GetYValue(), "<ms> @y")),
-                            EntryDepth = entryDepth,
-                            Position = ParsePositionCode(element.GetCValue()),
-                            Forward = ParseBool(element.GetFwdValue(), true),
-                            LeadIn = ParseInt(element.GetInValue()),
-                            LeadOut = ParseInt(element.GetOutValue()),
-                            StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<ms> @sxy") : null,
-                            CurrentDepth = entryDepth
-                        };
-                        break;
-                    }
-
-                    case "ml":
-                    {
-                        var open = contour ?? throw new XncProgramFormatException("<ml> outside a milling contour.");
-                        // dp is optional on <ml>: absent means keep cutting at the contour's current depth.
-                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
-                        open.Segments.Add(new XncLineSegment
-                        {
-                            End = new XncPoint(Eval(element.GetXValue(), "<ml> @x"), Eval(element.GetYValue(), "<ml> @y")),
-                            Depth = open.CurrentDepth
-                        });
-                        break;
-                    }
-
-                    case "mac":
-                    {
-                        var open = contour ?? throw new XncProgramFormatException("<mac> outside a milling contour.");
-                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
-                        var end = new XncPoint(Eval(element.GetXValue(), "<mac> @x"), Eval(element.GetYValue(), "<mac> @y"));
-                        var center = new XncPoint(Eval(element.GetCxValue(), "<mac> @cx"), Eval(element.GetCyValue(), "<mac> @cy"));
-                        open.Segments.Add(new XncArcSegment
-                        {
-                            End = end,
-                            Center = center,
-                            Clockwise = ParseBool(element.GetDirValue(), false),
-                            Radius = center.ToVec2().DistanceTo(end.ToVec2()),
-                            Depth = open.CurrentDepth
-                        });
-                        break;
-                    }
-
-                    case "ma":
-                    {
-                        var open = contour ?? throw new XncProgramFormatException("<ma> outside a milling contour.");
-                        open.CurrentDepth = EvalOr(element.GetDpValue(), open.CurrentDepth);
-                        var start = open.Segments.Count > 0 ? open.Segments[^1].End : open.Entry;
-                        var end = new XncPoint(Eval(element.GetXValue(), "<ma> @x"), Eval(element.GetYValue(), "<ma> @y"));
-                        var radius = Eval(element.GetRValue(), "<ma> @r");
-
-                        var center = PlanarGeometry.ArcCentreFromChord(start.ToVec2(), end.ToVec2(), radius, ParseBool(element.GetDirValue(), false))
-                            ?? throw new XncProgramFormatException($"<ma> radius {radius} cannot span {start} -> {end}.");
-
-                        open.Segments.Add(new XncArcSegment
-                        {
-                            End = end,
-                            Center = new XncPoint(center.X, center.Y),
-                            Clockwise = ParseBool(element.GetDirValue(), false),
-                            Radius = radius,
-                            Depth = open.CurrentDepth
-                        });
-                        break;
-                    }
-
-                    case "gr":
-                    {
-                        CloseContour();
-                        SetToolDia(element.GetNameValue(), "<gr>");
-                        groovings.Add(new XncGrooving
-                        {
-                            ToolName = element.GetNameValue() ?? string.Empty,
-                            Start = new XncPoint(Eval(element.GetX1Value(), "<gr> @x1"), Eval(element.GetY1Value(), "<gr> @y1")),
-                            End = new XncPoint(Eval(element.GetX2Value(), "<gr> @x2"), Eval(element.GetY2Value(), "<gr> @y2")),
-                            Depth = Eval(element.GetDpValue(), "<gr> @dp"),
-                            Width = Eval(element.GetTValue(), "<gr> @t"),
-                            SideCode = ParseInt(element.GetPValue()),
-                            Z = EvalOr(element.GetZValue(), 0d),
-                            Position = ParsePositionCode(element.GetCValue()),
-                            Comment = element.GetCommentValue() ?? string.Empty
-                        });
-                        break;
-                    }
-
-                    case "me":
-                    {
-                        CloseContour();
-                        SetToolDia(element.GetNameValue(), "<me>");
-                        ellipses.Add(new XncMillingEllipse
-                        {
-                            ToolName = element.GetNameValue() ?? string.Empty,
-                            Center = new XncPoint(
-                                Eval(element.GetXValue(), "<me> @x"),
-                                Eval(element.GetYValue(), "<me> @y")),
-                            Length = Eval(element.GetLengthValue(), "<me> @l"),
-                            Width = Eval(element.GetWidthValue(), "<me> @w"),
-                            Angle = Eval(element.GetAValue(), "<me> @a"),
-                            Depth = Eval(element.GetDpValue(), "<me> @dp"),
-                            Position = ParsePositionCode(element.GetCValue()),
-                            Forward = ParseBool(element.GetFwdValue(), true),
-                            LeadIn = ParseInt(element.GetInValue()),
-                            LeadOut = ParseInt(element.GetOutValue()),
-                            StartOffsetXY = element.GetSxyValue() is { } sxy
-                                ? Eval(sxy, "<me> @sxy")
-                                : null
-                        });
-                        break;
-                    }
-
-                    case "mr":
-                    {
-                        CloseContour();
-                        SetToolDia(element.GetNameValue(), "<mr>");
-                        rectangles.Add(new XncMillingRectangle
-                        {
-                            ToolName = element.GetNameValue() ?? string.Empty,
-                            Origin = new XncPoint(Eval(element.GetXValue(), "<mr> @x"), Eval(element.GetYValue(), "<mr> @y")),
-                            Length = Eval(element.GetLengthValue(), "<mr> @l"),
-                            Width = Eval(element.GetWidthValue(), "<mr> @w"),
-                            Angle = Eval(element.GetAValue(), "<mr> @a"),
-                            CornerRadius = Eval(element.GetRValue(), "<mr> @r"),
-                            Depth = Eval(element.GetDpValue(), "<mr> @dp"),
-                            Position = ParsePositionCode(element.GetCValue()),
-                            Forward = ParseBool(element.GetFwdValue(), true),
-                            LeadIn = ParseInt(element.GetInValue()),
-                            LeadOut = ParseInt(element.GetOutValue()),
-                            StartOffsetXY = element.GetSxyValue() is { } sxy ? Eval(sxy, "<mr> @sxy") : null
-                        });
-                        break;
-                    }
-
-                    case "bf":
-                    case "bt":
-                    case "bb":
-                    case "bl":
-                    case "br":
-                    {
-                        CloseContour();
-                        SetToolDia(element.GetNameValue(), $"<{tag}>");
-
-                        // Edge bore through-thickness position: m="true" ("middle") pins it to
-                        // dz/2 and no z attribute is needed; otherwise z is required.
-                        var isMiddle = ParseBool(element.GetMValue(), false);
-
-                        double EdgeZ() => isMiddle
-                            ? dz / 2d
-                            : Eval(element.GetZValue(), $"<{tag}> @z");
-
-                        var (surface, bx, by, bz) = tag switch
-                        {
-                            "bf" => (BoreSurface.Face,   Eval(element.GetXValue(), "<bf> @x"), Eval(element.GetYValue(), "<bf> @y"), 0d),
-                            "bl" => (BoreSurface.Left,   0d,                                   Eval(element.GetYValue(), "<bl> @y"), EdgeZ()),
-                            "br" => (BoreSurface.Right,  Sym("dx"),                            Eval(element.GetYValue(), "<br> @y"), EdgeZ()),
-                            // Plane names are visual: <bt> is the screen-top edge (y = 0 in the
-                            // Y-down frame), <bb> the screen-bottom edge (y = dy).
-                            "bb" => (BoreSurface.Bottom, Eval(element.GetXValue(), "<bb> @x"), Sym("dy"),                            EdgeZ()),
-                            "bt" => (BoreSurface.Top,    Eval(element.GetXValue(), "<bt> @x"), 0d,                                   EdgeZ()),
-                            _ => throw new XncProgramFormatException($"<{tag}> is not a bore element.")
-                        };
-
-                        var boreDepth = Eval(element.GetDpValue(), $"<{tag}> @dp");
-
-                        // "Through" isn't carried by any attribute - av/ac/as describe a
-                        // repeated-bore array (array-is-vertical / count / step), unrelated to
-                        // hole depth. A bore is through when its depth reaches the panel
-                        // dimension it drills into: dz for a face bore, dx for an edge bore
-                        // drilled from the left/right, dy for one drilled from the top/bottom.
-                        var throughAt = tag switch
-                        {
-                            "bl" or "br" => dx,
-                            "bt" or "bb" => dy,
-                            _ => dz
-                        };
-
-                        bores.Add(new XncBore
-                        {
-                            Surface = surface,
-                            ToolName = element.GetNameValue() ?? string.Empty,
-                            X = bx,
-                            Y = by,
-                            Z = bz,
-                            Depth = boreDepth,
-                            Through = boreDepth >= throughAt,
-                            Index = bores.Count,
-                            XText = element.GetXValue(),
-                            YText = element.GetYValue(),
-                            ZText = isMiddle ? null : element.GetZValue(),
-                            DepthText = element.GetDpValue()
-                        });
-                        break;
-                    }
-
-                    default:
-                        // Unknown element type: ignore (see .claude/skills/project-file-processing-skill/references/xnc-program-format.md §9).
-                        break;
+                    parse(element, state);
                 }
             }
 
-            CloseContour();
+            state.CloseContour();
 
-            return new XncProgram
+            return state.ToProgram(operationId, side, turn);
+        }
+
+        #region Tools and variables
+
+        private static void ParseTool(XElement element, ReadState state) =>
+            state.AddTool(new XncTool
+            {
+                Name = element.GetNameValue() ?? string.Empty,
+                Diameter = RequireDouble(element.GetDValue(), "<tool> @d")
+            });
+
+        private static void ParseVariable(XElement element, ReadState state)
+        {
+            var name = element.GetNameValue()
+                ?? throw new XncProgramFormatException("<var> has no name.");
+            var type = XncVariableTypes.Parse(element.GetTypeValue());
+
+            // Only int/double vars are arithmetic symbols; a string/bool var's expr is
+            // not a number and nothing numeric may reference it.
+            double? value = type.IsNumeric() ? state.Eval(element.GetExprValue(), $"<var> '{name}'") : null;
+
+            state.AddVariable(new XncVariable
+            {
+                Index = state.DeclaredVariables.Count,
+                Name = name,
+                Type = type,
+                Expr = element.GetExprValue() ?? string.Empty,
+                Comment = element.GetCommentValue(),
+                Value = value
+            });
+        }
+
+        #endregion
+
+        #region Contours
+
+        private static void ParseContourStart(XElement element, ReadState state)
+        {
+            state.SelectTool(element);
+            var entryDepth = state.Eval(element, "dp");
+
+            state.OpenContour(new ContourBuilder
+            {
+                ToolName = element.GetNameValue() ?? string.Empty,
+                Entry = state.Point(element, "x", "y"),
+                EntryDepth = entryDepth,
+                Position = ParsePositionCode(element.GetCValue()),
+                Forward = ParseBool(element.GetFwdValue(), true),
+                LeadIn = ParseInt(element.GetInValue()),
+                LeadOut = ParseInt(element.GetOutValue()),
+                StartOffsetXY = state.EvalOptional(element, "sxy"),
+                CurrentDepth = entryDepth
+            });
+        }
+
+        private static void ParseLine(XElement element, ReadState state)
+        {
+            var contour = state.ContinueContour(element);
+
+            contour.Segments.Add(new XncLineSegment
+            {
+                End = state.Point(element, "x", "y"),
+                Depth = contour.CurrentDepth
+            });
+        }
+
+        private static void ParseCentreArc(XElement element, ReadState state)
+        {
+            var contour = state.ContinueContour(element);
+            var end = state.Point(element, "x", "y");
+            var center = state.Point(element, "cx", "cy");
+
+            contour.Segments.Add(new XncArcSegment
+            {
+                End = end,
+                Center = center,
+                Clockwise = IsClockwise(element),
+                Radius = center.ToVec2().DistanceTo(end.ToVec2()),
+                Depth = contour.CurrentDepth
+            });
+        }
+
+        private static void ParseRadiusArc(XElement element, ReadState state)
+        {
+            var contour = state.ContinueContour(element);
+            var start = contour.Segments.Count > 0 ? contour.Segments[^1].End : contour.Entry;
+            var end = state.Point(element, "x", "y");
+            var radius = state.Eval(element, "r");
+            var center = PlanarGeometry.ArcCentreFromChord(start.ToVec2(), end.ToVec2(), radius, IsClockwise(element))
+                ?? throw new XncProgramFormatException($"<ma> radius {radius} cannot span {start} -> {end}.");
+
+            contour.Segments.Add(new XncArcSegment
+            {
+                End = end,
+                Center = new XncPoint(center.X, center.Y),
+                Clockwise = IsClockwise(element),
+                Radius = radius,
+                Depth = contour.CurrentDepth
+            });
+        }
+
+        #endregion
+
+        #region Grooves and self-contained mills
+
+        private static void ParseGroove(XElement element, ReadState state)
+        {
+            state.SelectTool(element);
+
+            state.Groovings.Add(new XncGrooving
+            {
+                ToolName = element.GetNameValue() ?? string.Empty,
+                Start = state.Point(element, "x1", "y1"),
+                End = state.Point(element, "x2", "y2"),
+                Depth = state.Eval(element, "dp"),
+                Width = state.Eval(element, "t"),
+                SideCode = ParseInt(element.GetPValue()),
+                Z = state.EvalOptional(element, "z") ?? 0d,
+                Position = ParsePositionCode(element.GetCValue()),
+                Comment = element.GetCommentValue() ?? string.Empty
+            });
+        }
+
+        private static void ParseEllipse(XElement element, ReadState state)
+        {
+            state.SelectTool(element);
+
+            state.Ellipses.Add(new XncMillingEllipse
+            {
+                ToolName = element.GetNameValue() ?? string.Empty,
+                Center = state.Point(element, "x", "y"),
+                Length = state.Eval(element, "l"),
+                Width = state.Eval(element, "w"),
+                Angle = state.Eval(element, "a"),
+                Depth = state.Eval(element, "dp"),
+                Position = ParsePositionCode(element.GetCValue()),
+                Forward = ParseBool(element.GetFwdValue(), true),
+                LeadIn = ParseInt(element.GetInValue()),
+                LeadOut = ParseInt(element.GetOutValue()),
+                StartOffsetXY = state.EvalOptional(element, "sxy")
+            });
+        }
+
+        private static void ParseRectangle(XElement element, ReadState state)
+        {
+            state.SelectTool(element);
+
+            state.Rectangles.Add(new XncMillingRectangle
+            {
+                ToolName = element.GetNameValue() ?? string.Empty,
+                Origin = state.Point(element, "x", "y"),
+                Length = state.Eval(element, "l"),
+                Width = state.Eval(element, "w"),
+                Angle = state.Eval(element, "a"),
+                CornerRadius = state.Eval(element, "r"),
+                Depth = state.Eval(element, "dp"),
+                Position = ParsePositionCode(element.GetCValue()),
+                Forward = ParseBool(element.GetFwdValue(), true),
+                LeadIn = ParseInt(element.GetInValue()),
+                LeadOut = ParseInt(element.GetOutValue()),
+                StartOffsetXY = state.EvalOptional(element, "sxy")
+            });
+        }
+
+        #endregion
+
+        #region Bores
+
+        private static void ParseBore(XElement element, ReadState state)
+        {
+            state.SelectTool(element);
+
+            var tag = element.Name.LocalName;
+
+            // Edge bore through-thickness position: m="true" ("middle") pins it to dz/2 and no z
+            // attribute is needed; otherwise z is required.
+            var isMiddle = ParseBool(element.GetMValue(), false);
+
+            double EdgeZ() => isMiddle ? state.Dz / 2d : state.Eval(element, "z");
+
+            var (surface, x, y, z) = tag switch
+            {
+                XncTags.FaceBore => (BoreSurface.Face, state.Eval(element, "x"), state.Eval(element, "y"), 0d),
+                XncTags.LeftBore => (BoreSurface.Left, 0d, state.Eval(element, "y"), EdgeZ()),
+                XncTags.RightBore => (BoreSurface.Right, state.Dx, state.Eval(element, "y"), EdgeZ()),
+                // Plane names are visual: <bt> is the screen-top edge (y = 0 in the Y-down frame),
+                // <bb> the screen-bottom edge (y = dy).
+                XncTags.BottomBore => (BoreSurface.Bottom, state.Eval(element, "x"), state.Dy, EdgeZ()),
+                _ => (BoreSurface.Top, state.Eval(element, "x"), 0d, EdgeZ()),
+            };
+
+            var depth = state.Eval(element, "dp");
+
+            state.Bores.Add(new XncBore
+            {
+                Surface = surface,
+                ToolName = element.GetNameValue() ?? string.Empty,
+                X = x,
+                Y = y,
+                Z = z,
+                Depth = depth,
+                Through = depth >= ThroughDepth(tag, state),
+                Index = state.Bores.Count,
+                XText = element.GetXValue(),
+                YText = element.GetYValue(),
+                ZText = isMiddle ? null : element.GetZValue(),
+                DepthText = element.GetDpValue()
+            });
+        }
+
+        /// <summary>
+        /// "Through" isn't carried by any attribute - <c>av</c>/<c>ac</c>/<c>as</c> describe a
+        /// repeated-bore array, unrelated to hole depth. A bore is through when its depth reaches the
+        /// panel dimension it drills into: <c>dz</c> for a face bore, <c>dx</c> for an edge bore
+        /// drilled from the left/right, <c>dy</c> for one drilled from the top/bottom.
+        /// </summary>
+        private static double ThroughDepth(string tag, ReadState state) => tag switch
+        {
+            XncTags.LeftBore or XncTags.RightBore => state.Dx,
+            XncTags.TopBore or XncTags.BottomBore => state.Dy,
+            _ => state.Dz
+        };
+
+        #endregion
+
+        #region Read state
+
+        /// <summary>Everything read so far: symbols, tools, the open contour and the parsed elements.</summary>
+        private sealed class ReadState
+        {
+            private readonly XncSymbolTable _symbols;
+            private readonly Dictionary<string, XncTool> _toolsByName = new(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, double> _variables = new(StringComparer.OrdinalIgnoreCase);
+            private readonly List<XncTool> _tools = [];
+            private readonly List<XncMillingContour> _contours = [];
+
+            private ContourBuilder? _contour;
+
+            public ReadState(XElement program)
+            {
+                _symbols = XncSymbols.DimensionSymbols(program);
+                Dx = Symbol("dx");
+                Dy = Symbol("dy");
+                Dz = Symbol("dz");
+            }
+
+            public double Dx { get; }
+
+            public double Dy { get; }
+
+            public double Dz { get; }
+
+            public List<XncVariable> DeclaredVariables { get; } = [];
+
+            public List<XncBore> Bores { get; } = [];
+
+            public List<XncGrooving> Groovings { get; } = [];
+
+            public List<XncMillingEllipse> Ellipses { get; } = [];
+
+            public List<XncMillingRectangle> Rectangles { get; } = [];
+
+            public void AddTool(XncTool tool)
+            {
+                _tools.Add(tool);
+                _toolsByName[tool.Name] = tool;
+            }
+
+            public void AddVariable(XncVariable variable)
+            {
+                if (variable.Value is { } number)
+                {
+                    _symbols.Set(variable.Name, number);
+                    _variables[variable.Name] = number;
+                }
+
+                DeclaredVariables.Add(variable);
+            }
+
+            /// <summary>Makes <c>tool.dia</c> resolve to the element's tool, which must be declared before it.</summary>
+            public void SelectTool(XElement element)
+            {
+                var toolName = element.GetNameValue();
+
+                if (toolName is null || !_toolsByName.TryGetValue(toolName, out var tool))
+                {
+                    throw new XncProgramFormatException($"<{element.Name.LocalName}> references unknown tool '{toolName}'.");
+                }
+
+                _symbols.SetToolDiameter(tool.Diameter);
+            }
+
+            public double Eval(string? expression, string where) => XncSymbols.Eval(expression, _symbols, where);
+
+            /// <summary>The element's required <paramref name="attribute"/>, evaluated.</summary>
+            public double Eval(XElement element, string attribute) =>
+                Eval(element.Attribute(attribute)?.Value, $"<{element.Name.LocalName}> @{attribute}");
+
+            /// <summary>The element's optional <paramref name="attribute"/>, evaluated; <c>null</c> when absent.</summary>
+            public double? EvalOptional(XElement element, string attribute) =>
+                element.Attribute(attribute) is null ? null : Eval(element, attribute);
+
+            public XncPoint Point(XElement element, string xAttribute, string yAttribute) =>
+                new(Eval(element, xAttribute), Eval(element, yAttribute));
+
+            public void OpenContour(ContourBuilder contour) => _contour = contour;
+
+            /// <summary>
+            /// The open contour a segment continues, with the segment's <c>dp</c> applied - optional
+            /// on a segment: absent means keep cutting at the contour's current depth.
+            /// </summary>
+            public ContourBuilder ContinueContour(XElement segment)
+            {
+                var contour = _contour
+                    ?? throw new XncProgramFormatException($"<{segment.Name.LocalName}> outside a milling contour.");
+
+                contour.CurrentDepth = segment.GetDpValue() is { } depth
+                    ? XncExpressionEvaluator.Evaluate(depth, _symbols)
+                    : contour.CurrentDepth;
+
+                return contour;
+            }
+
+            public void CloseContour()
+            {
+                if (_contour is not null)
+                {
+                    _contours.Add(_contour.Build());
+                    _contour = null;
+                }
+            }
+
+            public XncProgram ToProgram(int operationId, bool side, int turn) => new()
             {
                 OperationId = operationId,
-                Dx = dx,
-                Dy = dy,
-                Dz = dz,
+                Dx = Dx,
+                Dy = Dy,
+                Dz = Dz,
                 Side = side,
                 Turn = turn,
-                Tools = tools,
-                Bores = bores,
-                Groovings = groovings,
-                MillingContours = contours,
-                MillingEllipses = ellipses,
-                MillingRectangles = rectangles,
-                Variables = variables,
-                DeclaredVariables = declaredVariables
+                Tools = _tools,
+                Bores = Bores,
+                Groovings = Groovings,
+                MillingContours = _contours,
+                MillingEllipses = Ellipses,
+                MillingRectangles = Rectangles,
+                Variables = _variables,
+                DeclaredVariables = DeclaredVariables
             };
+
+            private double Symbol(string name) => _symbols.TryGet(name, out var value) ? value : 0d;
         }
 
         private sealed class ContourBuilder
@@ -372,5 +453,7 @@ namespace XncOptimizerUI.Services.Xnc
                 Segments = Segments
             };
         }
+
+        #endregion
     }
 }
