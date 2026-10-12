@@ -41,13 +41,13 @@
     </Style>
 
     <!--
-        Parts grid edge-band select, edit mode only: lists AppViewModel.BandOptions (empty option
+        Parts grid edge-band select, edit mode only: lists ProjectCatalogVM.BandOptions (empty option
         first) and shows each band as "<internal symbol> <name>", both in the box and in the
         drop-down. Opens its list when it appears; closing the list returns the cell to text.
         Each column binds only SelectedValue to its PartVM.*BandingId.
     -->
     <Style x:Key="BandSelectComboBoxStyle" TargetType="ComboBox">
-        <Setter Property="ItemsSource" Value="{Binding DataContext.BandOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+        <Setter Property="ItemsSource" Value="{Binding DataContext.Catalog.BandOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
         <Setter Property="SelectedValuePath" Value="Id" />
         <Setter Property="helpers:DataGridCellEditBehavior.OpenDropDownOnLoad" Value="True" />
         <Setter Property="ItemTemplate">
