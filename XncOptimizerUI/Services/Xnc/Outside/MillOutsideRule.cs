@@ -70,7 +70,7 @@ namespace XncOptimizerUI.Services.Xnc.Outside
         #region Centre lines
 
         private static CentreLine? ContourCentreLine(OutsideElement mill, XncSymbolTable symbols) =>
-            mill.Segments.Count > 0 && ReadPath(ReadPoint(mill.Element, symbols), mill.Segments, symbols) is { Count: > 0 } path
+            mill.Segments.Count > 0 && ReadPath(EvalPoint(mill.Element, symbols), mill.Segments, symbols) is { Count: > 0 } path
                 ? new CentreLine(path, 0d)
                 : null;
 
@@ -89,7 +89,7 @@ namespace XncOptimizerUI.Services.Xnc.Outside
                 : 0d;
 
             var path = MillShapeGeometry.RoundedRectangle(halfLength, halfWidth, radius)
-                .Select(p => MillShapeGeometry.Place(p, ReadPoint(mr, symbols), ReadAngle(mr, symbols)))
+                .Select(p => MillShapeGeometry.Place(p, EvalPoint(mr, symbols), ReadAngle(mr, symbols)))
                 .ToList();
 
             return new CentreLine(path, 0d);
@@ -107,7 +107,7 @@ namespace XncOptimizerUI.Services.Xnc.Outside
             }
 
             var path = MillShapeGeometry.EllipseChords(semiX, semiY, EllipseSegments)
-                .Select(p => MillShapeGeometry.Place(p, ReadPoint(me, symbols), ReadAngle(me, symbols)))
+                .Select(p => MillShapeGeometry.Place(p, EvalPoint(me, symbols), ReadAngle(me, symbols)))
                 .ToList();
 
             return new CentreLine(path, MillShapeGeometry.EllipseChordSagitta(semiX, semiY, EllipseSegments));

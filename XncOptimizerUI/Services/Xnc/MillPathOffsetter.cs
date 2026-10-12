@@ -155,7 +155,7 @@ namespace XncOptimizerUI.Services.Xnc
                 return Outcome.Ignored;
             }
 
-            var entry = ReadPoint(mill.Head, symbols);
+            var entry = EvalPoint(mill.Head, symbols);
 
             if (ReadPath(entry, mill.Segments, symbols) is not { } path)
             {

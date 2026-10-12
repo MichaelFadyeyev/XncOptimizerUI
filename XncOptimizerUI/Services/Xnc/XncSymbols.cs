@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.XncAttributeParsing;
 
 namespace XncOptimizerUI.Services.Xnc
@@ -94,6 +95,11 @@ namespace XncOptimizerUI.Services.Xnc
             XncExpressionEvaluator.Evaluate(
                 expression ?? throw new XncProgramFormatException(where is null ? "Missing XNC coordinate/value." : $"Missing value for {where}."),
                 symbols);
+
+        /// <summary>The element's <c>x</c>/<c>y</c> point, evaluated.</summary>
+        /// <exception cref="XncProgramFormatException">A coordinate is missing or does not resolve.</exception>
+        public static Vec2 EvalPoint(XElement element, XncSymbolTable symbols) =>
+            new(Eval(element.GetXValue(), symbols), Eval(element.GetYValue(), symbols));
 
         /// <summary>Replaces every whole-identifier occurrence of <paramref name="oldName"/> (any case) with <paramref name="newName"/>.</summary>
         public static string RenameIdentifier(string expression, string oldName, string newName) =>

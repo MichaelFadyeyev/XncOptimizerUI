@@ -60,7 +60,7 @@ namespace XncOptimizerUI.Services.Xnc.Outside
         /// <summary>Every hole of a face bore: <c>ac</c> holes <c>as</c> apart along X, or along Y for <c>av="true"</c>.</summary>
         private static IReadOnlyList<Vec2>? FaceBoreCentres(XElement bore, XncSymbolTable symbols)
         {
-            var first = XncMillElements.ReadPoint(bore, symbols);
+            var first = EvalPoint(bore, symbols);
 
             if (ArrayCount(bore) is not { } holes)
             {

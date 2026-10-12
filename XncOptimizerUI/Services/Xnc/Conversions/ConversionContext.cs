@@ -68,7 +68,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         public double Eval(string? expression) => XncSymbols.Eval(expression, Symbols);
 
         /// <summary>The element's <c>x</c>/<c>y</c> point.</summary>
-        public Vec2 Point(XElement element) => new(Eval(element.GetXValue()), Eval(element.GetYValue()));
+        public Vec2 Point(XElement element) => XncSymbols.EvalPoint(element, Symbols);
 
         /// <summary>Records the tool of a replaced element, if it names one.</summary>
         public void Replacing(string? toolName)

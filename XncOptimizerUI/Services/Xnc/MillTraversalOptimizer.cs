@@ -104,7 +104,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             try
             {
-                return (XncMillElements.ReadPoint(start, symbols), XncMillElements.ReadPoint(line, symbols));
+                return (EvalPoint(start, symbols), EvalPoint(line, symbols));
             }
             catch (Exception)
             {

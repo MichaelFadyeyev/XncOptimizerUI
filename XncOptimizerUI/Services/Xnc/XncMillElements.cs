@@ -62,12 +62,9 @@ namespace XncOptimizerUI.Services.Xnc
             return path;
         }
 
-        internal static Vec2 ReadPoint(XElement element, XncSymbolTable symbols) =>
-            new(Eval(element.GetXValue(), symbols), Eval(element.GetYValue(), symbols));
-
         private static Primitive? ReadPrimitive(Vec2 start, XElement segment, XncSymbolTable symbols)
         {
-            var end = ReadPoint(segment, symbols);
+            var end = EvalPoint(segment, symbols);
 
             return segment.Name.LocalName switch
             {
