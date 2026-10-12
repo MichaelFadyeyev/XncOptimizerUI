@@ -59,7 +59,7 @@ namespace XncOptimizerUI.Services.Project
                 PrepareProgram(operation, newWidth, newCount);
             }
 
-            return $"{part.GetPartNameValue()} resized to {XmlConvert.ToString(newWidth)}; count changed: {count} -> {newCount}";
+            return $"{part.GetNameValue()} resized to {XmlConvert.ToString(newWidth)}; count changed: {count} -> {newCount}";
         }
 
         /// <summary>Sets the program's <c>dy</c>, adds a mirrored copy of each bore, and updates the operation's counts.</summary>
