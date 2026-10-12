@@ -2,7 +2,7 @@ using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>Display-ready row for a selected part's grooves.</summary>
     public partial class GrooveRowVM : ObservableObject

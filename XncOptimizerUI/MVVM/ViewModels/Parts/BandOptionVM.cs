@@ -1,4 +1,4 @@
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
     /// <summary>
     /// One choice of the Parts grid edge-band selects: an EL operation (by id, shown by its

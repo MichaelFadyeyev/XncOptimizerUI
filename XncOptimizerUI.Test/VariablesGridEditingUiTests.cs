@@ -1,5 +1,6 @@
 using System.Windows.Controls;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
 using XncOptimizerUI.MVVM.Views.PartPrograms;
 
 namespace XncOptimizerUI.Test

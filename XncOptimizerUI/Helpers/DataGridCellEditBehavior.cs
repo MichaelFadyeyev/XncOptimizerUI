@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
 
 namespace XncOptimizerUI.Helpers
 {

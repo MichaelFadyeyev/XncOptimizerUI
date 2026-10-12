@@ -2,7 +2,7 @@ using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models.Xnc;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     public sealed class ToolRowVM
     {

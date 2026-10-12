@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 using XncOptimizerUI.MVVM.Views.PartPreview;
 
 namespace XncOptimizerUI.MVVM.Views

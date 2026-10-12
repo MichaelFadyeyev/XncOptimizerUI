@@ -11,6 +11,8 @@ using System.Windows.Threading;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 
 namespace XncOptimizerUI.MVVM.ViewModels
 {

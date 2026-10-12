@@ -1,7 +1,7 @@
 ﻿using XncOptimizerUI.Core;
 using XncOptimizerUI.MVVM.Models;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
     public class PartVM(Part part) : ObservableObject
     {

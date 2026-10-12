@@ -5,7 +5,7 @@ using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// One row of the selected part's bores <c>DataGrid</c>: a flattened, display-ready view of

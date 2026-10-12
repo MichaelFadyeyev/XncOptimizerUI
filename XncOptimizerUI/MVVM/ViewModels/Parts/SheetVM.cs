@@ -2,7 +2,7 @@
 using XncOptimizerUI.Core;
 using XncOptimizerUI.MVVM.Models;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Parts
 {
     public class SheetVM(Sheet sheet) : ObservableObject
     {

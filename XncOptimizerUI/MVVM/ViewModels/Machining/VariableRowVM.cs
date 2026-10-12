@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// One row of the selected part's Variables <c>DataGrid</c>: a <c>&lt;var&gt;</c> declaration

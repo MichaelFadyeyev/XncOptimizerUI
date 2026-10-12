@@ -1,6 +1,6 @@
 using System.Globalization;
 using XncOptimizerUI.Helpers;
-using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 
 namespace XncOptimizerUI.Test
 {

@@ -1,4 +1,4 @@
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// A <c>DataGrid</c> row item whose cells are committed one at a time, driven by

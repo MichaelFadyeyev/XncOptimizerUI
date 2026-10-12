@@ -4,6 +4,8 @@ using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.Services;
 using XncOptimizerUI.Test.Fakes;

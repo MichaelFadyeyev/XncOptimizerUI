@@ -2,7 +2,7 @@ using System.Collections;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace XncOptimizerUI.MVVM.ViewModels
+namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// Base of a program-table row edited cell by cell (<see cref="ICellEditableRow"/>). Editors

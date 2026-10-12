@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Windows.Data;
-using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Parts;
 
 namespace XncOptimizerUI.Helpers
 {

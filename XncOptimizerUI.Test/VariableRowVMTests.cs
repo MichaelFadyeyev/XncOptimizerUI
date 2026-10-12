@@ -1,5 +1,6 @@
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
 
 namespace XncOptimizerUI.Test
 {
