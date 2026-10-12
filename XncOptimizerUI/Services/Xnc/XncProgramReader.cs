@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -168,7 +169,7 @@ namespace XncOptimizerUI.Services.Xnc
                             End = end,
                             Center = center,
                             Clockwise = ParseBool(element.GetDirValue(), false),
-                            Radius = Distance(center, end),
+                            Radius = center.ToVec2().DistanceTo(end.ToVec2()),
                             Depth = open.CurrentDepth
                         });
                         break;
@@ -182,17 +183,13 @@ namespace XncOptimizerUI.Services.Xnc
                         var end = new XncPoint(Eval(element.GetXValue(), "<ma> @x"), Eval(element.GetYValue(), "<ma> @y"));
                         var radius = Eval(element.GetRValue(), "<ma> @r");
 
-                        if (!XncProgramMath.TryReconstructArcCentre(
-                                start.X, start.Y, end.X, end.Y, radius, XncProgramMath.ParseDirSign(element.GetDirValue()),
-                                out var centerX, out var centerY))
-                        {
-                            throw new XncProgramFormatException($"<ma> radius {radius} cannot span {start} -> {end}.");
-                        }
+                        var center = PlanarGeometry.ArcCentreFromChord(start.ToVec2(), end.ToVec2(), radius, ParseBool(element.GetDirValue(), false))
+                            ?? throw new XncProgramFormatException($"<ma> radius {radius} cannot span {start} -> {end}.");
 
                         open.Segments.Add(new XncArcSegment
                         {
                             End = end,
-                            Center = new XncPoint(centerX, centerY),
+                            Center = new XncPoint(center.X, center.Y),
                             Clockwise = ParseBool(element.GetDirValue(), false),
                             Radius = radius,
                             Depth = open.CurrentDepth
@@ -370,14 +367,6 @@ namespace XncOptimizerUI.Services.Xnc
                 && Enum.IsDefined(typeof(ToolPosition), code)
                     ? (ToolPosition)code
                     : ToolPosition.Center;
-
-        private static double Distance(XncPoint a, XncPoint b)
-        {
-            var dx = a.X - b.X;
-            var dy = a.Y - b.Y;
-
-            return Math.Sqrt((dx * dx) + (dy * dy));
-        }
 
         private sealed class ContourBuilder
         {

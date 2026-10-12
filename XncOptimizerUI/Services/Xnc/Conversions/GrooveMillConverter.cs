@@ -2,6 +2,7 @@ using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.Conversions.ElementOutcome;
 
 namespace XncOptimizerUI.Services.Xnc.Conversions
@@ -61,12 +62,10 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return Ignored;
             }
 
-            var x1 = context.Eval(groove.GetX1Value());
-            var y1 = context.Eval(groove.GetY1Value());
-            var x2 = context.Eval(groove.GetX2Value());
-            var y2 = context.Eval(groove.GetY2Value());
+            var start = new Vec2(context.Eval(groove.GetX1Value()), context.Eval(groove.GetY1Value()));
+            var end = new Vec2(context.Eval(groove.GetX2Value()), context.Eval(groove.GetY2Value()));
 
-            if (AxisOf(x1, y1, x2, y2) is not { } horizontal)
+            if (AxisOf(start, end) is not { } horizontal)
             {
                 return Ignored;
             }
@@ -78,12 +77,12 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
             if (millingToolDiameters.Any(d => Math.Abs(d - width) <= ConversionTools.DiameterEpsilon))
             {
-                InsertMillPath(groove, x1, y1, x2, y2, width, depth, horizontal, context);
+                InsertMillPath(groove, start, end, width, depth, horizontal, context);
             }
             else if (millingToolDiameters[0] <= width)
             {
                 // No cutter of the groove's exact width: mill it out as a pocket with the smallest one.
-                InsertGroovePocket(groove, x1, y1, x2, y2, width, depth, horizontal, millingToolDiameters[0], context);
+                InsertGroovePocket(groove, start, end, width, depth, horizontal, millingToolDiameters[0], context);
             }
             else
             {
@@ -97,28 +96,20 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
         /// <summary>An <c>&lt;ms&gt;</c> + <c>&lt;ml&gt;</c> along the groove, cut by the cutter of its width.</summary>
         private static void InsertMillPath(
-            XElement groove, double x1, double y1, double x2, double y2, double width, string depth, bool horizontal, ConversionContext context)
+            XElement groove, Vec2 start, Vec2 end, double width, string depth, bool horizontal, ConversionContext context)
         {
             var toolName = ConversionTools.Ensure(groove, width, XncToolKinds.Mill, context.Tools);
 
             // The tool centre must clear the edge, but only along the axis the groove runs.
             var overshoot = width / 2d;
-
-            if (horizontal)
-            {
-                x1 = OvershootAlongAxis(x1, context.Dx, overshoot);
-                x2 = OvershootAlongAxis(x2, context.Dx, overshoot);
-            }
-            else
-            {
-                y1 = OvershootAlongAxis(y1, context.Dy, overshoot);
-                y2 = OvershootAlongAxis(y2, context.Dy, overshoot);
-            }
+            var (entry, exit) = horizontal
+                ? (start with { X = OvershootAlongAxis(start.X, context.Dx, overshoot) }, end with { X = OvershootAlongAxis(end.X, context.Dx, overshoot) })
+                : (start with { Y = OvershootAlongAxis(start.Y, context.Dy, overshoot) }, end with { Y = OvershootAlongAxis(end.Y, context.Dy, overshoot) });
 
             groove.AddBeforeSelf(
                 WithComment(new XElement(XncTags.ContourStart,
-                    new XAttribute("x", XmlConvert.ToString(x1)),
-                    new XAttribute("y", XmlConvert.ToString(y1)),
+                    new XAttribute("x", XmlConvert.ToString(entry.X)),
+                    new XAttribute("y", XmlConvert.ToString(entry.Y)),
                     new XAttribute("dp", depth),
                     new XAttribute("in", "0"),
                     new XAttribute("out", "0"),
@@ -127,8 +118,8 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                     new XAttribute("c", groove.GetCValue() ?? "0"),
                     new XAttribute("name", toolName)), groove.GetCommentValue()),
                 new XElement(XncTags.Line,
-                    new XAttribute("x", XmlConvert.ToString(x2)),
-                    new XAttribute("y", XmlConvert.ToString(y2)),
+                    new XAttribute("x", XmlConvert.ToString(exit.X)),
+                    new XAttribute("y", XmlConvert.ToString(exit.Y)),
                     new XAttribute("dp", depth)));
         }
 
@@ -138,13 +129,13 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         /// beyond the border is pushed half the cutter past it; the constant axis keeps the centre line.
         /// </summary>
         private static void InsertGroovePocket(
-            XElement groove, double x1, double y1, double x2, double y2, double width, string depth, bool horizontal,
+            XElement groove, Vec2 start, Vec2 end, double width, string depth, bool horizontal,
             double toolDiameter, ConversionContext context)
         {
             var overshoot = toolDiameter / 2d;
             var (runStart, runEnd, runSize, constCoord) = horizontal
-                ? (x1, x2, context.Dx, (y1 + y2) / 2d)
-                : (y1, y2, context.Dy, (x1 + x2) / 2d);
+                ? (start.X, end.X, context.Dx, (start.Y + end.Y) / 2d)
+                : (start.Y, end.Y, context.Dy, (start.X + end.X) / 2d);
 
             runStart = OvershootAlongAxis(runStart, runSize, overshoot);
             runEnd = OvershootAlongAxis(runEnd, runSize, overshoot);
@@ -219,12 +210,10 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return false;
             }
 
-            var x1 = context.Eval(start.GetXValue());
-            var y1 = context.Eval(start.GetYValue());
-            var x2 = context.Eval(line.GetXValue());
-            var y2 = context.Eval(line.GetYValue());
+            var entry = context.Point(start);
+            var exit = context.Point(line);
 
-            if (AxisOf(x1, y1, x2, y2) is not { } horizontal
+            if (AxisOf(entry, exit) is not { } horizontal
                 || start.GetNameValue() is not { } millToolName
                 || !context.Tools.DiametersByName.TryGetValue(millToolName, out var millToolDiameter))
             {
@@ -235,23 +224,16 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
             var grooveToolName = ConversionTools.Ensure(start, groovingToolDiameter, XncToolKinds.Groove, context.Tools);
 
             // An end outside the part is pulled onto the outline; only the running axis can be out of range.
-            if (horizontal)
-            {
-                x1 = Math.Clamp(x1, 0d, context.Dx);
-                x2 = Math.Clamp(x2, 0d, context.Dx);
-            }
-            else
-            {
-                y1 = Math.Clamp(y1, 0d, context.Dy);
-                y2 = Math.Clamp(y2, 0d, context.Dy);
-            }
+            var (from, to) = horizontal
+                ? (entry with { X = Math.Clamp(entry.X, 0d, context.Dx) }, exit with { X = Math.Clamp(exit.X, 0d, context.Dx) })
+                : (entry with { Y = Math.Clamp(entry.Y, 0d, context.Dy) }, exit with { Y = Math.Clamp(exit.Y, 0d, context.Dy) });
 
             start.AddBeforeSelf(WithComment(new XElement(XncTags.Groove,
-                new XAttribute("x1", XmlConvert.ToString(x1)),
-                new XAttribute("y1", XmlConvert.ToString(y1)),
+                new XAttribute("x1", XmlConvert.ToString(from.X)),
+                new XAttribute("y1", XmlConvert.ToString(from.Y)),
                 new XAttribute("dp", line.GetDpValue() ?? start.GetDpValue() ?? "0"),
-                new XAttribute("x2", XmlConvert.ToString(x2)),
-                new XAttribute("y2", XmlConvert.ToString(y2)),
+                new XAttribute("x2", XmlConvert.ToString(to.X)),
+                new XAttribute("y2", XmlConvert.ToString(to.Y)),
                 new XAttribute("t", XmlConvert.ToString(millToolDiameter)),
                 new XAttribute("c", start.GetCValue() ?? "0"),
                 new XAttribute("p", "0"),
@@ -283,12 +265,10 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return Ignored;
             }
 
-            var cx = context.Eval(rectangle.GetXValue());
-            var cy = context.Eval(rectangle.GetYValue());
+            var centre = context.Point(rectangle);
+            var halfSize = new Vec2(length / 2d, breadth / 2d);
 
-            InsertPocketGroove(rectangle,
-                cx - length / 2d, cx + length / 2d, cy - breadth / 2d, cy + breadth / 2d,
-                rectangle.GetDpValue() ?? "0", groovingToolDiameter, context);
+            InsertPocketGroove(rectangle, new Box(centre - halfSize, centre + halfSize), rectangle.GetDpValue() ?? "0", groovingToolDiameter, context);
             rectangle.Remove();
 
             return Converted;
@@ -299,13 +279,15 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         {
             var vertices = segments
                 .Prepend(start)
-                .Select(e => (X: context.Eval(e.GetXValue()), Y: context.Eval(e.GetYValue())))
+                .Select(context.Point)
                 .ToList();
 
-            var (minX, maxX) = (vertices.Min(v => v.X), vertices.Max(v => v.X));
-            var (minY, maxY) = (vertices.Min(v => v.Y), vertices.Max(v => v.Y));
+            var bounds = new Box(
+                new Vec2(vertices.Min(v => v.X), vertices.Min(v => v.Y)),
+                new Vec2(vertices.Max(v => v.X), vertices.Max(v => v.Y)));
+            var size = bounds.Max - bounds.Min;
 
-            if (maxX - minX <= AxisEpsilon || maxY - minY <= AxisEpsilon || !IsAxisParallelRectangle(vertices, minX, maxX, minY, maxY))
+            if (size.X <= AxisEpsilon || size.Y <= AxisEpsilon || !IsAxisParallelRectangle(vertices, bounds))
             {
                 return false;
             }
@@ -321,7 +303,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return false;
             }
 
-            InsertPocketGroove(start, minX, maxX, minY, maxY, start.GetDpValue() ?? "0", groovingToolDiameter, context);
+            InsertPocketGroove(start, bounds, start.GetDpValue() ?? "0", groovingToolDiameter, context);
             segments.ToList().ForEach(s => s.Remove());
             start.Remove();
 
@@ -329,34 +311,35 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         }
 
         /// <summary>Every vertex on a bounding-box corner, and every step along one axis only.</summary>
-        private static bool IsAxisParallelRectangle(List<(double X, double Y)> vertices, double minX, double maxX, double minY, double maxY)
+        private static bool IsAxisParallelRectangle(List<Vec2> vertices, Box bounds)
         {
             bool Near(double a, double b) => Math.Abs(a - b) <= AxisEpsilon;
 
-            return vertices.All(v => (Near(v.X, minX) || Near(v.X, maxX)) && (Near(v.Y, minY) || Near(v.Y, maxY)))
+            return vertices.All(v => (Near(v.X, bounds.Min.X) || Near(v.X, bounds.Max.X)) && (Near(v.Y, bounds.Min.Y) || Near(v.Y, bounds.Max.Y)))
                 && vertices.Zip(vertices.Skip(1)).All(step => Near(step.First.X, step.Second.X) || Near(step.First.Y, step.Second.Y));
         }
 
         /// <summary>
-        /// A <c>&lt;gr&gt;</c> for an axis-parallel pocket bounded by <c>[minX,maxX] x [minY,maxY]</c>:
+        /// A <c>&lt;gr&gt;</c> for an axis-parallel pocket bounded by <paramref name="bounds"/>:
         /// it runs along the longer side, its width is the shorter side, and ends beyond the part edge
         /// are pulled onto it.
         /// </summary>
         private static void InsertPocketGroove(
-            XElement anchor, double minX, double maxX, double minY, double maxY, string depth, double groovingToolDiameter, ConversionContext context)
+            XElement anchor, Box bounds, string depth, double groovingToolDiameter, ConversionContext context)
         {
-            var (x1, y1, x2, y2, slot) = maxX - minX >= maxY - minY
-                ? (Math.Clamp(minX, 0d, context.Dx), (minY + maxY) / 2d, Math.Clamp(maxX, 0d, context.Dx), (minY + maxY) / 2d, maxY - minY)
-                : ((minX + maxX) / 2d, Math.Clamp(minY, 0d, context.Dy), (minX + maxX) / 2d, Math.Clamp(maxY, 0d, context.Dy), maxX - minX);
+            var (min, max, centre) = (bounds.Min, bounds.Max, bounds.Centre);
+            var (from, to, slot) = max.X - min.X >= max.Y - min.Y
+                ? (new Vec2(Math.Clamp(min.X, 0d, context.Dx), centre.Y), new Vec2(Math.Clamp(max.X, 0d, context.Dx), centre.Y), max.Y - min.Y)
+                : (new Vec2(centre.X, Math.Clamp(min.Y, 0d, context.Dy)), new Vec2(centre.X, Math.Clamp(max.Y, 0d, context.Dy)), max.X - min.X);
 
             var grooveToolName = ConversionTools.Ensure(anchor, groovingToolDiameter, XncToolKinds.Groove, context.Tools);
 
             anchor.AddBeforeSelf(WithComment(new XElement(XncTags.Groove,
-                new XAttribute("x1", XmlConvert.ToString(x1)),
-                new XAttribute("y1", XmlConvert.ToString(y1)),
+                new XAttribute("x1", XmlConvert.ToString(from.X)),
+                new XAttribute("y1", XmlConvert.ToString(from.Y)),
                 new XAttribute("dp", depth),
-                new XAttribute("x2", XmlConvert.ToString(x2)),
-                new XAttribute("y2", XmlConvert.ToString(y2)),
+                new XAttribute("x2", XmlConvert.ToString(to.X)),
+                new XAttribute("y2", XmlConvert.ToString(to.Y)),
                 new XAttribute("t", XmlConvert.ToString(slot)),
                 new XAttribute("c", "0"),
                 new XAttribute("p", "0"),
@@ -370,10 +353,10 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         #region Methods
 
         /// <summary><c>true</c> for a horizontal path, <c>false</c> for a vertical one, <c>null</c> for a diagonal or degenerate one.</summary>
-        private static bool? AxisOf(double x1, double y1, double x2, double y2)
+        private static bool? AxisOf(Vec2 start, Vec2 end)
         {
-            var horizontal = Math.Abs(y1 - y2) <= AxisEpsilon;
-            var vertical = Math.Abs(x1 - x2) <= AxisEpsilon;
+            var horizontal = Math.Abs(start.Y - end.Y) <= AxisEpsilon;
+            var vertical = Math.Abs(start.X - end.X) <= AxisEpsilon;
 
             return horizontal == vertical ? null : horizontal;
         }

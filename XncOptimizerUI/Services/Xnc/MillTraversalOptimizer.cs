@@ -3,6 +3,7 @@ using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Batch;
 using XncOptimizerUI.Services.Xnc.Conversions;
+using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Xnc
@@ -34,7 +35,7 @@ namespace XncOptimizerUI.Services.Xnc
             string MsX, string MsY, string? MsDp,
             string MlX, string MlY, string? MlDp,
             string? In, string? Out, string? Sxy, string? Fwd, string? C, string? Comment,
-            double EntryX, double EntryY, double ExitX, double ExitY);
+            Vec2 Entry, Vec2 Exit);
 
         /// <summary>A pass's place in the program: its <c>&lt;ms&gt;</c> and <c>&lt;ml&gt;</c>.</summary>
         private readonly record struct Slot(XElement Start, XElement Line);
@@ -84,7 +85,7 @@ namespace XncOptimizerUI.Services.Xnc
             var line = segments[0];
 
             if (TryReadEnds(start, line, symbols) is not { } ends
-                || (Math.Abs(ends.Ay - ends.By) <= GrooveMillConverter.AxisEpsilon) == (Math.Abs(ends.Ax - ends.Bx) <= GrooveMillConverter.AxisEpsilon))
+                || (Math.Abs(ends.Entry.Y - ends.Exit.Y) <= GrooveMillConverter.AxisEpsilon) == (Math.Abs(ends.Entry.X - ends.Exit.X) <= GrooveMillConverter.AxisEpsilon))
             {
                 return null; // unresolvable, diagonal or degenerate
             }
@@ -94,16 +95,15 @@ namespace XncOptimizerUI.Services.Xnc
                 start.GetXValue()!, start.GetYValue()!, start.GetDpValue(),
                 line.GetXValue()!, line.GetYValue()!, line.GetDpValue(),
                 start.GetInValue(), start.GetOutValue(), start.GetSxyValue(), start.GetFwdValue(), start.GetCValue(), start.GetCommentValue(),
-                ends.Ax, ends.Ay, ends.Bx, ends.By));
+                ends.Entry, ends.Exit));
         }
 
         /// <summary>The pass's entry and exit, or <c>null</c> when they don't resolve to numbers.</summary>
-        private static (double Ax, double Ay, double Bx, double By)? TryReadEnds(XElement start, XElement line, XncSymbolTable symbols)
+        private static (Vec2 Entry, Vec2 Exit)? TryReadEnds(XElement start, XElement line, XncSymbolTable symbols)
         {
             try
             {
-                return (EvalXnc(start.GetXValue(), symbols), EvalXnc(start.GetYValue(), symbols),
-                        EvalXnc(line.GetXValue(), symbols), EvalXnc(line.GetYValue(), symbols));
+                return (XncMillElements.ReadPoint(start, symbols), XncMillElements.ReadPoint(line, symbols));
             }
             catch (Exception)
             {
@@ -138,7 +138,7 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var order = new List<(int, bool)> { (0, false) };
             var remaining = Enumerable.Range(1, passes.Count - 1).ToList();
-            var (currentX, currentY) = (passes[0].ExitX, passes[0].ExitY);
+            var current = passes[0].Exit;
 
             while (remaining.Count > 0)
             {
@@ -149,8 +149,8 @@ namespace XncOptimizerUI.Services.Xnc
                 for (var r = 0; r < remaining.Count; r++)
                 {
                     var pass = passes[remaining[r]];
-                    var forward = SquaredDistance(currentX, currentY, pass.EntryX, pass.EntryY);
-                    var backward = SquaredDistance(currentX, currentY, pass.ExitX, pass.ExitY);
+                    var forward = current.SquaredDistanceTo(pass.Entry);
+                    var backward = current.SquaredDistanceTo(pass.Exit);
 
                     if (forward < bestDistance)
                     {
@@ -167,7 +167,7 @@ namespace XncOptimizerUI.Services.Xnc
 
                 order.Add((remaining[bestPosition], bestReversed));
                 remaining.RemoveAt(bestPosition);
-                (currentX, currentY) = bestReversed ? (chosen.EntryX, chosen.EntryY) : (chosen.ExitX, chosen.ExitY);
+                current = bestReversed ? chosen.Entry : chosen.Exit;
             }
 
             return order;

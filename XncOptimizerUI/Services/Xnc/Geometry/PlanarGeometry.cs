@@ -61,6 +61,29 @@ namespace XncOptimizerUI.Services.Xnc.Geometry
             return [basePoint + (normal * half), basePoint - (normal * half)];
         }
 
+        /// <summary>
+        /// Centre of a radius-defined arc (<c>&lt;ma&gt;</c>) from <paramref name="start"/> to
+        /// <paramref name="end"/>: on the right normal of the chord for a <paramref name="clockwise"/>
+        /// (<c>dir="true"</c>) arc, on the left one otherwise. For the closed-circle-in-two-half-arcs
+        /// case the chord equals the diameter and the centre is the chord midpoint either way.
+        /// <c>null</c> when the chord is degenerate or longer than the diameter.
+        /// </summary>
+        public static Vec2? ArcCentreFromChord(Vec2 start, Vec2 end, double radius, bool clockwise)
+        {
+            var chord = start.DistanceTo(end);
+
+            if (chord <= Tolerance || chord > (2d * radius) + Tolerance)
+            {
+                return null;
+            }
+
+            var halfChord = chord / 2d;
+            var offset = Math.Sqrt(Math.Max(0d, (radius * radius) - (halfChord * halfChord)));
+            var perpendicular = new Vec2(-(end.Y - start.Y) / chord, (end.X - start.X) / chord);
+
+            return Vec2.Midpoint(start, end) + (perpendicular * ((clockwise ? 1d : -1d) * offset));
+        }
+
         /// <summary>Distance from <paramref name="p"/> to the segment <paramref name="a"/>-<paramref name="b"/>.</summary>
         public static double DistanceToSegment(Vec2 p, Vec2 a, Vec2 b)
         {

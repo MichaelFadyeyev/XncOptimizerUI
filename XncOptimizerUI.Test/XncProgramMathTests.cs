@@ -142,40 +142,5 @@ namespace XncOptimizerUI.Test
         {
             Assert.That(XncProgramMath.ParseDirSign(raw), Is.EqualTo(expected));
         }
-
-        [TestCase(1, 5, 8.660254)]
-        [TestCase(-1, 5, -8.660254)]
-        public void TryReconstructArcCentre_PlacesCentreOnDirSide(int dirSign, double expectedX, double expectedY)
-        {
-            var found = XncProgramMath.TryReconstructArcCentre(0, 0, 10, 0, 10, dirSign, out var cx, out var cy);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(found, Is.True);
-                Assert.That(cx, Is.EqualTo(expectedX).Within(1e-6));
-                Assert.That(cy, Is.EqualTo(expectedY).Within(1e-6));
-            });
-        }
-
-        [TestCase(1)]
-        [TestCase(-1)]
-        public void TryReconstructArcCentre_HalfCircleCentreIsChordMidpoint(int dirSign)
-        {
-            var found = XncProgramMath.TryReconstructArcCentre(0, 0, 10, 0, 5, dirSign, out var cx, out var cy);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(found, Is.True);
-                Assert.That(cx, Is.EqualTo(5).Within(1e-9));
-                Assert.That(cy, Is.EqualTo(0).Within(1e-9));
-            });
-        }
-
-        [TestCase(0, 0, 10, 0, 4.9, Description = "chord longer than the diameter")]
-        [TestCase(3, 3, 3, 3, 5, Description = "zero chord")]
-        public void TryReconstructArcCentre_Impossible_ReturnsFalse(double sx, double sy, double ex, double ey, double radius)
-        {
-            Assert.That(XncProgramMath.TryReconstructArcCentre(sx, sy, ex, ey, radius, 1, out _, out _), Is.False);
-        }
     }
 }

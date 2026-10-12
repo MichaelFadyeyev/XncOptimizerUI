@@ -131,7 +131,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             var radius = Math.Clamp(rectangle.CornerRadius, 0d, Math.Min(halfLength, halfWidth));
             var counterClockwise = MillShapeGeometry.RoundedRectangle(halfLength, halfWidth, radius)
-                .Select(p => MillShapeGeometry.Place(p, ToVec(rectangle.Origin), rectangle.Angle))
+                .Select(p => MillShapeGeometry.Place(p, rectangle.Origin.ToVec2(), rectangle.Angle))
                 .ToList();
 
             var travel = Orient(counterClockwise, true, rectangle.Forward, isRectangleOrEllipse: true);
@@ -155,7 +155,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             var counterClockwise = (Math.Abs(ellipse.Length - ellipse.Width) <= Tolerance
                     ? MillShapeGeometry.Circle(ellipse.Length)
                     : MillShapeGeometry.EllipseChords(ellipse.Length, ellipse.Width, EllipseSegments))
-                .Select(p => MillShapeGeometry.Place(p, ToVec(ellipse.Center), ellipse.Angle))
+                .Select(p => MillShapeGeometry.Place(p, ellipse.Center.ToVec2(), ellipse.Angle))
                 .ToList();
 
             var travel = Orient(counterClockwise, true, ellipse.Forward, isRectangleOrEllipse: true);
@@ -166,15 +166,15 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         private static List<Primitive> AuthoredPrimitives(XncMillingContour contour)
         {
             var primitives = new List<Primitive>(contour.Segments.Count);
-            var current = ToVec(contour.Entry);
+            var current = contour.Entry.ToVec2();
 
             foreach (var segment in contour.Segments)
             {
-                var end = ToVec(segment.End);
+                var end = segment.End.ToVec2();
 
                 if (segment is XncArcSegment arc && arc.Radius > Tolerance)
                 {
-                    primitives.Add(Primitive.Arc(current, end, ToVec(arc.Center), arc.Radius, arc.Clockwise));
+                    primitives.Add(Primitive.Arc(current, end, arc.Center.ToVec2(), arc.Radius, arc.Clockwise));
                 }
                 else if (current.DistanceTo(end) > Tolerance)
                 {
@@ -374,8 +374,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 ? clamped with { X = direction.X > 0d ? maxX : minX }
                 : clamped with { Y = direction.Y > 0d ? maxY : minY };
         }
-
-        private static Vec2 ToVec(XncPoint point) => new(point.X, point.Y);
 
         #endregion
     }

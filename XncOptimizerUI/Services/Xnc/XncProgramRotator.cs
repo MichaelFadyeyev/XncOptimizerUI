@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
+using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Xnc
@@ -174,14 +175,14 @@ namespace XncOptimizerUI.Services.Xnc
 
         private static string AlongAttributeOf(string edgeTag) => edgeTag is BoreTop or BoreBottom ? "x" : "y";
 
-        private static double AlongValueOf(string edgeTag, Point point) => edgeTag is BoreTop or BoreBottom ? point.X : point.Y;
+        private static double AlongValueOf(string edgeTag, Vec2 point) => edgeTag is BoreTop or BoreBottom ? point.X : point.Y;
 
-        private static Point EdgePoint(string edgeTag, double along, double dx, double dy) => edgeTag switch
+        private static Vec2 EdgePoint(string edgeTag, double along, double dx, double dy) => edgeTag switch
         {
-            BoreTop => new Point(along, 0d),
-            BoreBottom => new Point(along, dy),
-            BoreLeft => new Point(0d, along),
-            _ => new Point(dx, along),
+            BoreTop => new Vec2(along, 0d),
+            BoreBottom => new Vec2(along, dy),
+            BoreLeft => new Vec2(0d, along),
+            _ => new Vec2(dx, along),
         };
 
         #endregion
@@ -193,24 +194,24 @@ namespace XncOptimizerUI.Services.Xnc
         // vector turns with the part; when it would point backwards the array restarts from its
         // last hole so `as` stays positive.
 
-        private static Point? ReadFaceArrayStep(XElement bore, RotationContext context)
+        private static Vec2? ReadFaceArrayStep(XElement bore, RotationContext context)
         {
             if (ReadArrayStepLength(bore, context) is not { } length)
             {
                 return null;
             }
 
-            return IsVerticalArray(bore) ? new Point(0d, length) : new Point(length, 0d);
+            return IsVerticalArray(bore) ? new Vec2(0d, length) : new Vec2(length, 0d);
         }
 
-        private static Point? ReadEdgeArrayStep(XElement bore, string tag, RotationContext context)
+        private static Vec2? ReadEdgeArrayStep(XElement bore, string tag, RotationContext context)
         {
             if (IsVerticalArray(bore) || ReadArrayStepLength(bore, context) is not { } length)
             {
                 return null;
             }
 
-            return AlongAttributeOf(tag) == "x" ? new Point(length, 0d) : new Point(0d, length);
+            return AlongAttributeOf(tag) == "x" ? new Vec2(length, 0d) : new Vec2(0d, length);
         }
 
         private static double? ReadArrayStepLength(XElement bore, RotationContext context)
@@ -234,7 +235,7 @@ namespace XncOptimizerUI.Services.Xnc
         /// Rotates an array's first hole and step; a step that would point backwards (negative
         /// component) is flipped and the array restarts from its last hole.
         /// </summary>
-        private static (Point Start, Point? Step) RotateArray(Point start, Point? step, int count, Frame frame)
+        private static (Vec2 Start, Vec2? Step) RotateArray(Vec2 start, Vec2? step, int count, Frame frame)
         {
             var rotatedStart = frame.RotatePoint(start);
 
@@ -251,12 +252,12 @@ namespace XncOptimizerUI.Services.Xnc
             }
 
             var span = count - 1;
-            var lastHole = new Point(rotatedStart.X + (span * rotatedStep.X), rotatedStart.Y + (span * rotatedStep.Y));
+            var lastHole = rotatedStart + (rotatedStep * span);
 
-            return (lastHole, new Point(-rotatedStep.X, -rotatedStep.Y));
+            return (lastHole, rotatedStep * -1d);
         }
 
-        private static void WriteFaceArrayStep(XElement bore, Point newStep, Point oldStep)
+        private static void WriteFaceArrayStep(XElement bore, Vec2 newStep, Vec2 oldStep)
         {
             bore.SetAttributeValue("av", newStep.Y != 0d ? "true" : "false");
             SetNumber(bore, "as", newStep.X + newStep.Y, oldStep.X + oldStep.Y);
@@ -366,7 +367,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         #region Attribute writing
 
-        private static void WritePoint(XElement element, string xAttribute, string yAttribute, Point value, Point original)
+        private static void WritePoint(XElement element, string xAttribute, string yAttribute, Vec2 value, Vec2 original)
         {
             SetNumber(element, xAttribute, value.X, original.X);
             SetNumber(element, yAttribute, value.Y, original.Y);
@@ -408,15 +409,13 @@ namespace XncOptimizerUI.Services.Xnc
 
         #region Frame and context
 
-        private readonly record struct Point(double X, double Y);
-
         /// <summary>Original part size and the number of clockwise quarter steps to apply.</summary>
         private readonly record struct Frame(double Dx, double Dy, int Steps)
         {
             public bool IsOdd => Steps % 2 == 1;
 
             /// <summary>Applies the steps to a position; each step: <c>(x, y) → (dy - y, x)</c>, then the size swaps.</summary>
-            public Point RotatePoint(Point point)
+            public Vec2 RotatePoint(Vec2 point)
             {
                 var (x, y, dx, dy) = (point.X, point.Y, Dx, Dy);
 
@@ -426,11 +425,11 @@ namespace XncOptimizerUI.Services.Xnc
                     (dx, dy) = (dy, dx);
                 }
 
-                return new Point(x, y);
+                return new Vec2(x, y);
             }
 
             /// <summary>Applies the steps to a direction; each step: <c>(vx, vy) → (-vy, vx)</c>.</summary>
-            public Point RotateVector(Point vector)
+            public Vec2 RotateVector(Vec2 vector)
             {
                 var (x, y) = (vector.X, vector.Y);
 
@@ -439,7 +438,7 @@ namespace XncOptimizerUI.Services.Xnc
                     (x, y) = (-y, x);
                 }
 
-                return new Point(x, y);
+                return new Vec2(x, y);
             }
         }
 
@@ -475,11 +474,11 @@ namespace XncOptimizerUI.Services.Xnc
                     expression ?? throw new XncProgramFormatException($"Missing value for {where}."),
                     symbols);
 
-            public Point ReadPoint(XElement element, string xAttribute, string yAttribute)
+            public Vec2 ReadPoint(XElement element, string xAttribute, string yAttribute)
             {
                 var tag = element.Name.LocalName;
 
-                return new Point(
+                return new Vec2(
                     Eval(element.Attribute(xAttribute)?.Value, $"<{tag}> @{xAttribute}"),
                     Eval(element.Attribute(yAttribute)?.Value, $"<{tag}> @{yAttribute}"));
             }

@@ -1,8 +1,8 @@
 using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
+using XncOptimizerUI.Services.Xnc.Geometry;
 using static XncOptimizerUI.Services.Xnc.Conversions.ElementOutcome;
-using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Xnc.Conversions
 {
@@ -33,7 +33,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         public const double CutterDiameter = 6.0;
 
         /// <summary>Slack (mm) when matching arc centres and radii.</summary>
-        private const double GeomTolerance = 1e-3;
+        private const double GeomTolerance = PlanarGeometry.Tolerance;
 
         public static ConversionStats BoresToMills(XElement program, bool useEllipse)
         {
@@ -73,7 +73,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
 
             context.Replacing(boreToolName);
 
-            var centre = (X: context.Eval(bore.GetXValue()), Y: context.Eval(bore.GetYValue()));
+            var centre = context.Point(bore);
             var depth = bore.GetDpValue() ?? "0";
             var radius = diameter / 2d;
             var millTool = ConversionTools.Ensure(bore, CutterDiameter, XncToolKinds.Mill, context.Tools);
@@ -91,7 +91,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         }
 
         /// <summary>A clockwise (<c>fwd="true"</c>) circle as an <c>&lt;me&gt;</c> with both semi-axes = <paramref name="radius"/>.</summary>
-        private static XElement RoundEllipse((double X, double Y) centre, double radius, string depth, string positionCode, string toolName) =>
+        private static XElement RoundEllipse(Vec2 centre, double radius, string depth, string positionCode, string toolName) =>
             new(XncTags.Ellipse,
                 new XAttribute("x", XmlConvert.ToString(centre.X)),
                 new XAttribute("y", XmlConvert.ToString(centre.Y)),
@@ -110,7 +110,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         /// A circle declared counter-clockwise on screen from its top: <c>&lt;ms&gt;</c> at the top, then
         /// four <c>&lt;mac dir="false"&gt;</c> quarter arcs to the left, bottom, right and back to the top.
         /// </summary>
-        private static IEnumerable<XElement> RoundContour((double X, double Y) centre, double radius, string depth, string positionCode, string toolName)
+        private static IEnumerable<XElement> RoundContour(Vec2 centre, double radius, string depth, string positionCode, string toolName)
         {
             yield return new XElement(XncTags.ContourStart,
                 new XAttribute("x", XmlConvert.ToString(centre.X)),
@@ -123,19 +123,19 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 new XAttribute("c", positionCode),
                 new XAttribute("name", toolName));
 
-            (double X, double Y)[] quarterEnds =
+            Vec2[] quarterEnds =
             [
-                (centre.X - radius, centre.Y),
-                (centre.X, centre.Y + radius),
-                (centre.X + radius, centre.Y),
-                (centre.X, centre.Y - radius),
+                new(centre.X - radius, centre.Y),
+                new(centre.X, centre.Y + radius),
+                new(centre.X + radius, centre.Y),
+                new(centre.X, centre.Y - radius),
             ];
 
-            foreach (var (x, y) in quarterEnds)
+            foreach (var end in quarterEnds)
             {
                 yield return new XElement(XncTags.CentreArc,
-                    new XAttribute("x", XmlConvert.ToString(x)),
-                    new XAttribute("y", XmlConvert.ToString(y)),
+                    new XAttribute("x", XmlConvert.ToString(end.X)),
+                    new XAttribute("y", XmlConvert.ToString(end.Y)),
                     new XAttribute("cx", XmlConvert.ToString(centre.X)),
                     new XAttribute("cy", XmlConvert.ToString(centre.Y)),
                     new XAttribute("dp", depth),
@@ -158,11 +158,10 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return false;
             }
 
-            var x = context.Eval(ellipse.GetXValue());
-            var y = context.Eval(ellipse.GetYValue());
+            var centre = context.Point(ellipse);
             var depth = context.Eval(ellipse.GetDpValue());
 
-            ReplaceWithBore(ellipse, [], x, y, depth, diameter, context);
+            ReplaceWithBore(ellipse, [], centre, depth, diameter, context);
 
             return true;
         }
@@ -174,11 +173,11 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 return false;
             }
 
-            var entry = (X: context.Eval(start.GetXValue()), Y: context.Eval(start.GetYValue()));
+            var entry = context.Point(start);
 
             if (FindSharedCircle(entry, segments, context) is not { } circle
-                || Math.Abs(Hypot(circle.Cx, circle.Cy, entry.X, entry.Y) - circle.Radius) > GeomTolerance // entry off the circle
-                || Hypot(circle.EndX, circle.EndY, entry.X, entry.Y) > GeomTolerance // not closed onto the entry
+                || Math.Abs(circle.Centre.DistanceTo(entry) - circle.Radius) > GeomTolerance // entry off the circle
+                || circle.End.DistanceTo(entry) > GeomTolerance // not closed onto the entry
                 || circle.Radius * 2d <= MinDiameter)
             {
                 return false;
@@ -190,7 +189,7 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 .Select(context.Eval)
                 .Aggregate(context.Eval(start.GetDpValue()), Math.Max);
 
-            ReplaceWithBore(start, segments, circle.Cx, circle.Cy, depth, circle.Radius * 2d, context);
+            ReplaceWithBore(start, segments, circle.Centre, depth, circle.Radius * 2d, context);
 
             return true;
         }
@@ -200,25 +199,25 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         /// <c>null</c> when an arc ends off its own circle, an arc disagrees with the first, or a
         /// radius arc cannot be reconstructed.
         /// </summary>
-        private static (double Cx, double Cy, double Radius, double EndX, double EndY)? FindSharedCircle(
-            (double X, double Y) entry, IReadOnlyList<XElement> arcs, ConversionContext context)
+        private static (Vec2 Centre, double Radius, Vec2 End)? FindSharedCircle(
+            Vec2 entry, IReadOnlyList<XElement> arcs, ConversionContext context)
         {
-            (double Cx, double Cy, double Radius)? shared = null;
+            (Vec2 Centre, double Radius)? shared = null;
             var current = entry;
 
             foreach (var arc in arcs)
             {
-                var end = (X: context.Eval(arc.GetXValue()), Y: context.Eval(arc.GetYValue()));
+                var end = context.Point(arc);
 
                 if (ArcCircle(arc, current, end, context) is not { } circle
-                    || Math.Abs(Hypot(circle.Cx, circle.Cy, end.X, end.Y) - circle.Radius) > GeomTolerance)
+                    || Math.Abs(circle.Centre.DistanceTo(end) - circle.Radius) > GeomTolerance)
                 {
                     return null;
                 }
 
                 shared ??= circle;
 
-                if (Hypot(circle.Cx, circle.Cy, shared.Value.Cx, shared.Value.Cy) > GeomTolerance
+                if (circle.Centre.DistanceTo(shared.Value.Centre) > GeomTolerance
                     || Math.Abs(circle.Radius - shared.Value.Radius) > GeomTolerance)
                 {
                     return null;
@@ -227,39 +226,37 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
                 current = end;
             }
 
-            return shared is { } s && s.Radius > GeomTolerance ? (s.Cx, s.Cy, s.Radius, current.X, current.Y) : null;
+            return shared is { } s && s.Radius > GeomTolerance ? (s.Centre, s.Radius, current) : null;
         }
 
         /// <summary>Centre and radius of one arc from <paramref name="start"/>: given by <c>&lt;mac&gt;</c>, reconstructed from the chord for <c>&lt;ma&gt;</c>.</summary>
-        private static (double Cx, double Cy, double Radius)? ArcCircle(
-            XElement arc, (double X, double Y) start, (double X, double Y) end, ConversionContext context)
+        private static (Vec2 Centre, double Radius)? ArcCircle(XElement arc, Vec2 start, Vec2 end, ConversionContext context)
         {
             if (arc.Name.LocalName == XncTags.CentreArc)
             {
-                var cx = context.Eval(arc.GetCxValue());
-                var cy = context.Eval(arc.GetCyValue());
+                var centre = new Vec2(context.Eval(arc.GetCxValue()), context.Eval(arc.GetCyValue()));
 
-                return (cx, cy, Hypot(cx, cy, start.X, start.Y));
+                return (centre, centre.DistanceTo(start));
             }
 
             var radius = context.Eval(arc.GetRValue());
 
-            return TryReconstructArcCentre(start.X, start.Y, end.X, end.Y, radius, ParseDirSign(arc.GetDirValue()), out var centreX, out var centreY)
-                ? (centreX, centreY, radius)
+            return PlanarGeometry.ArcCentreFromChord(start, end, radius, XncProgramMath.ParseDirSign(arc.GetDirValue()) > 0) is { } arcCentre
+                ? (arcCentre, radius)
                 : null;
         }
 
         /// <summary>Inserts a face bore with a <c>Bore&lt;diameter&gt;</c> tool in place of the mill and its segments.</summary>
         private static void ReplaceWithBore(
-            XElement mill, IReadOnlyList<XElement> segments, double x, double y, double depth, double diameter, ConversionContext context)
+            XElement mill, IReadOnlyList<XElement> segments, Vec2 centre, double depth, double diameter, ConversionContext context)
         {
             context.Replacing(mill.GetNameValue());
 
             var boreTool = ConversionTools.Ensure(mill, diameter, XncToolKinds.Bore, context.Tools);
 
             mill.AddBeforeSelf(new XElement(XncTags.FaceBore,
-                new XAttribute("x", XmlConvert.ToString(x)),
-                new XAttribute("y", XmlConvert.ToString(y)),
+                new XAttribute("x", XmlConvert.ToString(centre.X)),
+                new XAttribute("y", XmlConvert.ToString(centre.Y)),
                 new XAttribute("dp", XmlConvert.ToString(depth)),
                 new XAttribute("ac", "1"),
                 new XAttribute("av", "false"),

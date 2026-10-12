@@ -90,10 +90,8 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var radius = EvalXnc(ma.GetRValue(), symbols);
 
-            return TryReconstructArcCentre(
-                    start.X, start.Y, end.X, end.Y, radius, ParseDirSign(ma.GetDirValue()),
-                    out var centreX, out var centreY)
-                ? Primitive.Arc(start, end, new Vec2(centreX, centreY), radius, IsClockwiseDir(ma))
+            return PlanarGeometry.ArcCentreFromChord(start, end, radius, IsClockwiseDir(ma)) is { } centre
+                ? Primitive.Arc(start, end, centre, radius, IsClockwiseDir(ma))
                 : null;
         }
 

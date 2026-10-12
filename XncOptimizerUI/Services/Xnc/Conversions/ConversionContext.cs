@@ -1,5 +1,7 @@
 using System.Xml.Linq;
+using XncOptimizerUI.Extensions;
 using XncOptimizerUI.Services.Xnc.Batch;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.Services.Xnc.Conversions
 {
@@ -64,6 +66,9 @@ namespace XncOptimizerUI.Services.Xnc.Conversions
         public static ConversionContext Of(XElement program) => new(program);
 
         public double Eval(string? expression) => XncProgramMath.EvalXnc(expression, Symbols);
+
+        /// <summary>The element's <c>x</c>/<c>y</c> point.</summary>
+        public Vec2 Point(XElement element) => new(Eval(element.GetXValue()), Eval(element.GetYValue()));
 
         /// <summary>Records the tool of a replaced element, if it names one.</summary>
         public void Replacing(string? toolName)
