@@ -1,4 +1,3 @@
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -14,7 +13,6 @@ namespace XncOptimizerUI.Test
         [TestCase(8.1, true)]
         public void DrawMills_stylesStartMarkerCrossLinesBySharedEightMillimetreThreshold(double diameter, bool dashed)
         {
-            var canvas = new Canvas();
             var program = new XncProgram
             {
                 Dx = 100,
@@ -52,9 +50,9 @@ namespace XncOptimizerUI.Test
                 Lines: boreBrushes);
             var layout = new FaceLayout(0, 0, 100, 80, 1, 10, 5);
 
-            MillPreviewRenderer.DrawMills(canvas, [program], layout, millBrushes);
+            var shapes = MillPreviewRenderer.DrawMills([program], layout, millBrushes);
 
-            var lines = canvas.Children.OfType<Line>().ToArray();
+            var lines = shapes.OfType<Line>().ToArray();
             Assert.Multiple(() =>
             {
                 Assert.That(lines.Length, Is.EqualTo(4));

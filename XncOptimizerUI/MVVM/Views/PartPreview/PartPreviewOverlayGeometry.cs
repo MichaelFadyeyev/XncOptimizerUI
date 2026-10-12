@@ -1,173 +1,53 @@
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
-    /// Band-edge and rectangle-placement geometry shared by <see cref="BorePreviewRenderer"/>
-    /// and <see cref="GroovePreviewRenderer"/>: both draw a "true" shape on one plane plus a
-    /// depth/extent rectangle projected onto the four edge bands or onto the Face rectangle,
-    /// anchored to whichever edge is nearest the Face when <c>side</c> is true, else the
-    /// far/outer edge.
+    /// Projection geometry shared by the bore and groove overlays, in canvas px: both draw a
+    /// "true" shape on one plane plus a depth/extent rectangle projected onto the four side bands
+    /// or onto the Face rectangle.
     /// </summary>
     internal static class PartPreviewOverlayGeometry
     {
-        internal const double DashedCrossLineDiameterMm = 8d;
-
         /// <summary>
-        /// Sets <paramref name="shape"/>'s stroke thickness and, when <paramref name="dashLengthPx"/>
-        /// is given, a dash/gap pattern of that length. WPF expresses <c>StrokeDashArray</c> as
-        /// multiples of <c>StrokeThickness</c>, so the dash length is divided by
-        /// <paramref name="thickness"/> to keep call sites in plain px/mm.
+        /// One side-band rectangle spanning <paramref name="axisLowPx"/>..<paramref name="axisHighPx"/>
+        /// along the band's own length, plus its center line. <paramref name="horizontal"/> selects
+        /// the Top/Bottom band pair (spanning the part's X axis) vs the Left/Right pair (spanning Y);
+        /// <paramref name="near"/> selects which of that pair (Top/Left = true). Across the band the
+        /// rectangle is <paramref name="perpendicularPx"/> deep, starting flush at the band's inner
+        /// edge when <paramref name="fromInner"/> (a front-side program), else at its outer edge - a
+        /// bore's drilling depth, or a front-plane groove's <c>dp</c> into the band.
         /// </summary>
-        internal static void SetStroke(Shape shape, double thickness, double? dashLengthPx = null)
-        {
-            shape.StrokeThickness = thickness;
-            shape.StrokeDashArray = dashLengthPx is double d
-                ? new DoubleCollection { d / thickness, d / thickness }
-                : null;
-        }
-
-        /// <summary>
-        /// Draws the crossed centre lines of a circular symbol (bore, mill start marker) as four
-        /// arms of <paramref name="armPx"/> running outward from (<paramref name="cx"/>,
-        /// <paramref name="cy"/>). Starting every arm at the centre keeps a dashed pattern
-        /// symmetric about it (a dash always crosses the centre) instead of drifting with the
-        /// full line's length.
-        /// </summary>
-        internal static void AddCrossArms(Action<double, double, double, double> addLine, double cx, double cy, double armPx)
-        {
-            addLine(cx, cy, cx + armPx, cy);
-            addLine(cx, cy, cx - armPx, cy);
-            addLine(cx, cy, cx, cy + armPx);
-            addLine(cx, cy, cx, cy - armPx);
-        }
-
-        /// <summary>
-        /// Makes every shape in <paramref name="clickTargets"/> toggle the selection of one
-        /// machining element: each click switches all of its <paramref name="stroked"/> shapes to
-        /// <paramref name="selectedBrush"/> or back to each shape's own normal brush. Selection is
-        /// local to the current render pass.
-        /// </summary>
-        internal static void AttachClickToggle(
-            IEnumerable<Shape> clickTargets,
-            IReadOnlyList<(Shape Shape, Brush Normal)> stroked,
-            Brush selectedBrush)
-        {
-            var selected = false;
-
-            void OnClick(object sender, MouseButtonEventArgs e)
-            {
-                selected = !selected;
-
-                foreach (var (shape, normal) in stroked)
-                {
-                    shape.Stroke = selected ? selectedBrush : normal;
-                }
-
-                e.Handled = true;
-            }
-
-            foreach (var shape in clickTargets)
-            {
-                shape.MouseLeftButtonDown += OnClick;
-            }
-        }
-
-        /// <summary>
-        /// Returns the near/far pixel edges of one Top/Bottom/Left/Right band and the
-        /// near-to-far direction sign (-1 for Top/Left, +1 for Bottom/Right).
-        /// </summary>
-        internal static (double NearEdge, double FarEdge, double Direction) GetBandEdges(
-            FaceLayout layout, bool horizontal, bool near)
-        {
-            var direction = near ? -1d : 1d;
-            var nearEdge = horizontal
-                ? (near ? layout.OriginY - layout.Gap : layout.OriginY + layout.FaceHeight + layout.Gap)
-                : (near ? layout.OriginX - layout.Gap : layout.OriginX + layout.FaceWidth + layout.Gap);
-            var farEdge = nearEdge + (direction * layout.BandThickness);
-
-            return (nearEdge, farEdge, direction);
-        }
-
-        /// <summary>
-        /// Draws one edge-band rectangle spanning <paramref name="axisLowPx"/>..<paramref name="axisHighPx"/>
-        /// along the band's own length axis, plus its center line. <paramref name="horizontal"/>
-        /// selects the Top/Bottom band pair (band spans the part's X axis) vs the Left/Right pair
-        /// (spans Y); <paramref name="near"/> selects which of that pair (Top/Left = true,
-        /// Bottom/Right = false). The rectangle's <paramref name="perpendicularPx"/> extent starts
-        /// flush at the band edge nearest the Face when <paramref name="side"/> is true (front), or
-        /// the band's far/outer edge when false (back), and grows toward the other edge - a bore's
-        /// drilling depth, or a front-plane groove's <c>dp</c> into the band.
-        /// </summary>
-        internal static void AddSideRectangleRange(
-            Action<Shape, bool> addShape,
-            Action<double, double, double, double> addCenterLine,
+        public static (PxRect Rect, PxLine CentreLine) SideRectangleRange(
             double axisLowPx,
             double axisHighPx,
             double perpendicularPx,
             double overshootPx,
             FaceLayout layout,
-            bool side,
+            bool fromInner,
             bool horizontal,
             bool near)
         {
-            var (nearEdge, farEdge, direction) = GetBandEdges(layout, horizontal, near);
+            var (start, direction) = layout.Band(horizontal, near).Anchor(fromInner);
+            var end = start + (direction * perpendicularPx);
+            var depthLow = Math.Min(start, end);
+            var depth = Math.Abs(end - start);
+            var rect = horizontal
+                ? new PxRect(axisLowPx, depthLow, axisHighPx - axisLowPx, depth)
+                : new PxRect(depthLow, axisLowPx, depth, axisHighPx - axisLowPx);
 
-            var start = side ? nearEdge : farEdge;
-            var dir = side ? direction : -direction;
-            var end = start + (dir * perpendicularPx);
-            var lo = Math.Min(start, end);
-
-            double left, top, width, height;
-
-            if (horizontal)
-            {
-                width = axisHighPx - axisLowPx;
-                height = Math.Abs(end - start);
-                left = axisLowPx;
-                top = lo;
-            }
-            else
-            {
-                height = axisHighPx - axisLowPx;
-                width = Math.Abs(end - start);
-                top = axisLowPx;
-                left = lo;
-            }
-
-            var rect = new Rectangle { Width = width, Height = height };
-            Canvas.SetLeft(rect, left);
-            Canvas.SetTop(rect, top);
-            addShape(rect, true);
-
-            // Center line runs along the depth/perpendicular axis, overshooting the rectangle
-            // by overshootPx at each end - not along the band's length axis.
-            if (horizontal)
-            {
-                var midX = left + (width / 2);
-                addCenterLine(midX, top - overshootPx, midX, top + height + overshootPx);
-            }
-            else
-            {
-                var midY = top + (height / 2);
-                addCenterLine(left - overshootPx, midY, left + width + overshootPx, midY);
-            }
+            return (rect, DepthCentreLine(rect, horizontal, overshootPx));
         }
 
         /// <summary>
-        /// Draws one Face-rectangle projection spanning <paramref name="axisLowPx"/>..<paramref name="axisHighPx"/>
-        /// along the edge's own length axis, plus its center line. Always starts flush at the
-        /// physical Face edge given by <paramref name="surface"/> and grows inward toward the
-        /// panel center by <paramref name="perpendicularPx"/> - a bore's drilling depth, or an
-        /// edge-plane groove's <c>dp</c> - since that edge is fixed regardless of <c>side</c>.
+        /// One Face-rectangle projection spanning <paramref name="axisLowPx"/>..<paramref name="axisHighPx"/>
+        /// along the edge's own length, plus its center line. Always starts flush at the physical
+        /// Face edge given by <paramref name="surface"/> and grows inward toward the panel center by
+        /// <paramref name="perpendicularPx"/> - a bore's drilling depth, or an edge-plane groove's
+        /// <c>dp</c> - since that edge is fixed regardless of the program's side.
         /// </summary>
-        internal static void AddFaceRectangleRange(
-            Action<Shape, bool> addShape,
-            Action<double, double, double, double> addCenterLine,
+        public static (PxRect Rect, PxLine CentreLine) FaceRectangleRange(
             double axisLowPx,
             double axisHighPx,
             double perpendicularPx,
@@ -176,42 +56,57 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             BoreSurface surface,
             bool horizontal)
         {
-            double left, top, width, height;
+            var rect = horizontal
+                ? new PxRect(
+                    axisLowPx,
+                    surface == BoreSurface.Top ? layout.OriginY : layout.OriginY + layout.FaceHeight - perpendicularPx,
+                    axisHighPx - axisLowPx,
+                    perpendicularPx)
+                : new PxRect(
+                    surface == BoreSurface.Left ? layout.OriginX : layout.OriginX + layout.FaceWidth - perpendicularPx,
+                    axisLowPx,
+                    perpendicularPx,
+                    axisHighPx - axisLowPx);
 
+            return (rect, DepthCentreLine(rect, horizontal, overshootPx));
+        }
+
+        /// <summary>
+        /// The center line of a depth rectangle: through its middle along the depth axis (across
+        /// a horizontal band's length), overshooting the rectangle by <paramref name="overshootPx"/>
+        /// at each end.
+        /// </summary>
+        public static PxLine DepthCentreLine(PxRect rect, bool horizontal, double overshootPx)
+        {
             if (horizontal)
             {
-                width = axisHighPx - axisLowPx;
-                height = perpendicularPx;
-                left = axisLowPx;
-                top = surface == BoreSurface.Top
-                    ? layout.OriginY
-                    : layout.OriginY + layout.FaceHeight - height;
-            }
-            else
-            {
-                height = axisHighPx - axisLowPx;
-                width = perpendicularPx;
-                top = axisLowPx;
-                left = surface == BoreSurface.Left
-                    ? layout.OriginX
-                    : layout.OriginX + layout.FaceWidth - width;
+                var midX = rect.Left + (rect.Width / 2);
+
+                return new PxLine(midX, rect.Top - overshootPx, midX, rect.Top + rect.Height + overshootPx);
             }
 
-            var rect = new Rectangle { Width = width, Height = height };
-            Canvas.SetLeft(rect, left);
-            Canvas.SetTop(rect, top);
-            addShape(rect, true);
+            var midY = rect.Top + (rect.Height / 2);
 
-            if (horizontal)
-            {
-                var midX = left + (width / 2);
-                addCenterLine(midX, top - overshootPx, midX, top + height + overshootPx);
-            }
-            else
-            {
-                var midY = top + (height / 2);
-                addCenterLine(left - overshootPx, midY, left + width + overshootPx, midY);
-            }
+            return new PxLine(rect.Left - overshootPx, midY, rect.Left + rect.Width + overshootPx, midY);
+        }
+
+        /// <summary>
+        /// The crossed center lines of a circular symbol (bore, mill start marker) as four arms of
+        /// <paramref name="armPx"/> running outward from <paramref name="centre"/>. Starting every
+        /// arm at the centre keeps a dashed pattern symmetric about it (a dash always crosses the
+        /// centre) instead of drifting with the full line's length.
+        /// </summary>
+        public static IReadOnlyList<PxLine> CrossArms(Vec2 centre, double armPx)
+        {
+            var (cx, cy) = centre;
+
+            return
+            [
+                new PxLine(cx, cy, cx + armPx, cy),
+                new PxLine(cx, cy, cx - armPx, cy),
+                new PxLine(cx, cy, cx, cy + armPx),
+                new PxLine(cx, cy, cx, cy - armPx),
+            ];
         }
     }
 }

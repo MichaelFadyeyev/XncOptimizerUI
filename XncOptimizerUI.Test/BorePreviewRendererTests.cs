@@ -1,4 +1,3 @@
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -38,7 +37,6 @@ namespace XncOptimizerUI.Test
 
         private static IReadOnlyList<Line> DrawCrossLines(BoreSurface surface, double diameter)
         {
-            var canvas = new Canvas();
             var program = new XncProgram
             {
                 Tools = [new XncTool { Name = "Drill", Diameter = diameter }],
@@ -56,9 +54,9 @@ namespace XncOptimizerUI.Test
                 CenterLineDashMm: 3);
             var layout = new FaceLayout(0, 0, 100, 100, 1, 10, 5);
 
-            BorePreviewRenderer.DrawBores(canvas, [program], layout, brushes);
+            var shapes = BorePreviewRenderer.DrawBores([program], layout, brushes);
 
-            return canvas.Children.OfType<Line>().Take(4).ToArray();
+            return shapes.OfType<Line>().Take(4).ToArray();
         }
 
     }

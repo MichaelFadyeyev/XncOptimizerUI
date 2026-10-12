@@ -116,13 +116,19 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         double TurnLabelFontSize);
 
     /// <summary>
+    /// How a shape is stroked: <see cref="Thickness"/> px, and dashes and gaps of
+    /// <see cref="DashPx"/> px each, or solid when <c>null</c>.
+    /// </summary>
+    internal readonly record struct LineStyle(double Thickness, double? DashPx = null);
+
+    /// <summary>
     /// Bore/groove styling. <see cref="Thickness2Px"/> is used for circular bore symbols and solid
-    /// groove rectangles; <see cref="Thickness1Px"/> for rectangular bore symbols, bore center
-    /// lines, and every dashed groove line. <see cref="DashLengthPx"/> is the screen-space dash
-    /// length used by dashed groove lines; <see cref="CenterLineDashMm"/> is the model-space dash
-    /// length used by a bore's crossed center lines when its diameter exceeds
-    /// <see cref="PartPreviewOverlayGeometry.DashedCrossLineDiameterMm"/> (scaled to px per draw, since it
-    /// must grow/shrink with zoom).
+    /// groove rectangles (<see cref="Bold"/>); <see cref="Thickness1Px"/> for rectangular bore
+    /// symbols, bore center lines, and every dashed groove line (<see cref="Thin"/>,
+    /// <see cref="Dashed"/>). <see cref="DashLengthPx"/> is the screen-space dash length used by
+    /// dashed groove lines; <see cref="CenterLineDashMm"/> is the model-space dash length of a
+    /// crossed center line (see <see cref="CrossLineDashPx"/>) or a bore's depth center line (see
+    /// <see cref="DepthLineDashPx"/>), scaled to px per draw since it must grow/shrink with zoom.
     /// </summary>
     internal readonly record struct BoreBrushes(
         Brush SideTrue,
@@ -133,7 +139,31 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         double Thickness1Px,
         double CenterLineOvershootMm,
         double DashLengthPx,
-        double CenterLineDashMm);
+        double CenterLineDashMm)
+    {
+        /// <summary>Crossed center lines of a bore or mill start marker stay solid up to this diameter (mm).</summary>
+        public const double DashedCrossLineDiameterMm = 8d;
+
+        /// <summary>A bore's depth center line stays solid up to this depth (mm).</summary>
+        public const double DashedDepthLineMm = 5d;
+
+        /// <summary>Solid, <see cref="Thickness2Px"/> wide.</summary>
+        public LineStyle Bold => new(Thickness2Px);
+
+        /// <summary>Dashed by <see cref="DashLengthPx"/>, <see cref="Thickness1Px"/> wide.</summary>
+        public LineStyle Dashed => new(Thickness1Px, DashLengthPx);
+
+        /// <summary><see cref="Thickness1Px"/> wide, dashed by <paramref name="dashPx"/> when given.</summary>
+        public LineStyle Thin(double? dashPx = null) => new(Thickness1Px, dashPx);
+
+        /// <summary>The dash of the crossed center lines of a <paramref name="diameterMm"/> circle: solid through <see cref="DashedCrossLineDiameterMm"/>.</summary>
+        public double? CrossLineDashPx(double diameterMm, FaceLayout layout) =>
+            diameterMm > DashedCrossLineDiameterMm ? layout.MmToPx(CenterLineDashMm) : null;
+
+        /// <summary>The dash of a bore's depth center line: solid through <see cref="DashedDepthLineMm"/>.</summary>
+        public double? DepthLineDashPx(double depthMm, FaceLayout layout) =>
+            depthMm > DashedDepthLineMm ? layout.MmToPx(CenterLineDashMm) : null;
+    }
 
     /// <summary>Mill styling; <see cref="Lines"/> styles the tool path and start marker like bores.</summary>
     internal readonly record struct MillBrushes(

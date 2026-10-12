@@ -35,9 +35,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             canvas.Children.Add(SurfaceRectangle("Face", layout.FaceRect, palette.Part.Face, palette.Part));
 
-            MillPreviewRenderer.DrawMills(canvas, scene.Programs, layout.Face, palette.Mills);
-            BorePreviewRenderer.DrawBores(canvas, scene.Programs, layout.Face, palette.Bores);
-            GroovePreviewRenderer.DrawGrooves(canvas, scene.Programs, layout.Face, palette.Bores);
+            AddAll(canvas, MillPreviewRenderer.DrawMills(scene.Programs, layout.Face, palette.Mills));
+            AddAll(canvas, BorePreviewRenderer.DrawBores(scene.Programs, layout.Face, palette.Bores));
+            AddAll(canvas, GroovePreviewRenderer.DrawGrooves(scene.Programs, layout.Face, palette.Bores));
 
             if (scene.ConsiderTexture)
             {

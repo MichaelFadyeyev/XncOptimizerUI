@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -45,11 +44,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 Regions.Concat(Strips).Concat(CentreLines).Concat(ToolPaths).Concat(Markers);
         }
 
-        public static void DrawMills(
-            Canvas canvas,
-            IEnumerable<XncProgram> programs,
-            FaceLayout layout,
-            MillBrushes brushes)
+        /// <summary>The shapes of every mill in <paramref name="programs"/>, bottom layer first.</summary>
+        public static IReadOnlyList<UIElement> DrawMills(IEnumerable<XncProgram> programs, FaceLayout layout, MillBrushes brushes)
         {
             var layers = new Layers();
 
@@ -61,10 +57,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 }
             }
 
-            foreach (var element in layers.BottomToTop())
-            {
-                canvas.Children.Add(element);
-            }
+            return [.. layers.BottomToTop()];
         }
 
         /// <summary>Every drawable mill of <paramref name="program"/> with its tool resolved; mills whose tool is unknown or has no diameter are skipped, like bores.</summary>
@@ -91,33 +84,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         {
             var lines = brushes.Lines;
             var sideBrush = program.Side ? lines.SideTrue : lines.SideFalse;
-            var tag = new MillTag(program, mill);
+            var sink = new OverlayShapeSink(new MillTag(program, mill), sideBrush);
             var outline = new Vec2(program.Dx, program.Dy);
             var toolPath = MillPreviewGeometry.ToolPath(path, outline);
-            var diameterPx = path.Diameter * layout.Scale;
-
-            var clickTargets = new List<Shape>();
-            var stroked = new List<(Shape Shape, Brush Normal)>();
-
-            T Add<T>(List<UIElement> layer, T shape, Brush? normalStroke, bool isClickTarget)
-                where T : Shape
-            {
-                shape.Tag = tag;
-                layer.Add(shape);
-
-                if (normalStroke != null)
-                {
-                    shape.Stroke = normalStroke;
-                    stroked.Add((shape, normalStroke));
-                }
-
-                if (isClickTarget)
-                {
-                    clickTargets.Add(shape);
-                }
-
-                return shape;
-            }
+            var diameterPx = layout.MmToPx(path.Diameter);
 
             // 1. Cut-off area, clipped to the Face rectangle. Not clickable: it would swallow
             // clicks meant for the face or the machining drawn over it.
@@ -127,17 +97,17 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 var boundary = ToGeometry(region.Boundary, layout, filled: true);
                 var mode = region.Outside ? GeometryCombineMode.Exclude : GeometryCombineMode.Intersect;
 
-                Add(layers.Regions, new Path
+                sink.Add(layers.Regions, new Path
                 {
                     Data = Geometry.Combine(face, boundary, mode, null),
                     Fill = MillPreviewGeometry.IsThrough(path, program.Dz) ? brushes.ThroughCutOff : brushes.BlindCutOff,
                     IsHitTestVisible = false,
-                }, normalStroke: null, isClickTarget: false);
+                }, stroke: null, isClickTarget: false);
             }
 
             // 2. Swept strip: the tool path stroked one tool diameter wide; round caps make its
             // ends the tool's semicircles.
-            Add(layers.Strips, new Path
+            sink.Add(layers.Strips, new Path
             {
                 Data = ToGeometry(toolPath, layout, filled: false),
                 Stroke = brushes.Face,
@@ -146,40 +116,33 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 StrokeEndLineCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round,
                 Opacity = brushes.StripOpacity,
-            }, normalStroke: null, isClickTarget: true);
+            }, stroke: null, isClickTarget: true);
 
             // 3. Programmed centre line, drawn like the part's own ridges; a back-side mill's in the
             // back-side bore colour.
-            var centreLineBrush = program.Side ? brushes.CentreLine : lines.SideFalse;
-            var centreLine = Add(layers.CentreLines, new Path { Data = ToGeometry(path.Travel, layout, filled: false) }, centreLineBrush, isClickTarget: true);
-            centreLine.StrokeThickness = brushes.CentreLineThickness;
+            sink.Add(layers.CentreLines, new Path
+            {
+                Data = ToGeometry(path.Travel, layout, filled: false),
+                StrokeThickness = brushes.CentreLineThickness,
+            }, stroke: program.Side ? brushes.CentreLine : lines.SideFalse, isClickTarget: true);
 
             // 4. Tool-centre path, dashed like a groove's reference lines.
-            var toolLine = Add(layers.ToolPaths, new Path { Data = ToGeometry(toolPath, layout, filled: false) }, sideBrush, isClickTarget: true);
-            PartPreviewOverlayGeometry.SetStroke(toolLine, lines.Thickness1Px, lines.DashLengthPx);
+            var toolLine = sink.Add(layers.ToolPaths, new Path { Data = ToGeometry(toolPath, layout, filled: false) }, sideBrush, isClickTarget: true);
+            OverlayShapeSink.SetStroke(toolLine, lines.Dashed);
 
             // 5. Start marker: the tool's circle with crossed centre lines, like a face bore.
-            var start = ToPoint(MillPreviewGeometry.StartPoint(toolPath), layout);
-            var radiusPx = diameterPx / 2d;
-            var overshootPx = lines.CenterLineOvershootMm * layout.Scale;
-            var crossDashPx = path.Diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm
-                ? lines.CenterLineDashMm * layout.Scale
-                : (double?)null;
+            var start = layout.ToPx(MillPreviewGeometry.StartPoint(toolPath));
+            var armPx = (diameterPx / 2d) + layout.MmToPx(lines.CenterLineOvershootMm);
+            var armStyle = lines.Thin(lines.CrossLineDashPx(path.Diameter, layout));
 
-            var circle = Add(layers.Markers, new Ellipse { Width = diameterPx, Height = diameterPx, Fill = Brushes.Transparent }, sideBrush, isClickTarget: true);
-            PartPreviewOverlayGeometry.SetStroke(circle, lines.Thickness2Px);
-            Canvas.SetLeft(circle, start.X - radiusPx);
-            Canvas.SetTop(circle, start.Y - radiusPx);
+            sink.AddCircle(layers.Markers, start, diameterPx, lines.Bold);
 
-            void AddCrossArm(double x1, double y1, double x2, double y2)
+            foreach (var arm in PartPreviewOverlayGeometry.CrossArms(start, armPx))
             {
-                var arm = Add(layers.Markers, new Line { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 }, sideBrush, isClickTarget: false);
-                PartPreviewOverlayGeometry.SetStroke(arm, lines.Thickness1Px, crossDashPx);
+                sink.AddLine(layers.Markers, arm, armStyle);
             }
 
-            PartPreviewOverlayGeometry.AddCrossArms(AddCrossArm, start.X, start.Y, radiusPx + overshootPx);
-
-            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, stroked, lines.Selected);
+            sink.AttachClickToggle(lines.Selected);
         }
 
         /// <summary>
@@ -220,7 +183,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 yield break;
             }
 
-            var size = new Size(primitive.Radius * layout.Scale, primitive.Radius * layout.Scale);
+            var radiusPx = layout.MmToPx(primitive.Radius);
+            var size = new Size(radiusPx, radiusPx);
 
             // Screen and operator view share the Y-down frame, so operator clockwise is screen clockwise.
             var sweep = primitive.Clockwise ? SweepDirection.Clockwise : SweepDirection.Counterclockwise;
@@ -239,6 +203,6 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         }
 
         private static Point ToPoint(Vec2 mm, FaceLayout layout) =>
-            new(layout.OriginX + (mm.X * layout.Scale), layout.OriginY + (mm.Y * layout.Scale));
+            new(layout.XPx(mm.X), layout.YPx(mm.Y));
     }
 }

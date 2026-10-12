@@ -172,13 +172,10 @@ namespace XncOptimizerUI.Test
             var first = programs[0];
             var layout = new FaceLayout(
                 Origin, Origin, first.Dx * Scale, first.Dy * Scale, Scale, GapMm * Scale, first.Dz * Scale);
-            var canvas = new Canvas();
 
-            MillPreviewRenderer.DrawMills(canvas, programs, layout, MillBrushes);
-            BorePreviewRenderer.DrawBores(canvas, programs, layout, BoreBrushes);
-            GroovePreviewRenderer.DrawGrooves(canvas, programs, layout, BoreBrushes);
-
-            return canvas.Children.Cast<UIElement>();
+            return MillPreviewRenderer.DrawMills(programs, layout, MillBrushes)
+                .Concat(BorePreviewRenderer.DrawBores(programs, layout, BoreBrushes))
+                .Concat(GroovePreviewRenderer.DrawGrooves(programs, layout, BoreBrushes));
         }
 
         /// <summary>Draws like <c>PartPreviewControl</c>: sized by the first program, with the texture mark.</summary>

@@ -1,7 +1,6 @@
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
+using System.Windows;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
@@ -18,19 +17,22 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// </summary>
     internal static class BorePreviewRenderer
     {
+        /// <summary>The four side bands as (horizontal, near): Top, Bottom, Left, Right.</summary>
+        private static readonly (bool Horizontal, bool Near)[] Bands = [(true, true), (true, false), (false, true), (false, false)];
+
         /// <summary>
-        /// Draws every bore in <paramref name="programs"/> onto <paramref name="canvas"/>. A
-        /// bore whose tool can't be resolved (or has a non-positive diameter) is skipped.
-        /// A face bore's five projections (the circle + its four edge-band rectangles), or an
-        /// edge bore's two (its band circle + Face rectangle), toggle red together on click,
-        /// since they represent the same physical hole.
+        /// The shapes of every bore in <paramref name="programs"/>. A bore whose tool can't be
+        /// resolved (or has a non-positive diameter) is skipped. A face bore's five projections
+        /// (the circle + its four edge-band rectangles), or an edge bore's two (its band circle +
+        /// Face rectangle), toggle red together on click, since they represent the same physical
+        /// hole.
         /// </summary>
-        public static void DrawBores(Canvas canvas, IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes)
+        public static IReadOnlyList<UIElement> DrawBores(IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes)
         {
+            var shapes = new List<UIElement>();
+
             foreach (var program in programs)
             {
-                var normalBrush = program.Side ? brushes.SideTrue : brushes.SideFalse;
-
                 foreach (var bore in program.Bores)
                 {
                     var diameter = program.Tools
@@ -43,211 +45,111 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
                     if (bore.Surface == BoreSurface.Face)
                     {
-                        DrawBore(canvas, program, bore, diameter, layout, brushes, normalBrush);
+                        DrawFaceBore(shapes, program, bore, diameter, layout, brushes);
                     }
                     else
                     {
-                        // Edge bores (bt/bb/bl/br) always share one color, regardless of the
-                        // owning program's Side - unlike a face bore's Side-based coloring.
-                        DrawEdgeBore(canvas, program, bore, diameter, layout, brushes);
+                        DrawEdgeBore(shapes, program, bore, diameter, layout, brushes);
                     }
                 }
             }
-        }
 
-        private static void DrawBore(
-            Canvas canvas,
-            XncProgram program,
-            XncBore bore,
-            double diameter,
-            FaceLayout layout,
-            BoreBrushes brushes,
-            Brush normalBrush)
-        {
-            var tag = new BoreTag(program, bore);
-            var diameterPx = diameter * layout.Scale;
-            var radiusPx = diameterPx / 2;
-            var depthPx = bore.Depth * layout.Scale;
-            var overshootPx = brushes.CenterLineOvershootMm * layout.Scale;
-            var cx = layout.OriginX + (bore.X * layout.Scale);
-            var cy = layout.OriginY + (bore.Y * layout.Scale);
-
-            var clickTargets = new List<Shape>(5);
-            var allStroked = new List<Shape>(11);
-
-            // A circular bore symbol's own crossing center lines are keyed on the bore's
-            // diameter; a rectangular bore symbol's (depth-reading) center line runs along the
-            // depth axis, so it's keyed on the bore's depth instead - the two thresholds are
-            // independent, per the drawing spec.
-            var crossDashPx = diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
-            var bandDashPx = bore.Depth > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
-
-            void AddShape(Shape shape, bool isClickTarget, double thickness)
-            {
-                shape.Stroke = normalBrush;
-                shape.Fill = Brushes.Transparent;
-                PartPreviewOverlayGeometry.SetStroke(shape, thickness);
-                shape.Tag = tag;
-                canvas.Children.Add(shape);
-                allStroked.Add(shape);
-
-                if (isClickTarget)
-                {
-                    clickTargets.Add(shape);
-                }
-            }
-
-            void AddCircleShape(Shape shape, bool isClickTarget) => AddShape(shape, isClickTarget, brushes.Thickness2Px);
-
-            void AddRectShape(Shape shape, bool isClickTarget) => AddShape(shape, isClickTarget, brushes.Thickness1Px);
-
-            void AddCenterLineCore(double x1, double y1, double x2, double y2, double? dashPx)
-            {
-                var line = new Line
-                {
-                    X1 = x1,
-                    Y1 = y1,
-                    X2 = x2,
-                    Y2 = y2,
-                    Stroke = normalBrush,
-                };
-                PartPreviewOverlayGeometry.SetStroke(line, brushes.Thickness1Px, dashPx);
-                canvas.Children.Add(line);
-                allStroked.Add(line);
-            }
-
-            void AddCrossCenterLine(double x1, double y1, double x2, double y2) => AddCenterLineCore(x1, y1, x2, y2, crossDashPx);
-
-            void AddCenterLine(double x1, double y1, double x2, double y2) => AddCenterLineCore(x1, y1, x2, y2, bandDashPx);
-
-            // Front (circle) projection: full disc + horizontal/vertical center lines.
-            var circle = new Ellipse { Width = diameterPx, Height = diameterPx };
-            Canvas.SetLeft(circle, cx - radiusPx);
-            Canvas.SetTop(circle, cy - radiusPx);
-            AddCircleShape(circle, isClickTarget: true);
-
-            // Only the front (circle) projection shows the through-bore background; the side
-            // (rectangle) projections stay transparent regardless of Through.
-            if (bore.Through)
-            {
-                circle.Fill = brushes.ThroughFill;
-            }
-
-            PartPreviewOverlayGeometry.AddCrossArms(AddCrossCenterLine, cx, cy, radiusPx + overshootPx);
-
-            // Edge-band (side) projections: one rectangle + one center line per band.
-            PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cx - radiusPx, cx + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: true, near: true);
-            PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cx - radiusPx, cx + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: true, near: false);
-            PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cy - radiusPx, cy + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: false, near: true);
-            PartPreviewOverlayGeometry.AddSideRectangleRange(AddRectShape, AddCenterLine, cy - radiusPx, cy + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal: false, near: false);
-
-            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
+            return shapes;
         }
 
         /// <summary>
-        /// Draws one edge-drilled bore (<see cref="BoreSurface.Top"/>/<see cref="BoreSurface.Bottom"/>/
-        /// <see cref="BoreSurface.Left"/>/<see cref="BoreSurface.Right"/>): a circle with crossed
-        /// center lines on the one band it was drilled from, plus a rectangle with one center
-        /// line on the Face rectangle, flush to that same edge and growing inward. Mirrors
-        /// <see cref="DrawBore"/>'s circle/rectangle roles but swaps which projection carries
-        /// which shape, and always colors with <see cref="BoreBrushes.SideTrue"/> regardless of
-        /// <paramref name="program"/>'s own <c>Side</c> (which still drives the band circle's
-        /// near/far depth anchor, per <see cref="GetBandEdges"/>). Neither shape uses
-        /// <see cref="BoreBrushes.ThroughFill"/> - both stay outline-only.
+        /// A face bore: a circle with crossed center lines on the Face rectangle - filled with
+        /// <see cref="BoreBrushes.ThroughFill"/> when it goes through - plus a depth rectangle with
+        /// one center line on each side band, measured from the band edge of the program's side.
+        /// Colored by the owning program's <c>Side</c>.
         /// </summary>
-        private static void DrawEdgeBore(
-            Canvas canvas,
+        private static void DrawFaceBore(
+            List<UIElement> shapes,
             XncProgram program,
             XncBore bore,
             double diameter,
             FaceLayout layout,
             BoreBrushes brushes)
         {
-            var normalBrush = brushes.SideTrue;
-            var tag = new BoreTag(program, bore);
-            var diameterPx = diameter * layout.Scale;
+            var sink = new OverlayShapeSink(new BoreTag(program, bore), program.Side ? brushes.SideTrue : brushes.SideFalse);
+            var diameterPx = layout.MmToPx(diameter);
             var radiusPx = diameterPx / 2;
-            var depthPx = bore.Depth * layout.Scale;
-            var overshootPx = brushes.CenterLineOvershootMm * layout.Scale;
-            var horizontal = bore.Surface is BoreSurface.Top or BoreSurface.Bottom;
-            var near = bore.Surface is BoreSurface.Top or BoreSurface.Left;
+            var depthPx = layout.MmToPx(bore.Depth);
+            var overshootPx = layout.MmToPx(brushes.CenterLineOvershootMm);
+            var centre = new Vec2(layout.XPx(bore.X), layout.YPx(bore.Y));
 
-            var alongAxisPx = horizontal
-                ? layout.OriginX + (bore.X * layout.Scale)
-                : layout.OriginY + (bore.Y * layout.Scale);
+            // Front (circle) projection. Only it shows the through-bore background; the side
+            // (rectangle) projections stay transparent regardless of Through.
+            var circle = sink.AddCircle(shapes, centre, diameterPx, brushes.Bold);
 
-            var clickTargets = new List<Shape>(2);
-            var allStroked = new List<Shape>(5);
-
-            // See DrawBore: the circle's crossing center lines are keyed on diameter, the
-            // rectangle's depth-axis center line on depth - independent thresholds.
-            var crossDashPx = diameter > PartPreviewOverlayGeometry.DashedCrossLineDiameterMm ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
-            var bandDashPx = bore.Depth > 5 ? brushes.CenterLineDashMm * layout.Scale : (double?)null;
-
-            void AddShape(Shape shape, bool isClickTarget, double thickness)
+            if (bore.Through)
             {
-                shape.Stroke = normalBrush;
-                shape.Fill = Brushes.Transparent;
-                PartPreviewOverlayGeometry.SetStroke(shape, thickness);
-                shape.Tag = tag;
-                canvas.Children.Add(shape);
-                allStroked.Add(shape);
-
-                if (isClickTarget)
-                {
-                    clickTargets.Add(shape);
-                }
+                circle.Fill = brushes.ThroughFill;
             }
 
-            void AddCircleShape(Shape shape, bool isClickTarget) => AddShape(shape, isClickTarget, brushes.Thickness2Px);
+            sink.AddCrossArms(shapes, centre, radiusPx + overshootPx, brushes.Thin(brushes.CrossLineDashPx(diameter, layout)));
 
-            void AddRectShape(Shape shape, bool isClickTarget) => AddShape(shape, isClickTarget, brushes.Thickness1Px);
+            // Edge-band (side) projections: one rectangle + one center line per band. The
+            // circle's crossed center lines are keyed on the bore's diameter, a rectangle's
+            // (depth-axis) center line on its depth - independent thresholds, per the drawing spec.
+            var depthLineStyle = brushes.Thin(brushes.DepthLineDashPx(bore.Depth, layout));
 
-            void AddCenterLineCore(double x1, double y1, double x2, double y2, double? dashPx)
+            foreach (var (horizontal, near) in Bands)
             {
-                var line = new Line
-                {
-                    X1 = x1,
-                    Y1 = y1,
-                    X2 = x2,
-                    Y2 = y2,
-                    Stroke = normalBrush,
-                };
-                PartPreviewOverlayGeometry.SetStroke(line, brushes.Thickness1Px, dashPx);
-                canvas.Children.Add(line);
-                allStroked.Add(line);
+                var along = horizontal ? centre.X : centre.Y;
+                var (rect, centreLine) = PartPreviewOverlayGeometry.SideRectangleRange(
+                    along - radiusPx, along + radiusPx, depthPx, overshootPx, layout, program.Side, horizontal, near);
+
+                sink.AddRectangle(shapes, rect, brushes.Thin());
+                sink.AddCentreLine(shapes, centreLine, depthLineStyle);
             }
 
-            void AddCrossCenterLine(double x1, double y1, double x2, double y2) => AddCenterLineCore(x1, y1, x2, y2, crossDashPx);
-
-            void AddCenterLine(double x1, double y1, double x2, double y2) => AddCenterLineCore(x1, y1, x2, y2, bandDashPx);
-
-            // Side-band (circle) projection: the bore's true cross-section. Its perpendicular
-            // (into-band) position comes from bore.Z, offset from the band edge nearest the
-            // Face when this program's Side is the working face, else from the band's far/outer
-            // edge - same near/far/side rule PartPreviewOverlayGeometry.AddSideRectangleRange applies to a rectangle extent.
-            var (nearEdge, farEdge, direction) = PartPreviewOverlayGeometry.GetBandEdges(layout, horizontal, near);
-            var zStart = program.Side ? nearEdge : farEdge;
-            var zDir = program.Side ? direction : -direction;
-            var perpPx = zStart + (zDir * (bore.Z * layout.Scale));
-
-            var cx = horizontal ? alongAxisPx : perpPx;
-            var cy = horizontal ? perpPx : alongAxisPx;
-
-            var circle = new Ellipse { Width = diameterPx, Height = diameterPx };
-            Canvas.SetLeft(circle, cx - radiusPx);
-            Canvas.SetTop(circle, cy - radiusPx);
-            AddCircleShape(circle, isClickTarget: true);
-
-            PartPreviewOverlayGeometry.AddCrossArms(AddCrossCenterLine, cx, cy, radiusPx + overshootPx);
-
-            // Front (rectangle) projection: the depth reading, always flush to the bore's own
-            // physical Face edge and growing inward toward the panel center - no Side
-            // branching, since the edge is fixed regardless of which face the program machines.
-            PartPreviewOverlayGeometry.AddFaceRectangleRange(AddRectShape, AddCenterLine, alongAxisPx - radiusPx, alongAxisPx + radiusPx, depthPx, overshootPx, layout, bore.Surface, horizontal);
-
-            PartPreviewOverlayGeometry.AttachClickToggle(clickTargets, allStroked.Select(s => (s, normalBrush)).ToList(), brushes.Selected);
+            sink.AttachClickToggle(brushes.Selected);
         }
 
+        /// <summary>
+        /// An edge-drilled bore: a circle with crossed center lines on the one band it was drilled
+        /// from, plus a rectangle with one center line on the Face rectangle, flush to that same
+        /// edge and growing inward. Mirrors <see cref="DrawFaceBore"/>'s circle/rectangle roles but
+        /// swaps which projection carries which shape, and always colors with
+        /// <see cref="BoreBrushes.SideTrue"/> regardless of the program's own <c>Side</c> (which
+        /// still decides the band edge the circle's <c>z</c> is measured from). Neither shape uses
+        /// <see cref="BoreBrushes.ThroughFill"/> - both stay outline-only.
+        /// </summary>
+        private static void DrawEdgeBore(
+            List<UIElement> shapes,
+            XncProgram program,
+            XncBore bore,
+            double diameter,
+            FaceLayout layout,
+            BoreBrushes brushes)
+        {
+            var sink = new OverlayShapeSink(new BoreTag(program, bore), brushes.SideTrue);
+            var diameterPx = layout.MmToPx(diameter);
+            var radiusPx = diameterPx / 2;
+            var depthPx = layout.MmToPx(bore.Depth);
+            var overshootPx = layout.MmToPx(brushes.CenterLineOvershootMm);
+            var horizontal = bore.Surface is BoreSurface.Top or BoreSurface.Bottom;
+            var near = bore.Surface is BoreSurface.Top or BoreSurface.Left;
+            var alongPx = layout.AlongPx(horizontal, horizontal ? bore.X : bore.Y);
+
+            // Side-band (circle) projection: the bore's true cross-section, z into the band from
+            // its inner edge when the program machines the front, else from its outer edge.
+            var acrossPx = layout.Band(horizontal, near).At(layout.MmToPx(bore.Z), program.Side);
+            var centre = horizontal ? new Vec2(alongPx, acrossPx) : new Vec2(acrossPx, alongPx);
+
+            sink.AddCircle(shapes, centre, diameterPx, brushes.Bold);
+            sink.AddCrossArms(shapes, centre, radiusPx + overshootPx, brushes.Thin(brushes.CrossLineDashPx(diameter, layout)));
+
+            // Front (rectangle) projection: the depth reading, always flush to the bore's own
+            // physical Face edge and growing inward toward the panel center.
+            var (rect, centreLine) = PartPreviewOverlayGeometry.FaceRectangleRange(
+                alongPx - radiusPx, alongPx + radiusPx, depthPx, overshootPx, layout, bore.Surface, horizontal);
+
+            sink.AddRectangle(shapes, rect, brushes.Thin());
+            sink.AddCentreLine(shapes, centreLine, brushes.Thin(brushes.DepthLineDashPx(bore.Depth, layout)));
+
+            sink.AttachClickToggle(brushes.Selected);
+        }
     }
 }
