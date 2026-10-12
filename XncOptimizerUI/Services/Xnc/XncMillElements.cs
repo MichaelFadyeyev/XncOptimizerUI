@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
-using static XncOptimizerUI.Services.Xnc.ContourOffsetGeometry;
+using XncOptimizerUI.Services.Xnc.Geometry;
+using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
 namespace XncOptimizerUI.Services.Xnc
@@ -69,7 +70,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             return segment.Name.LocalName switch
             {
-                "ml" => start.DistanceTo(end) > Tolerance ? Primitive.Line(start, end) : null,
+                "ml" => start.DistanceTo(end) > PlanarGeometry.Tolerance ? Primitive.Line(start, end) : null,
                 "mac" => ReadCentreArc(start, end, segment, symbols),
                 _ => ReadRadiusArc(start, end, segment, symbols),
             };
@@ -80,7 +81,7 @@ namespace XncOptimizerUI.Services.Xnc
             var centre = new Vec2(EvalXnc(mac.GetCxValue(), symbols), EvalXnc(mac.GetCyValue(), symbols));
             var radius = start.DistanceTo(centre);
 
-            return radius > Tolerance && Math.Abs(end.DistanceTo(centre) - radius) <= Tolerance
+            return radius > PlanarGeometry.Tolerance && Math.Abs(end.DistanceTo(centre) - radius) <= PlanarGeometry.Tolerance
                 ? Primitive.Arc(start, end, centre, radius, IsClockwiseDir(mac))
                 : null;
         }

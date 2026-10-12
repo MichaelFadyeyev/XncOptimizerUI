@@ -4,6 +4,7 @@ using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.Services.Xnc
 {
@@ -15,7 +16,7 @@ namespace XncOptimizerUI.Services.Xnc
     internal static class XncProgramMath
     {
         /// <summary>Tolerance for comparing reconstructed geometry (radii, chords), mm.</summary>
-        public const double GeomTolerance = 1e-3;
+        public const double GeomTolerance = PlanarGeometry.Tolerance;
 
         /// <summary>Decimal places a rewriter writes recalculated values with.</summary>
         public const int OutputDecimals = 4;

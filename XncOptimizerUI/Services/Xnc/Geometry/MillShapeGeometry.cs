@@ -1,6 +1,4 @@
-using static XncOptimizerUI.Services.Xnc.ContourOffsetGeometry;
-
-namespace XncOptimizerUI.Services.Xnc
+namespace XncOptimizerUI.Services.Xnc.Geometry
 {
     /// <summary>
     /// Centre lines of the self-contained mills - <c>&lt;mr&gt;</c> rounded rectangles and
@@ -34,14 +32,14 @@ namespace XncOptimizerUI.Services.Xnc
                 var corner = corners[i];
                 var sideEnd = corner + (sides[i] * radius);
 
-                if (current.DistanceTo(sideEnd) > Tolerance)
+                if (current.DistanceTo(sideEnd) > PlanarGeometry.Tolerance)
                 {
                     yield return Primitive.Line(current, sideEnd);
                 }
 
                 var arcEnd = corner + (sides[(i + 1) % 4] * radius);
 
-                if (radius > Tolerance)
+                if (radius > PlanarGeometry.Tolerance)
                 {
                     yield return Primitive.Arc(sideEnd, arcEnd, corner, radius, clockwise: false);
                 }
@@ -49,7 +47,7 @@ namespace XncOptimizerUI.Services.Xnc
                 current = arcEnd;
             }
 
-            if (current.DistanceTo(start) > Tolerance)
+            if (current.DistanceTo(start) > PlanarGeometry.Tolerance)
             {
                 yield return Primitive.Line(current, start);
             }

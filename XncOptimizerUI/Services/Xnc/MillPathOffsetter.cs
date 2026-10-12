@@ -1,7 +1,8 @@
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using static XncOptimizerUI.Services.Xnc.ContourOffsetGeometry;
+using XncOptimizerUI.Services.Xnc.Geometry;
+using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
 using static XncOptimizerUI.Services.Xnc.XncMillElements;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
@@ -106,7 +107,7 @@ namespace XncOptimizerUI.Services.Xnc
             var newLength = length + (2d * growth);
             var newWidth = width + (2d * growth);
 
-            if (newLength <= Tolerance || newWidth <= Tolerance)
+            if (newLength <= PlanarGeometry.Tolerance || newWidth <= PlanarGeometry.Tolerance)
             {
                 return false;
             }
@@ -129,7 +130,7 @@ namespace XncOptimizerUI.Services.Xnc
             var newLength = length + growth;
             var newWidth = width + growth;
 
-            if (newLength <= Tolerance || newWidth <= Tolerance)
+            if (newLength <= PlanarGeometry.Tolerance || newWidth <= PlanarGeometry.Tolerance)
             {
                 return false;
             }

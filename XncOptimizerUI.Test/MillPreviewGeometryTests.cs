@@ -1,6 +1,7 @@
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.Views.PartPreview;
 using XncOptimizerUI.Services.Xnc;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.Test
 {
@@ -150,7 +151,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(mill.Travel, Has.All.Property(nameof(ContourOffsetGeometry.Primitive.IsArc)).True);
+                Assert.That(mill.Travel, Has.All.Property(nameof(Primitive.IsArc)).True);
                 Assert.That(MillPreviewGeometry.RemovedRegion(mill, Outline)!.Outside, Is.False); // fwd="true" <me>: clockwise, right = inside
                 Assert.That(MillPreviewGeometry.IsThrough(mill, 18), Is.True);
             });

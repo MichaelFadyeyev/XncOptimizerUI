@@ -2,7 +2,8 @@ using System.Globalization;
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using static XncOptimizerUI.Services.Xnc.ContourOffsetGeometry;
+using XncOptimizerUI.Services.Xnc.Geometry;
+using static XncOptimizerUI.Services.Xnc.Geometry.ContourOffsetGeometry;
 using static XncOptimizerUI.Services.Xnc.XncMillElements;
 using static XncOptimizerUI.Services.Xnc.XncProgramMath;
 
@@ -37,14 +38,10 @@ namespace XncOptimizerUI.Services.Xnc
     /// </summary>
     internal static class OutsideOperationDetector
     {
-        /// <summary>Largest chord error allowed when an arc is flattened, mm.</summary>
-        private const double ArcFlatteningError = 1e-3;
-
         /// <summary>Chords an ellipse is flattened to; its chord error is added to the tool reach.</summary>
         private const int EllipseSegments = 2048;
 
-        /// <summary>Upper bound of chords per arc, so a huge radius never explodes the flattening.</summary>
-        private const int MaxArcSegments = 4096;
+        private const double Tolerance = PlanarGeometry.Tolerance;
 
         private static readonly string[] BoreTags = ["bf", "bt", "bb", "bl", "br"];
 
@@ -53,31 +50,6 @@ namespace XncOptimizerUI.Services.Xnc
 
         /// <summary>Elements of the selected <paramref name="kinds"/> found outside, and how many could not be checked.</summary>
         internal sealed record Result(IReadOnlyList<OutsideElement> Outside, int Unresolved);
-
-        /// <summary>Axis-aligned box <c>[Min, Max]</c>: the face (<c>dx</c> x <c>dy</c>), an edge (length x <c>dz</c>), or an inset of one.</summary>
-        private readonly record struct Box(Vec2 Min, Vec2 Max)
-        {
-            public static Box Of(double width, double height) => new(new Vec2(0d, 0d), new Vec2(width, height));
-
-            public Vec2 Centre => Vec2.Midpoint(Min, Max);
-
-            public IEnumerable<Vec2> Corners =>
-                [Min, new(Max.X, Min.Y), Max, new(Min.X, Max.Y)];
-
-            /// <summary>The box shrunk by <paramref name="margin"/> on every side.</summary>
-            public Box Inset(double margin) => new(Min + new Vec2(margin, margin), Max - new Vec2(margin, margin));
-
-            public bool Contains(Vec2 p) => p.X >= Min.X && p.X <= Max.X && p.Y >= Min.Y && p.Y <= Max.Y;
-
-            /// <summary>Distance from <paramref name="p"/> to the box; 0 inside.</summary>
-            public double DistanceTo(Vec2 p)
-            {
-                var gapX = Math.Max(Math.Max(Min.X - p.X, p.X - Max.X), 0d);
-                var gapY = Math.Max(Math.Max(Min.Y - p.Y, p.Y - Max.Y), 0d);
-
-                return Math.Sqrt((gapX * gapX) + (gapY * gapY));
-            }
-        }
 
         /// <summary>What a mill removes on the face.</summary>
         private abstract record MillFootprint;
@@ -299,7 +271,7 @@ namespace XncOptimizerUI.Services.Xnc
                 start + (normal * offsetB),
             ];
 
-            return Separation(footprint, face) >= -Tolerance;
+            return face.SeparationFrom(footprint) >= -Tolerance;
         }
 
         /// <summary>The span along the edge, or the <c>z +- t</c> band through the thickness, misses the edge rectangle.</summary>
@@ -309,34 +281,6 @@ namespace XncOptimizerUI.Services.Xnc
 
         /// <summary>Gap between <c>[low, high]</c> and <c>[0, length]</c>; negative when they overlap.</summary>
         private static double IntervalGap(double low, double high, double length) => Math.Max(-high, low - length);
-
-        /// <summary>
-        /// Largest gap between the convex <paramref name="polygon"/> and <paramref name="box"/> along
-        /// a separating axis candidate (box axes, polygon edge normals); negative when they overlap.
-        /// </summary>
-        private static double Separation(IReadOnlyList<Vec2> polygon, Box box)
-        {
-            var axes = polygon
-                .Select((p, i) => polygon[(i + 1) % polygon.Count] - p)
-                .Where(edge => edge.Length > Tolerance)
-                .Select(RightNormal)
-                .Concat([new Vec2(1d, 0d), new Vec2(0d, 1d)]);
-
-            return axes.Max(axis =>
-            {
-                var (polygonMin, polygonMax) = Project(polygon, axis);
-                var (boxMin, boxMax) = Project(box.Corners.ToList(), axis);
-
-                return Math.Max(polygonMin - boxMax, boxMin - polygonMax);
-            });
-        }
-
-        private static (double Min, double Max) Project(IReadOnlyList<Vec2> points, Vec2 axis)
-        {
-            var projections = points.Select(p => p.Dot(axis)).ToList();
-
-            return (projections.Min(), projections.Max());
-        }
 
         #endregion
 
@@ -428,7 +372,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             if (position == ToolPosition.Pocket && IsClosed(centreLine.Path))
             {
-                var (boundary, boundaryError) = FlattenPath(centreLine.Path);
+                var (boundary, boundaryError) = ChordPath.Flatten(centreLine.Path);
 
                 return new PocketFootprint(boundary, boundaryError + centreLine.ShapeError);
             }
@@ -438,7 +382,7 @@ namespace XncOptimizerUI.Services.Xnc
                     ? (shifted, diameter / 2d)
                     : (centreLine.Path, ToolReach(position, diameter));
 
-            var (chords, error) = FlattenPath(toolCentres);
+            var (chords, error) = ChordPath.Flatten(toolCentres);
 
             return new SweptFootprint(chords, reach + error + centreLine.ShapeError);
         }
@@ -486,7 +430,7 @@ namespace XncOptimizerUI.Services.Xnc
 
         /// <summary>The tool never comes within reach of the face.</summary>
         private static bool IsSweptOutside(SweptFootprint swept, Box face) =>
-            swept.ToolCentres.All(chord => SegmentDistance(chord.Start, chord.End, face) >= swept.Reach - Tolerance);
+            swept.ToolCentres.All(chord => face.DistanceTo(chord.Start, chord.End) >= swept.Reach - Tolerance);
 
         /// <summary>
         /// The pocket area and the face share no area: no contour chord enters the face (shrunk by the
@@ -498,100 +442,9 @@ namespace XncOptimizerUI.Services.Xnc
         {
             var core = face.Inset(Tolerance + pocket.ChordError);
 
-            return pocket.Boundary.All(chord => SegmentDistance(chord.Start, chord.End, core) > 0d)
-                && !Encloses(pocket.Boundary, face.Centre);
+            return pocket.Boundary.All(chord => core.DistanceTo(chord.Start, chord.End) > 0d)
+                && !ChordPath.Encloses(pocket.Boundary, face.Centre);
         }
-
-        /// <summary>A path as chords, with the largest chord error.</summary>
-        private static (IReadOnlyList<Primitive> Chords, double Error) FlattenPath(IReadOnlyList<Primitive> path)
-        {
-            var flattened = path.SelectMany(Flatten).ToList();
-
-            return (flattened.Select(f => f.Chord).ToList(), flattened.Max(f => f.Error));
-        }
-
-        /// <summary>An arc as chords whose error stays within <see cref="ArcFlatteningError"/>; a line as itself.</summary>
-        private static IEnumerable<(Primitive Chord, double Error)> Flatten(Primitive primitive)
-        {
-            if (primitive.Centre is not { } centre)
-            {
-                return [(primitive, 0d)];
-            }
-
-            // Raw-frame sweep: an operator-clockwise arc turns the raw angle up (Y is mirrored).
-            var sweep = -OperatorSweep(primitive);
-            var maxStep = 2d * Math.Acos(Math.Max(-1d, 1d - (ArcFlatteningError / primitive.Radius)));
-            var count = Math.Clamp((int)Math.Ceiling(Math.Abs(sweep) / maxStep), 1, MaxArcSegments);
-            var step = sweep / count;
-            var error = primitive.Radius * (1d - Math.Cos(step / 2d));
-            var startAngle = Math.Atan2(primitive.Start.Y - centre.Y, primitive.Start.X - centre.X);
-
-            Vec2 PointAt(int i) => i == count
-                ? primitive.End
-                : centre + new Vec2(Math.Cos(startAngle + (step * i)), Math.Sin(startAngle + (step * i))) * primitive.Radius;
-
-            return Enumerable.Range(0, count).Select(i => (Primitive.Line(PointAt(i), PointAt(i + 1)), error));
-        }
-
-        /// <summary>Distance from segment <paramref name="a"/>-<paramref name="b"/> to the box; 0 when they meet.</summary>
-        private static double SegmentDistance(Vec2 a, Vec2 b, Box box)
-        {
-            if (box.Contains(a) || box.Contains(b) || CrossesBox(a, b, box))
-            {
-                return 0d;
-            }
-
-            return box.Corners
-                .Select(corner => PointSegmentDistance(corner, a, b))
-                .Append(box.DistanceTo(a))
-                .Append(box.DistanceTo(b))
-                .Min();
-        }
-
-        /// <summary>Whether the segment crosses any side of the box (Liang-Barsky clip leaves a piece).</summary>
-        private static bool CrossesBox(Vec2 a, Vec2 b, Box box)
-        {
-            var d = b - a;
-            var low = 0d;
-            var high = 1d;
-
-            bool Clip(double p, double q)
-            {
-                if (p == 0d)
-                {
-                    return q >= 0d;
-                }
-
-                var t = q / p;
-
-                if (p < 0d)
-                {
-                    low = Math.Max(low, t);
-                }
-                else
-                {
-                    high = Math.Min(high, t);
-                }
-
-                return low <= high;
-            }
-
-            return Clip(-d.X, a.X - box.Min.X) && Clip(d.X, box.Max.X - a.X) && Clip(-d.Y, a.Y - box.Min.Y) && Clip(d.Y, box.Max.Y - a.Y);
-        }
-
-        private static double PointSegmentDistance(Vec2 p, Vec2 a, Vec2 b)
-        {
-            var d = b - a;
-            var lengthSquared = d.Dot(d);
-            var t = lengthSquared <= 0d ? 0d : Math.Clamp((p - a).Dot(d) / lengthSquared, 0d, 1d);
-
-            return p.DistanceTo(a + (d * t));
-        }
-
-        /// <summary>Even-odd ray cast of <paramref name="point"/> against the closed chord chain.</summary>
-        private static bool Encloses(IReadOnlyList<Primitive> chords, Vec2 point) =>
-            chords.Count(c => (c.Start.Y > point.Y) != (c.End.Y > point.Y)
-                && point.X < c.Start.X + ((point.Y - c.Start.Y) / (c.End.Y - c.Start.Y) * (c.End.X - c.Start.X))) % 2 == 1;
 
         #endregion
     }

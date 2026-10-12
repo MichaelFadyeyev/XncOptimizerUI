@@ -1,6 +1,6 @@
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc;
-using Primitive = XncOptimizerUI.Services.Xnc.ContourOffsetGeometry.Primitive;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
@@ -18,7 +18,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <summary>Line pieces per full turn used to approximate a non-circular <c>&lt;me&gt;</c> ellipse.</summary>
         private const int EllipseSegments = 96;
 
-        private const double Tolerance = ContourOffsetGeometry.Tolerance;
+        private const double Tolerance = PlanarGeometry.Tolerance;
 
         /// <summary>
         /// One mill reduced to its programmed centre line in travel order.

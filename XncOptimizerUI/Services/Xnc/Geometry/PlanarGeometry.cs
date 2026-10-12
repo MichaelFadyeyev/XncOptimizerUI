@@ -1,33 +1,14 @@
-namespace XncOptimizerUI.Services.Xnc
+namespace XncOptimizerUI.Services.Xnc.Geometry
 {
-    /// <summary>A point or vector in raw XNC program coordinates (mm).</summary>
-    internal readonly record struct Vec2(double X, double Y)
-    {
-        public static Vec2 operator +(Vec2 a, Vec2 b) => new(a.X + b.X, a.Y + b.Y);
-        public static Vec2 operator -(Vec2 a, Vec2 b) => new(a.X - b.X, a.Y - b.Y);
-        public static Vec2 operator *(Vec2 a, double k) => new(a.X * k, a.Y * k);
-        public static Vec2 operator /(Vec2 a, double k) => new(a.X / k, a.Y / k);
-
-        public double Length => Math.Sqrt((X * X) + (Y * Y));
-
-        public Vec2 Normalized() => this / Length;
-
-        public double Dot(Vec2 other) => (X * other.X) + (Y * other.Y);
-
-        /// <summary>Z component of the 3D cross product; positive when <paramref name="other"/> lies counter-clockwise (raw math sense) of this vector.</summary>
-        public double Cross(Vec2 other) => (X * other.Y) - (Y * other.X);
-
-        public double DistanceTo(Vec2 other) => (this - other).Length;
-
-        public static Vec2 Midpoint(Vec2 a, Vec2 b) => (a + b) / 2d;
-    }
-
     /// <summary>
     /// Intersections of infinite lines and full circles, the building blocks of path offsetting.
     /// Every method returns all real solutions; callers pick the relevant one.
     /// </summary>
     internal static class PlanarGeometry
     {
+        /// <summary>Tolerance for comparing reconstructed geometry (lengths, radii, chords), mm.</summary>
+        public const double Tolerance = 1e-3;
+
         private const double ParallelEpsilon = 1e-12;
 
         /// <summary>Line through <paramref name="p1"/> along <paramref name="d1"/> meets line through <paramref name="p2"/> along <paramref name="d2"/>.</summary>
@@ -78,6 +59,16 @@ namespace XncOptimizerUI.Services.Xnc
             var normal = new Vec2(-axis.Y, axis.X);
 
             return [basePoint + (normal * half), basePoint - (normal * half)];
+        }
+
+        /// <summary>Distance from <paramref name="p"/> to the segment <paramref name="a"/>-<paramref name="b"/>.</summary>
+        public static double DistanceToSegment(Vec2 p, Vec2 a, Vec2 b)
+        {
+            var d = b - a;
+            var lengthSquared = d.Dot(d);
+            var t = lengthSquared <= 0d ? 0d : Math.Clamp((p - a).Dot(d) / lengthSquared, 0d, 1d);
+
+            return p.DistanceTo(a + (d * t));
         }
 
         public static Vec2? Nearest(IEnumerable<Vec2> candidates, Vec2 target)

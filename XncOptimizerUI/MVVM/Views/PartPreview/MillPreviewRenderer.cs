@@ -5,7 +5,7 @@ using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc;
 using MillPath = XncOptimizerUI.MVVM.Views.PartPreview.MillPreviewGeometry.MillPath;
-using Primitive = XncOptimizerUI.Services.Xnc.ContourOffsetGeometry.Primitive;
+using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
@@ -208,7 +208,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             foreach (var primitive in chain)
             {
-                if (figure == null || cursor is not { } at || at.DistanceTo(primitive.Start) > ContourOffsetGeometry.Tolerance)
+                if (figure == null || cursor is not { } at || at.DistanceTo(primitive.Start) > PlanarGeometry.Tolerance)
                 {
                     figure = new PathFigure { StartPoint = ToPoint(primitive.Start, layout), IsClosed = filled, IsFilled = filled };
                     geometry.Figures.Add(figure);
@@ -238,7 +238,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             // Screen and operator view share the Y-down frame, so operator clockwise is screen clockwise.
             var sweep = primitive.Clockwise ? SweepDirection.Clockwise : SweepDirection.Counterclockwise;
 
-            if (primitive.Start.DistanceTo(primitive.End) <= ContourOffsetGeometry.Tolerance)
+            if (primitive.Start.DistanceTo(primitive.End) <= PlanarGeometry.Tolerance)
             {
                 // A full circle: WPF cannot draw an arc back onto its own start, so go via the antipode.
                 var antipode = (centre * 2d) - primitive.Start;
