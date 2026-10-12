@@ -37,10 +37,15 @@ namespace XncOptimizerUI.Test
 
             var assembly = typeof(App).Assembly.GetName().Name;
             _ = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-            Application.Current!.Resources.MergedDictionaries.Add(new ResourceDictionary
+
+            // The dictionaries App.xaml merges.
+            foreach (var dictionary in new[] { "ControlStyles.xaml", "PartPreviewResources.xaml" })
             {
-                Source = new Uri($"pack://application:,,,/{assembly};component/Resources/ControlStyles.xaml")
-            });
+                Application.Current!.Resources.MergedDictionaries.Add(new ResourceDictionary
+                {
+                    Source = new Uri($"pack://application:,,,/{assembly};component/Resources/{dictionary}")
+                });
+            }
         }
 
         /// <summary>

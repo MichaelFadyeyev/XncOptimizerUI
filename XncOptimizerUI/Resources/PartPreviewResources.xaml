@@ -1,0 +1,44 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--  Part preview: colors  -->
+    <SolidColorBrush x:Key="PartPreviewBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PartFaceBrush" Color="#8DB9D9" />
+    <SolidColorBrush x:Key="PartEdgeProjectionBrush" Color="#8DB9D9" />
+    <SolidColorBrush x:Key="PartOutlineBrush" Color="#444444" />
+    <SolidColorBrush x:Key="PartTextureBrush" Color="#808080" />
+    <SolidColorBrush x:Key="AxisXBrush" Color="#D00000" />
+    <SolidColorBrush x:Key="AxisYBrush" Color="#0A7A0A" />
+    <SolidColorBrush x:Key="TurnLabelBrush" Color="#444444" />
+
+    <!--  Part preview: line widths and screen-space metrics (px)  -->
+    <sys:Double x:Key="PartOutlineThickness">2</sys:Double>
+    <sys:Double x:Key="PartTextureLineThickness">1</sys:Double>
+    <sys:Double x:Key="AxisThickness">1.5</sys:Double>
+    <sys:Double x:Key="TurnLabelFontSize">24</sys:Double>
+    <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
+    <sys:Double x:Key="ProjectionGapMm">10</sys:Double>
+    <sys:Double x:Key="PartPreviewMargin">24</sys:Double>
+
+    <!--  Part preview: bore overlay colors  -->
+    <SolidColorBrush x:Key="BoreSideTrueBrush" Color="#444444" />
+    <SolidColorBrush x:Key="BoreSideFalseBrush" Color="#808080" />
+    <SolidColorBrush x:Key="BoreSelectedBrush" Color="#FF0000" />
+
+    <!--
+        Part preview: bore/groove overlay line widths (px), dash metrics (px and mm), and
+        center line overshoot (mm)
+    -->
+    <sys:Double x:Key="LineThickness2Px">2</sys:Double>
+    <sys:Double x:Key="LineThickness1Px">1</sys:Double>
+    <sys:Double x:Key="DashLengthPx">3</sys:Double>
+    <sys:Double x:Key="CenterLineDashMm">3</sys:Double>
+    <sys:Double x:Key="BoreCenterLineOvershootMm">3</sys:Double>
+
+    <!--  Part preview: mill overlay - cut-off area colors and swept-strip opacity  -->
+    <SolidColorBrush x:Key="ThroughCutOffsBrush" Color="#E1F1FD" />
+    <SolidColorBrush x:Key="BlindCutOffsBrush" Color="#56A1D8" />
+    <sys:Double x:Key="MillStripOpacity">0.5</sys:Double>
+</ResourceDictionary>
