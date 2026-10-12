@@ -35,8 +35,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             {
                 foreach (var bore in program.Bores)
                 {
-                    var diameter = program.Tools
-                        .FirstOrDefault(t => t.Name == bore.ToolName)?.Diameter ?? 0;
+                    var diameter = program.FindTool(bore.ToolName)?.Diameter ?? 0;
 
                     if (diameter <= 0)
                     {

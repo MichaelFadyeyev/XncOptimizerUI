@@ -338,7 +338,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         /// <summary>Diameter of the program's tool <paramref name="toolName"/>, or <c>null</c> when it is not declared.</summary>
         private static string? ToolDiameter(XncProgram program, string toolName) =>
-            program.Tools.FirstOrDefault(t => t.Name == toolName)?.Diameter is { } diameter
+            program.FindTool(toolName)?.Diameter is { } diameter
                 ? MachiningNumber.Format(diameter)
                 : null;
         #endregion

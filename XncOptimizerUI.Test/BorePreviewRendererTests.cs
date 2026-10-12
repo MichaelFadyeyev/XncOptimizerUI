@@ -9,6 +9,19 @@ namespace XncOptimizerUI.Test
     [Apartment(ApartmentState.STA)]
     public class BorePreviewRendererTests
     {
+        private static readonly FaceLayout Layout = new(0, 0, 100, 100, 1, 10, 5);
+
+        private static readonly BoreBrushes Style = new(
+            Brushes.Black,
+            Brushes.Gray,
+            Brushes.Red,
+            Brushes.LightBlue,
+            Thickness2Px: 2,
+            Thickness1Px: 1,
+            CenterLineOvershootMm: 3,
+            DashLengthPx: 3,
+            CenterLineDashMm: 3);
+
         [TestCase(BoreSurface.Face)]
         [TestCase(BoreSurface.Right)]
         public void DrawBores_keepsCrossLinesSolidThroughEightMillimetres(BoreSurface surface)
@@ -35,6 +48,20 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [Test]
+        public void DrawBores_findsTheToolIgnoringCaseLikeMills()
+        {
+            var program = new XncProgram
+            {
+                Tools = [new XncTool { Name = "Drill", Diameter = 8 }],
+                Bores = [new XncBore { Surface = BoreSurface.Face, ToolName = "DRILL", Depth = 5, X = 20, Y = 20 }],
+            };
+
+            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style);
+
+            Assert.That(shapes.OfType<Ellipse>().Single().Width, Is.EqualTo(8));
+        }
+
         private static IReadOnlyList<Line> DrawCrossLines(BoreSurface surface, double diameter)
         {
             var program = new XncProgram
@@ -42,22 +69,10 @@ namespace XncOptimizerUI.Test
                 Tools = [new XncTool { Name = "Drill", Diameter = diameter }],
                 Bores = [new XncBore { Surface = surface, ToolName = "Drill", Depth = 5, X = 20, Y = 20, Z = 2 }],
             };
-            var brushes = new BoreBrushes(
-                Brushes.Black,
-                Brushes.Gray,
-                Brushes.Red,
-                Brushes.LightBlue,
-                Thickness2Px: 2,
-                Thickness1Px: 1,
-                CenterLineOvershootMm: 3,
-                DashLengthPx: 3,
-                CenterLineDashMm: 3);
-            var layout = new FaceLayout(0, 0, 100, 100, 1, 10, 5);
 
-            var shapes = BorePreviewRenderer.DrawBores([program], layout, brushes);
+            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style);
 
             return shapes.OfType<Line>().Take(4).ToArray();
         }
-
     }
 }

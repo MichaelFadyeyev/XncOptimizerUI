@@ -36,6 +36,10 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         /// <summary>Tools declared by <c>&lt;tool&gt;</c>, in declaration order.</summary>
         public IReadOnlyList<XncTool> Tools { get; init; } = [];
 
+        /// <summary>The declared tool named <paramref name="name"/>, ignoring case like the program reader, or <c>null</c>.</summary>
+        public XncTool? FindTool(string name) =>
+            Tools.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+
         /// <summary>All bores (<c>bf</c>/<c>bt</c>/<c>bb</c>/<c>bl</c>/<c>br</c>), in document order.</summary>
         public IReadOnlyList<XncBore> Bores { get; init; } = [];
 

@@ -63,8 +63,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <summary>Every drawable mill of <paramref name="program"/> with its tool resolved; mills whose tool is unknown or has no diameter are skipped, like bores.</summary>
         private static IEnumerable<(object Mill, MillPath Path)> MillPaths(XncProgram program)
         {
-            double Diameter(string toolName) => program.Tools
-                .FirstOrDefault(t => string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase))?.Diameter ?? 0d;
+            double Diameter(string toolName) => program.FindTool(toolName)?.Diameter ?? 0d;
 
             return program.MillingContours
                 .Select(c => ((object)c, MillPreviewGeometry.FromContour(c, Diameter(c.ToolName))))
