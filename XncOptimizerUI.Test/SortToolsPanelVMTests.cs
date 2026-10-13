@@ -1,5 +1,6 @@
 using NSubstitute;
-using XncOptimizerUI.Test.Fakes;
+using XncOptimizerUI.Contracts;
+using static XncOptimizerUI.Test.Fakes.ProjectServicesStub;
 
 namespace XncOptimizerUI.Test
 {
@@ -17,17 +18,13 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.SortToolDeclarations)));
-                Assert.That(ProjectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
-                    "a successful sort reloads the project");
-            });
+            Project.Batch.Received(1).SortToolDeclarations(PartsWithIds(100));
+            Assert.That(Project.Calls, Does.Contain(nameof(IProjectSession.Open)),
+                "a successful sort reloads the project");
         }
 
         [Test]
@@ -38,11 +35,11 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.SortTools.SortToolsGlobally = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
-            Assert.That(ProjectService.LastToolSortParts!.Select(p => p.Id), Is.EquivalentTo(new[] { 100, 101 }));
+            Project.Batch.Received(1).SortToolDeclarations(PartsWithIdsInAnyOrder(100, 101));
         }
 
         [Test]
@@ -56,30 +53,30 @@ namespace XncOptimizerUI.Test
             hidden.IsSelected = true;
             vm.Filter.FilterName = vm.PartsList.Parts.Single(p => p.Id == 100).Name;
             vm.SortTools.SortToolsGlobally = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
-            Assert.That(ProjectService.LastToolSortParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }),
-                "the filter decides the scope; a checked part hidden by the filter is not sorted");
+            // The filter decides the scope; a checked part hidden by the filter is not sorted.
+            Project.Batch.Received(1).SortToolDeclarations(PartsWithIds(100));
         }
 
         [Test]
         public void SortToolDeclarations_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
         {
             SeedTwoParts();
-            ProjectService.SortToolDeclarationsResult = false;
-            ProjectService.ResultMessage = "No tool declarations reordered (skipped 0 program(s)).";
+            Project.Batch.SortToolDeclarations(default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            Project.ResultMessage = "No tool declarations reordered (skipped 0 program(s)).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Dialogs.Received(1).ShowWarning("No tool declarations reordered (skipped 0 program(s)).", Arg.Any<string>());
-            AssertNotReloadedAfter(nameof(FakeProjectService.SortToolDeclarations));
+            AssertNotReloadedAfter(nameof(IXncBatchOperations.SortToolDeclarations));
         }
 
         [Test]
@@ -89,14 +86,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No parts checked for tool sorting!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -110,7 +107,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
     }

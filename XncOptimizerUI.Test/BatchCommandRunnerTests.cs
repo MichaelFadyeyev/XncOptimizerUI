@@ -1,5 +1,5 @@
 using NSubstitute;
-using XncOptimizerUI.Test.Fakes;
+using XncOptimizerUI.Contracts;
 
 namespace XncOptimizerUI.Test
 {
@@ -13,7 +13,7 @@ namespace XncOptimizerUI.Test
         public void BatchCommand_WhenNothingChanged_KeepsTheSelectedPart()
         {
             SeedTwoParts();
-            ProjectService.GroupIdenticalElementsResult = false;
+            Project.Restructuring.GroupIdenticalElements().Returns(_ => Project.Result(changed: false));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -29,12 +29,12 @@ namespace XncOptimizerUI.Test
         public void ExecuteOptimize_WhenServiceFails_WarnsWithTheTextTheServiceLogged()
         {
             SeedTwoParts();
-            ProjectService.GroupIdenticalElementsResult = false;
-            ProjectService.ResultMessage = "File seems to be already optimized or contains no XNC.";
+            Project.Restructuring.GroupIdenticalElements().Returns(_ => Project.Result(changed: false));
+            Project.ResultMessage = "File seems to be already optimized or contains no XNC.";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.Preparation.ExecuteOptimizeCommand.Execute(null);
 
@@ -45,15 +45,14 @@ namespace XncOptimizerUI.Test
             // Releasing the SelectedPart before the service call may auto-save it
             // (UpdatePart/Save) — that's expected. What must NOT happen is a
             // reload of the project after a failed GroupIdenticalElements call.
-            AssertNotReloadedAfter(nameof(FakeProjectService.GroupIdenticalElements));
+            AssertNotReloadedAfter(nameof(IProjectRestructuring.GroupIdenticalElements));
         }
 
         [Test]
         public void ExecuteOptimize_WhenServiceSucceeds_DoesNotWarn()
         {
             SeedTwoParts();
-            ProjectService.GroupIdenticalElementsResult = true;
-            ProjectService.ResultMessage = "Stored to: C:\\out_opt.project";
+            Project.ResultMessage = "Stored to: C:\\out_opt.project";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -74,7 +73,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
     }

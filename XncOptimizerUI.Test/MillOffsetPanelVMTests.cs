@@ -1,6 +1,8 @@
 using NSubstitute;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Test.Fakes;
+using XncOptimizerUI.MVVM.Models;
+using static XncOptimizerUI.Test.Fakes.ProjectServicesStub;
 
 namespace XncOptimizerUI.Test
 {
@@ -20,20 +22,13 @@ namespace XncOptimizerUI.Test
             vm.PartsList.Parts[1].IsSelected = true;
             vm.MillOffset.MillOffset = "2.5";
             vm.MillOffset.MillOffsetSide = MillOffsetSide.Left;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.OffsetMillPaths)));
-                Assert.That(ProjectService.LastMillOffsetParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.PartsList.Parts[1].Id }));
-                Assert.That(ProjectService.LastMillOffset, Is.EqualTo(2.5d));
-                Assert.That(ProjectService.LastMillOffsetSide, Is.EqualTo(MillOffsetSide.Left));
-                Assert.That(ProjectService.LastMillOffsetKinds, Is.EqualTo(MillPathKinds.All));
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
-                    "a successful offset reloads the project");
-            });
+            Project.Batch.Received(1).OffsetMillPaths(PartsWithIds(vm.PartsList.Parts[1].Id), 2.5d, MillOffsetSide.Left, MillPathKinds.All);
+            Assert.That(Project.Calls, Does.Contain(nameof(IProjectSession.Open)),
+                "a successful offset reloads the project");
         }
 
         [Test]
@@ -65,7 +60,7 @@ namespace XncOptimizerUI.Test
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
-            Assert.That(ProjectService.LastMillOffsetKinds, Is.EqualTo(expected));
+            Project.Batch.Received(1).OffsetMillPaths(Arg.Any<IList<Part>>(), Arg.Any<double>(), Arg.Any<MillOffsetSide>(), expected);
         }
 
         [Test]
@@ -79,14 +74,14 @@ namespace XncOptimizerUI.Test
             vm.MillOffset.MillOffset = "3";
             vm.MillOffset.OffsetOpenMillPaths = false;
             vm.MillOffset.OffsetClosedMillPaths = false;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("Select open and/or closed mill paths to offset!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -103,14 +98,14 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
             vm.MillOffset.MillOffset = offset;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("Enter a mill path offset greater than 0!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -122,14 +117,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.MillOffset.MillOffset = "3";
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No parts checked for mill path offset!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -137,19 +132,19 @@ namespace XncOptimizerUI.Test
         public void OffsetMillPaths_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
         {
             SeedTwoParts();
-            ProjectService.OffsetMillPathsResult = false;
-            ProjectService.ResultMessage = "No mill paths offset (ignored 2).";
+            Project.Batch.OffsetMillPaths(default!, default, default, default).ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            Project.ResultMessage = "No mill paths offset (ignored 2).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
             vm.MillOffset.MillOffset = "3";
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOffset.OffsetMillPathsCommand.Execute(null);
 
             Dialogs.Received(1).ShowWarning("No mill paths offset (ignored 2).", Arg.Any<string>());
-            AssertNotReloadedAfter(nameof(FakeProjectService.OffsetMillPaths));
+            AssertNotReloadedAfter(nameof(IXncBatchOperations.OffsetMillPaths));
         }
 
         [Test]
@@ -163,7 +158,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
     }

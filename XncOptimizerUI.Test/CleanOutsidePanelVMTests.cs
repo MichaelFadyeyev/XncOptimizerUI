@@ -1,5 +1,7 @@
+using NSubstitute;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Test.Fakes;
+using static XncOptimizerUI.Test.Fakes.ProjectServicesStub;
 
 namespace XncOptimizerUI.Test
 {
@@ -31,17 +33,14 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[1].IsSelected = true;
             vm.CleanOutside.CleanOutsideGrooves = false;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ProjectService.LastCleanOutsideParts!.Select(p => p.Id), Is.EqualTo(new[] { vm.PartsList.Parts[1].Id }));
-                Assert.That(ProjectService.LastCleanOutsideKinds, Is.EqualTo(OutsideOperationKinds.Bores | OutsideOperationKinds.Mills));
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
-                    "a successful cleaning reloads the project");
-            });
+            Project.Batch.Received(1).CleanOutsideOperations(
+                PartsWithIds(vm.PartsList.Parts[1].Id), OutsideOperationKinds.Bores | OutsideOperationKinds.Mills);
+            Assert.That(Project.Calls, Does.Contain(nameof(IProjectSession.Open)),
+                "a successful cleaning reloads the project");
         }
 
         [Test]
@@ -55,8 +54,9 @@ namespace XncOptimizerUI.Test
 
             vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
-            Assert.That(ProjectService.LastCleanOutsideParts!.Select(p => p.Id),
-                Is.EquivalentTo(ProjectService.Parts.Select(p => p.Id)), "all parts of the project, not only the filtered ones");
+            // All parts of the project, not only the filtered ones.
+            Project.Batch.Received(1).CleanOutsideOperations(
+                PartsWithIdsInAnyOrder([.. Project.Parts.Select(p => p.Id)]), Arg.Any<OutsideOperationKinds>());
         }
 
         [Test]
@@ -69,14 +69,14 @@ namespace XncOptimizerUI.Test
             vm.CleanOutside.CleanOutsideBores = false;
             vm.CleanOutside.CleanOutsideGrooves = false;
             vm.CleanOutside.CleanOutsideMills = false;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("Select bores, grooves and/or mills to clean!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -87,12 +87,12 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.CleanOutsideOperationsResult = false;
-            ProjectService.Calls.Clear();
+            Project.Batch.CleanOutsideOperations(default!, default).ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            Project.ClearCalls();
 
             vm.CleanOutside.CleanOutsideOperationsCommand.Execute(null);
 
-            AssertNotReloadedAfter(nameof(FakeProjectService.CleanOutsideOperations));
+            AssertNotReloadedAfter(nameof(IXncBatchOperations.CleanOutsideOperations));
         }
     }
 }

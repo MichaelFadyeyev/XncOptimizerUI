@@ -1,6 +1,6 @@
 using NSubstitute;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
 {
@@ -14,7 +14,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_WithPrograms_TakesDisplayDimsAndTurnFromFirstProgram()
         {
             SeedTwoParts(); // Полиця is 600 x 400
-            ProjectService.XncPrograms =
+            Project.XncPrograms =
             [
                 new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 1 },
                 new XncProgram { Side = false, Dx = 111, Dy = 222, Dz = 19, Turn = 3 }
@@ -36,7 +36,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_WithNoPrograms_FallsBackToPartDimensionsAndZeroTurn()
         {
             SeedTwoParts(); // Полиця is 600 x 400
-            ProjectService.XncPrograms = [];
+            Project.XncPrograms = [];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -54,7 +54,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_SyncsRotationButtonsWithoutRotating()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -63,7 +63,7 @@ namespace XncOptimizerUI.Test
             {
                 Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg180));
                 Assert.That(vm.Preview.CanRotate, Is.True);
-                Assert.That(ProjectService.Calls, Does.Not.Contain(nameof(FakeProjectService.RotatePart)));
+                Assert.That(Project.Calls, Does.Not.Contain(nameof(IProjectEditor.RotatePart)));
             });
         }
 
@@ -71,7 +71,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_WithNoPrograms_DisablesRotation()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [];
+            Project.XncPrograms = [];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -87,20 +87,19 @@ namespace XncOptimizerUI.Test
         public void ChangingRotation_RotatesSavesAndRefreshesPreview()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
-            ProjectService.XncProgramsAfterRotate = [new XncProgram { Side = true, Dx = 800, Dy = 400, Dz = 19, Turn = 1 }];
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            Project.Editor.RotatePart(default, default, default).ReturnsForAnyArgs(Project.ChangingProgramsTo([new XncProgram { Side = true, Dx = 800, Dy = 400, Dz = 19, Turn = 1 }]));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             vm.Preview.Rotation = PartTurn.Deg90;
 
+            Project.Editor.Received(1).RotatePart(vm.PartsList.SelectedPart!.Id, 1, Arg.Any<bool>());
             Assert.Multiple(() =>
             {
-                Assert.That(ProjectService.LastRotatePartId, Is.EqualTo(vm.PartsList.SelectedPart!.Id));
-                Assert.That(ProjectService.LastRotateTargetTurn, Is.EqualTo(1));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.Preview.DisplayLength, Is.EqualTo(800));
                 Assert.That(vm.Preview.DisplayWidth, Is.EqualTo(400));
                 Assert.That(vm.Preview.TurnText, Is.EqualTo("90°"));
@@ -114,18 +113,15 @@ namespace XncOptimizerUI.Test
         public void ChangingRotation_PassesTclFlipFromOption(bool neverFlip, bool expectedFlip)
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
             Config.NeverFlipTclOnTurn.Returns(neverFlip);
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.Preview.Rotation = PartTurn.Deg90;
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(vm.Preview.NeverFlipTclOnTurn, Is.EqualTo(neverFlip));
-                Assert.That(ProjectService.LastRotateFlipEdgeGrooveTcl, Is.EqualTo(expectedFlip));
-            });
+            Assert.That(vm.Preview.NeverFlipTclOnTurn, Is.EqualTo(neverFlip));
+            Project.Editor.Received(1).RotatePart(Arg.Any<int>(), Arg.Any<int>(), expectedFlip);
         }
 
         [Test]
@@ -142,19 +138,19 @@ namespace XncOptimizerUI.Test
         public void ChangingRotation_WhenRotationFails_RestoresButtonsAndSavesNothing()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
-            ProjectService.RotatePartResult = false;
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 0 }];
+            Project.Editor.RotatePart(default, default, default).ReturnsForAnyArgs(_ => Project.Result(changed: false));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             vm.Preview.Rotation = PartTurn.Deg270;
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Preview.Rotation, Is.EqualTo(PartTurn.Deg0));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
             });
         }
 
@@ -162,7 +158,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_ToNull_ClearsDisplayDimsAndTurn()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 800, Dz = 19, Turn = 2 }];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);

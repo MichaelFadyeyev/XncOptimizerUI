@@ -15,7 +15,7 @@ namespace XncOptimizerUI.Test
     /// </summary>
     public abstract class AppViewModelTestBase : TempFixtureTestBase
     {
-        protected FakeProjectService ProjectService { get; private set; } = null!;
+        protected ProjectServicesStub Project { get; private set; } = null!;
 
         protected IConfigService Config { get; private set; } = null!;
 
@@ -24,7 +24,7 @@ namespace XncOptimizerUI.Test
         [SetUp]
         public void SetUp()
         {
-            ProjectService = new FakeProjectService();
+            Project = new ProjectServicesStub();
             Dialogs = Substitute.For<IDialogService>();
 
             Config = Substitute.For<IConfigService>();
@@ -33,7 +33,7 @@ namespace XncOptimizerUI.Test
         }
 
         protected AppViewModel CreateViewModel(TimeProvider? clock = null) =>
-            TestViewModels.Create(ProjectService.Services, Config, Dialogs, clock);
+            TestViewModels.Create(Project.Services, Config, Dialogs, clock);
 
         /// <summary>
         /// A failed operation ran once and was not followed by reopening or saving the project; the
@@ -41,12 +41,12 @@ namespace XncOptimizerUI.Test
         /// </summary>
         protected void AssertNotReloadedAfter(string operation)
         {
-            var after = ProjectService.Calls.SkipWhile(call => call != operation).Skip(1).ToList();
+            var after = Project.Calls.SkipWhile(call => call != operation).Skip(1).ToList();
 
             Assert.Multiple(() =>
             {
-                Assert.That(ProjectService.Calls.Count(call => call == operation), Is.EqualTo(1), $"{operation} runs once");
-                Assert.That(after, Has.None.EqualTo(nameof(FakeProjectService.Open)).And.None.EqualTo(nameof(FakeProjectService.Save)),
+                Assert.That(Project.Calls.Count(call => call == operation), Is.EqualTo(1), $"{operation} runs once");
+                Assert.That(after, Has.None.EqualTo(nameof(IProjectSession.Open)).And.None.EqualTo(nameof(IProjectSession.Save)),
                     "a failed operation must not reload or save the project");
             });
         }
@@ -60,19 +60,19 @@ namespace XncOptimizerUI.Test
             Dialogs.ShowOpenProjectDialog().Returns(@"C:\project.project");
 
             // Two sheets so a test can mark exactly one of them as a split sheet.
-            ProjectService.Sheets =
+            Project.Sheets =
             [
                 new Sheet { Id = 10, Name = "ДСП 18мм" },
                 new Sheet { Id = 11, Name = "ДСП 16мм" }
             ];
 
-            ProjectService.Bands =
+            Project.Bands =
             [
                 new Band { Id = 1, ExternalSymbol = "S1", InternalSymbol = "i1" },
                 new Band { Id = 2, ExternalSymbol = "S2", InternalSymbol = "i2" }
             ];
 
-            ProjectService.Parts =
+            Project.Parts =
             [
                 new Part
                 {

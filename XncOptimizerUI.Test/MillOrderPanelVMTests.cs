@@ -1,5 +1,6 @@
 using NSubstitute;
-using XncOptimizerUI.Test.Fakes;
+using XncOptimizerUI.Contracts;
+using static XncOptimizerUI.Test.Fakes.ProjectServicesStub;
 
 namespace XncOptimizerUI.Test
 {
@@ -17,35 +18,31 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.OptimizeMillTraversal)));
-                Assert.That(ProjectService.LastMillTraversalParts!.Select(p => p.Id), Is.EqualTo(new[] { 100 }));
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.Open)),
-                    "a successful optimization reloads the project");
-            });
+            Project.Batch.Received(1).OptimizeMillTraversal(PartsWithIds(100));
+            Assert.That(Project.Calls, Does.Contain(nameof(IProjectSession.Open)),
+                "a successful optimization reloads the project");
         }
 
         [Test]
         public void OptimizeMillTraversal_WhenServiceFails_WarnsWithLoggedTextAndDoesNotReload()
         {
             SeedTwoParts();
-            ProjectService.OptimizeMillTraversalResult = false;
-            ProjectService.ResultMessage = "No mill passes reordered (ignored 0).";
+            Project.Batch.OptimizeMillTraversal(default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            Project.ResultMessage = "No mill passes reordered (ignored 0).";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.Parts[0].IsSelected = true;
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             Dialogs.Received(1).ShowWarning("No mill passes reordered (ignored 0).", Arg.Any<string>());
-            AssertNotReloadedAfter(nameof(FakeProjectService.OptimizeMillTraversal));
+            AssertNotReloadedAfter(nameof(IXncBatchOperations.OptimizeMillTraversal));
         }
 
         [Test]
@@ -55,14 +52,14 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
 
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No parts checked for mill order optimization!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
 
@@ -76,7 +73,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
-                Assert.That(ProjectService.Calls, Is.Empty);
+                Assert.That(Project.Calls, Is.Empty);
             });
         }
     }

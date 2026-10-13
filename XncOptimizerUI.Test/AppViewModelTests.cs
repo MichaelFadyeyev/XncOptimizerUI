@@ -2,7 +2,6 @@ using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
-using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
 {
@@ -65,7 +64,7 @@ namespace XncOptimizerUI.Test
         public void CopyPartsList_ForSplitSheet_AppendsSeparatorRow()
         {
             SeedTwoParts();
-            ProjectService.Sheets[0].Name = "ДСП Сращ.(2)";
+            Project.Sheets[0].Name = "ДСП Сращ.(2)";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -84,7 +83,7 @@ namespace XncOptimizerUI.Test
         public void CopyPartsList_ForSplitSheet_SeparatorRowHasDashInNameColumn()
         {
             SeedTwoParts();
-            ProjectService.Sheets[0].Name = "ДСП Сращ.(2)";
+            Project.Sheets[0].Name = "ДСП Сращ.(2)";
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -100,7 +99,7 @@ namespace XncOptimizerUI.Test
         public void CopyPartsList_FormatsFractionalSizesWithCurrentCulture()
         {
             SeedTwoParts();
-            ProjectService.Parts[0].Length = 600.5m;
+            Project.Parts[0].Length = 600.5m;
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -241,7 +240,7 @@ namespace XncOptimizerUI.Test
         public void OpeningProject_WithXncTurnDiscordance_WarnsAndLogsEachPartName()
         {
             SeedTwoParts();
-            ProjectService.PartsWithXncTurnDiscordance = ["Полиця", "Кришка"];
+            Project.PartsWithXncTurnDiscordance = ["Полиця", "Кришка"];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -297,7 +296,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.Close)));
+                Assert.That(Project.Calls, Does.Contain(nameof(IProjectSession.Close)));
                 Assert.That(vm.Workspace.FullPath, Is.Empty);
                 Assert.That(vm.PartsList.Parts, Is.Empty);
                 Assert.That(vm.Catalog.Bands, Is.Empty);

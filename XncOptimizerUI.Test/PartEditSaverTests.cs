@@ -1,3 +1,5 @@
+using NSubstitute;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.MVVM.ViewModels.Parts;
 using XncOptimizerUI.Test.Fakes;
@@ -19,14 +21,14 @@ namespace XncOptimizerUI.Test
             vm.OpenFileCommand.Execute(null);
 
             vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
 
             Assert.Multiple(() =>
             {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(1));
+                Assert.That(Project.Calls, Does.Contain(nameof(IProjectEditor.UpdatePart)));
+                Assert.That(Project.SaveCount, Is.EqualTo(1));
                 Assert.That(vm.Log.Text, Does.Contain("Updates saved"));
             });
         }
@@ -54,7 +56,7 @@ namespace XncOptimizerUI.Test
         public void SelectingAnotherPart_WhenNothingChanged_DoesNotSave()
         {
             SeedTwoParts();
-            ProjectService.UpdatePartResult = false;
+            Project.Editor.UpdatePart(default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -62,7 +64,7 @@ namespace XncOptimizerUI.Test
             vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
             vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
 
-            Assert.That(ProjectService.SaveCount, Is.Zero);
+            Assert.That(Project.SaveCount, Is.Zero);
         }
 
         [TestCase(nameof(PartVM.TopBandingId))]
@@ -76,14 +78,14 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             vm.PartsList.SelectedPart = vm.PartsList.Parts[0];
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             typeof(PartVM).GetProperty(edge)!.SetValue(vm.PartsList.Parts[1], (int?)2);
 
             Assert.Multiple(() =>
             {
-                Assert.That(ProjectService.Calls, Does.Contain(nameof(FakeProjectService.UpdatePart)));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(1));
+                Assert.That(Project.Calls, Does.Contain(nameof(IProjectEditor.UpdatePart)));
+                Assert.That(Project.SaveCount, Is.EqualTo(1));
                 Assert.That(vm.Log.Text, Does.Contain("Updates saved"));
             });
         }
@@ -95,11 +97,11 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.PartsList.Parts[0].TopBandingId = null;
 
-            Assert.That(ProjectService.SaveCount, Is.EqualTo(1));
+            Assert.That(Project.SaveCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -109,11 +111,11 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            ProjectService.Calls.Clear();
+            Project.ClearCalls();
 
             vm.PartsList.Parts[1].ConsiderTexture = !vm.PartsList.Parts[1].ConsiderTexture;
 
-            Assert.That(ProjectService.SaveCount, Is.EqualTo(1));
+            Assert.That(Project.SaveCount, Is.EqualTo(1));
         }
     }
 }

@@ -1,7 +1,8 @@
+using NSubstitute;
+using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.ViewModels;
 using XncOptimizerUI.MVVM.ViewModels.Machining;
-using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
 {
@@ -15,7 +16,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_RendersItsXncProgramsAsBriefLines()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms =
+            Project.XncPrograms =
             [
                 new XncProgram
                 {
@@ -71,7 +72,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_BuildsRowsForAllMachiningTablesAndListEntries()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms =
+            Project.XncPrograms =
             [
                 new XncProgram
                 {
@@ -138,7 +139,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_BuildsNumberedGrooveRowsWithMappedSides()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms =
+            Project.XncPrograms =
             [
                 new XncProgram
                 {
@@ -199,7 +200,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_WithNoPrograms_ShowsNone()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [];
+            Project.XncPrograms = [];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -213,7 +214,7 @@ namespace XncOptimizerUI.Test
         public void ChangingSelectedPart_RefreshesTheProgramsText()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [new XncProgram { Side = false, Dx = 800, Dy = 300, Dz = 16 }];
+            Project.XncPrograms = [new XncProgram { Side = false, Dx = 800, Dy = 300, Dz = 16 }];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -248,7 +249,7 @@ namespace XncOptimizerUI.Test
         private AppViewModel OpenWithBores()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [ProgramWithBores((100, "100"), (200, "200"))];
+            Project.XncPrograms = [ProgramWithBores((100, "100"), (200, "200"))];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -260,21 +261,21 @@ namespace XncOptimizerUI.Test
         public void EditingBoreX_CommitsExpression_SavesAndUpdatesRowInPlace()
         {
             var vm = OpenWithBores();
-            ProjectService.XncProgramsAfterUpdateBore = [ProgramWithBores((368, "dx-32"), (200, "200"))];
+            Project.Editor.UpdateBore(default, default, default, default!).ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramWithBores((368, "dx-32"), (200, "200"))]));
             var row = vm.Machining.Bores[0];
             vm.Machining.SelectedBore = row;
             row.IsSelected = true;
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
             row.XInput = "dx-32";
             var committed = row.TryCommitCellEdit();
 
+            Project.Editor.Received(1).UpdateBore(5, 0, BoreAttribute.X, "dx-32");
             Assert.Multiple(() =>
             {
                 Assert.That(committed, Is.True);
-                Assert.That(ProjectService.LastUpdateBore, Is.EqualTo((5, 0, BoreAttribute.X, "dx-32")));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.Machining.Bores[0], Is.SameAs(row));
                 Assert.That(vm.Machining.SelectedBore, Is.SameAs(row));
                 Assert.That(row.X, Is.EqualTo("368"));
@@ -304,7 +305,7 @@ namespace XncOptimizerUI.Test
         public void SelectingPart_ListsVariablesInTableAndXncList()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+            Project.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
@@ -321,23 +322,23 @@ namespace XncOptimizerUI.Test
         public void EditingVariableExpr_SavesUpdatesRowInPlaceAndRebuildsDependents()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
-            ProjectService.XncProgramsAfterUpdateVariable = [ProgramWithVariable("dz+4", 23, 23)];
+            Project.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+            Project.Editor.UpdateVariable(default, default, default, default!).ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramWithVariable("dz+4", 23, 23)]));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             var row = vm.Machining.Variables.Single();
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
             row.ExprInput = "dz+4";
             var committed = row.TryCommitCellEdit();
 
+            Project.Editor.Received(1).UpdateVariable(5, 0, XncVariableAttribute.Expr, "dz+4");
             Assert.Multiple(() =>
             {
                 Assert.That(committed, Is.True);
-                Assert.That(ProjectService.LastUpdateVariable, Is.EqualTo((5, 0, XncVariableAttribute.Expr, "dz+4")));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.Machining.Variables.Single(), Is.SameAs(row));
                 Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "23")));
                 Assert.That(vm.Machining.Bores.Single().Depth, Is.EqualTo("23"));
@@ -349,13 +350,13 @@ namespace XncOptimizerUI.Test
         public void EditingVariable_WhenServiceRejects_SavesNothing()
         {
             SeedTwoParts();
-            ProjectService.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
-            ProjectService.UpdateVariableResult = false;
+            Project.XncPrograms = [ProgramWithVariable("dz+2", 21, 21)];
+            Project.Editor.UpdateVariable(default, default, default, default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             var row = vm.Machining.Variables.Single();
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
             row.TypeInput = "int";
@@ -363,7 +364,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(row.TryCommitCellEdit(), Is.False);
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
             });
         }
 
@@ -381,7 +382,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(row.HasErrors, Is.True);
                 Assert.That(row.GetErrors(nameof(BoreRowVM.XInput)).Cast<string>().Single(), Does.Contain("sign"));
                 Assert.That(row.TryCommitCellEdit(), Is.False);
-                Assert.That(ProjectService.Calls, Does.Not.Contain(nameof(FakeProjectService.UpdateBore)));
+                Assert.That(Project.Calls, Does.Not.Contain(nameof(IProjectEditor.UpdateBore)));
             });
         }
 
@@ -414,7 +415,7 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(row.TryCommitCellEdit(), Is.True);
-                Assert.That(ProjectService.Calls, Does.Not.Contain(nameof(FakeProjectService.UpdateBore)));
+                Assert.That(Project.Calls, Does.Not.Contain(nameof(IProjectEditor.UpdateBore)));
             });
         }
 
@@ -422,9 +423,9 @@ namespace XncOptimizerUI.Test
         public void EditingBore_WhenServiceRejects_KeepsEditAndSavesNothing()
         {
             var vm = OpenWithBores();
-            ProjectService.UpdateBoreResult = false;
+            Project.Editor.UpdateBore(default, default, default, default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
             var row = vm.Machining.Bores[0];
-            var savesBefore = ProjectService.SaveCount;
+            var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
             row.DepthInput = "dz";
@@ -434,7 +435,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(row.TryCommitCellEdit(), Is.False);
                 Assert.That(row.HasErrors, Is.True);
                 Assert.That(row.Depth, Is.EqualTo("10"));
-                Assert.That(ProjectService.SaveCount, Is.EqualTo(savesBefore));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
             });
         }
     }
