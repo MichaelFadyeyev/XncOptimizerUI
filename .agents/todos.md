@@ -135,3 +135,15 @@ place exactly. Possible refinements:
 - **Parts list export culture** - CSV/clipboard sizes use the current culture on purpose
   (`AppViewModelTests.CopyPartsList_FormatsFractionalSizesWithCurrentCulture`); switch to
   invariant if the consumer needs it.
+
+## Test project layout
+
+- **Group test files into folders mirroring the app** - `XncOptimizerUI.Test/` is flat
+  (~68 files). Move them into `Services/` (`Project/`, `Xnc/`, `Xnc/Geometry/`, ...),
+  `MVVM/ViewModels/` (`Parts/`, `Machining/`, `Panels/`, `Preview/`), `MVVM/Views/`
+  (UI tests, preview renderers) and a shared `Infrastructure/` (or similar) for
+  `TempFixtureTestBase`, `AppViewModelTestBase`, `ProjectServicesTestBase`,
+  `ProgramGridUiTestBase`, `TestProject`, `TestViewModels`, `GoldenSnapshot`,
+  `BindingErrorListener`; `Fakes/` and `Golden/` stay. Decide whether namespaces follow
+  the folders (then update `using`s) or stay `XncOptimizerUI.Test`. Pure move, own commit;
+  keep the golden snapshot paths working.
