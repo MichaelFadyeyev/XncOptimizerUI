@@ -121,3 +121,17 @@ place exactly. Possible refinements:
   so such a mill passing a part corner from outside may be kept.
 - **`countBore`** on the XNC operation is not recalculated after removing bores (same as the other
   conversions).
+
+## Refactoring leftovers (need a user decision)
+
+- **Atomic restructuring** - `IdenticalPartsGrouper` and `SplitAlongXPreparer` change the
+  document step by step; a failure part-way leaves the in-memory document partly changed
+  (nothing is saved). The XNC batch operations already compute first and write only when
+  every program succeeds (`XncBatchRunner`).
+- **Existing output file** - `ProjectDocument.SaveAsSuffixed` overwrites a file of the same
+  name (`*_opt.project`, `*_gm.project`, ...) without asking.
+- **`XncProgramText.Load` HTML-decodes the program** (`WebUtility.HtmlDecode`) before parsing;
+  suspected to break programs whose comments contain `&`. Untested.
+- **Parts list export culture** - CSV/clipboard sizes use the current culture on purpose
+  (`AppViewModelTests.CopyPartsList_FormatsFractionalSizesWithCurrentCulture`); switch to
+  invariant if the consumer needs it.

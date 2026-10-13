@@ -229,7 +229,7 @@ Constants: `GrooveMillConverter.AxisEpsilon = 1e-6`, `ConversionTools.DiameterEp
 
 XNC `program` sub-documents need **no** id remapping — their coordinates are part-local.
 
-## Headless usage pattern (from `XncOptimizerUI.Test/ProjectServicesTests.cs`)
+## Headless usage pattern (from `XncOptimizerUI.Test/ProjectServicesTestBase.cs`)
 
 ```csharp
 var config = Substitute.For<IConfigService>();
@@ -244,6 +244,6 @@ var result = project.Batch.ConvertGroovesAndMills(parts, GrooveMillDirection.Gro
 ```
 
 Fixtures: `XncOptimizerUI/TestData/*.project`. Conversion/optimization tests:
-`ProjectServicesTests.ConvertGroovesAndMills_*`, `OptimizeMillTraversal_*`; byte-exact output of every
+`GrooveMillConverterTests`, `BoreMillConverterTests`, `MillTraversalOptimizerTests`, `MillPathOffsetterTests`; byte-exact output of every
 operation: `OperationGoldenTests` (`Golden/Operations/`). Reader tests: `XncProgramReaderTests`,
 `XncExpressionEvaluatorTests`.
