@@ -17,11 +17,9 @@
     <DataGrid
         x:Name="VariablesDataGrid"
         helpers:DataGridCellEditBehavior.CommitToRow="True"
-        AutoGenerateColumns="False"
-        CanUserAddRows="False"
         ItemsSource="{Binding Variables}"
         SelectionMode="Single"
-        SelectionUnit="FullRow">
+        Style="{StaticResource ProgramGridStyle}">
         <DataGrid.Columns>
 
             <!--  Read-only variable identity  -->

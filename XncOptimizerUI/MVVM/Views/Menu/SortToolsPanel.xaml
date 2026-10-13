@@ -1,0 +1,32 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.SortToolsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SortToolsPanelVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Sort tool declarations: tools to program start, Bore - Cut - Mill, then by diameter  -->
+    <Border x:Name="SortToolDeclarationsBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="SortToolDeclarationsStack">
+            <Button
+                x:Name="SortToolDeclarationsButton"
+                Command="{Binding SortToolDeclarationsCommand}"
+                Content="Sort tools"
+                Style="{StaticResource CommandButtonStyle}"
+                ToolTip="Move tool declarations to the program start, ordered Bore - Cut - Mill, then by Ø ascending" />
+
+            <!--  Scope: all filtered parts (all parts when unfiltered) instead of the checked ones  -->
+            <CheckBox
+                x:Name="SortToolsGloballyCheckBox"
+                Margin="0,7,0,0"
+                Content="Apply globally / filtered"
+                IsChecked="{Binding SortToolsGlobally}"
+                Style="{StaticResource MenuCheckBoxStyle}"
+                ToolTip="Sort tools in every part passing the filter (all parts when no filter is set), not only the checked ones" />
+        </StackPanel>
+    </Border>
+</UserControl>

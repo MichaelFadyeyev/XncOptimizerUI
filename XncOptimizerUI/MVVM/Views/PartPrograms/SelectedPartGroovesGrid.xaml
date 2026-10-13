@@ -1,0 +1,75 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartGroovesGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Selected part grooves (<gr>), read-only  -->
+    <DataGrid
+        x:Name="GroovesDataGrid"
+        ItemsSource="{Binding Grooves}"
+        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        <DataGrid.Columns>
+
+            <!--  Check: feeds SelectedPartMachiningVM's checked grooves  -->
+            <common:RowCheckColumn x:Name="GroovesCheckColumn" />
+
+            <!--  Groove identity  -->
+            <DataGridTextColumn
+                x:Name="GroovesNumberColumn"
+                Width="Auto"
+                Binding="{Binding Number}"
+                Header="#" />
+            <DataGridTextColumn
+                x:Name="GroovesSideColumn"
+                Width="Auto"
+                Binding="{Binding Side}"
+                Header="Side" />
+
+            <!--  Start and end points  -->
+            <DataGridTextColumn
+                x:Name="GroovesStartXColumn"
+                Width="*"
+                Binding="{Binding StartX}"
+                Header="Start X" />
+            <DataGridTextColumn
+                x:Name="GroovesStartYColumn"
+                Width="*"
+                Binding="{Binding StartY}"
+                Header="Start Y" />
+            <DataGridTextColumn
+                x:Name="GroovesEndXColumn"
+                Width="*"
+                Binding="{Binding EndX}"
+                Header="End X" />
+            <DataGridTextColumn
+                x:Name="GroovesEndYColumn"
+                Width="*"
+                Binding="{Binding EndY}"
+                Header="End Y" />
+
+            <!--  Cut: depth, width, tool to center line position  -->
+            <DataGridTextColumn
+                x:Name="GroovesDepthColumn"
+                Width="*"
+                Binding="{Binding Depth}"
+                Header="Depth" />
+            <DataGridTextColumn
+                x:Name="GroovesWidthColumn"
+                Width="*"
+                Binding="{Binding Width}"
+                Header="Width" />
+            <DataGridTextColumn
+                x:Name="GroovesTclColumn"
+                Width="*"
+                Binding="{Binding ToolToCenterLine}"
+                Header="TCL" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

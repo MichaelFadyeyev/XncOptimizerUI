@@ -1,0 +1,71 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers">
+
+    <!--  Splitter resizing the grid rows or columns on both of its sides  -->
+    <Style x:Key="GridSplitterStyle" TargetType="GridSplitter">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{DynamicResource SeparatorBrush}" />
+        <Setter Property="ResizeBehavior" Value="PreviousAndNext" />
+        <Setter Property="ShowsPreview" Value="False" />
+    </Style>
+
+    <!--  Splitter between two grid rows  -->
+    <Style
+        x:Key="RowSplitterStyle"
+        BasedOn="{StaticResource GridSplitterStyle}"
+        TargetType="GridSplitter">
+        <Setter Property="Cursor" Value="SizeNS" />
+        <Setter Property="ResizeDirection" Value="Rows" />
+    </Style>
+
+    <!--  Splitter between two grid columns  -->
+    <Style
+        x:Key="ColumnSplitterStyle"
+        BasedOn="{StaticResource GridSplitterStyle}"
+        TargetType="GridSplitter">
+        <Setter Property="Cursor" Value="SizeWE" />
+        <Setter Property="ResizeDirection" Value="Columns" />
+    </Style>
+
+    <!--  Heading above a table  -->
+    <Style x:Key="SectionLabelStyle" TargetType="Label">
+        <Setter Property="Margin" Value="5,2,0,5" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!--  Explanation below a table  -->
+    <Style x:Key="HintTextStyle" TargetType="TextBlock">
+        <Setter Property="Margin" Value="5,0,0,4" />
+        <Setter Property="Foreground" Value="{DynamicResource HintTextBrush}" />
+    </Style>
+
+    <!--  Low single-line text input (filter fields, menu options)  -->
+    <Style x:Key="CompactTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="Padding" Value="0,2" />
+    </Style>
+
+    <!--
+        Range bound input: a decimal the view model rewrites while typing (",", ".5"); the caret
+        stays at the end of the rewritten text
+    -->
+    <Style
+        x:Key="DecimalRangeTextBoxStyle"
+        BasedOn="{StaticResource CompactTextBoxStyle}"
+        TargetType="TextBox">
+        <Setter Property="helpers:CaretBehavior.KeepAtEndOnRewrite" Value="True" />
+    </Style>
+
+    <!--  Low button next to compact inputs  -->
+    <Style x:Key="CompactButtonStyle" TargetType="Button">
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="Padding" Value="0,2" />
+    </Style>
+</ResourceDictionary>

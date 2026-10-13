@@ -1,0 +1,35 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.OptionsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Preview"
+    d:DataContext="{d:DesignInstance Type=viewmodels:PartPreviewVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Options group: options dialog button (inactive for now) and persisted app options  -->
+    <Border x:Name="OptionsBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="OptionsStack">
+
+            <!--  Options dialog: not implemented yet  -->
+            <Button
+                x:Name="OptionsButton"
+                Content="Options"
+                IsEnabled="False"
+                Style="{StaticResource FileOpsButtonStyle}" />
+
+            <!--  Rotation option: keep edge groove TCL as GibLab does  -->
+            <CheckBox
+                x:Name="NeverFlipTclOnTurnCheckBox"
+                Margin="2,4,2,0"
+                IsChecked="{Binding NeverFlipTclOnTurn}">
+                <TextBlock
+                    x:Name="NeverFlipTclOnTurnText"
+                    Style="{StaticResource TextWrappingStyle}"
+                    Text="Never flips TCL on program turning (keep GibLab behavior)" />
+            </CheckBox>
+        </StackPanel>
+    </Border>
+</UserControl>

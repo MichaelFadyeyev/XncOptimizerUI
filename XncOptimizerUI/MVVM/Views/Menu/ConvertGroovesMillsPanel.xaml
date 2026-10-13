@@ -1,0 +1,66 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.ConvertGroovesMillsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
+    d:DataContext="{d:DesignInstance Type=viewmodels:GrooveMillPanelVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Convert grooves and mills: command, direction and pocket option  -->
+    <Border x:Name="ConvertGroovesMillsBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="ConvertGroovesMillsStack">
+            <Button
+                x:Name="ConvertGroovesMillsButton"
+                Command="{Binding ConvertGroovesAndMillsCommand}"
+                Content="Convert grooves / mills"
+                Style="{StaticResource CommandButtonStyle}" />
+
+            <!--  Direction radios; pockets only apply to mills to grooves  -->
+            <Grid x:Name="GrooveMillOptionsGrid" Margin="0,7,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <RadioButton
+                    x:Name="GroovesToMillsRadio"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Content="Grooves → Mills"
+                    GroupName="GrooveMillDir"
+                    IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.GroovesToMills}, Converter={StaticResource EnumToBool}}"
+                    Style="{StaticResource MenuRadioButtonStyle}" />
+
+                <RadioButton
+                    x:Name="MillsToGroovesRadio"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Content="Mills → Grooves"
+                    GroupName="GrooveMillDir"
+                    IsChecked="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
+                    Style="{StaticResource MenuRadioButtonStyle}" />
+
+                <CheckBox
+                    x:Name="ProcessPocketsCheckBox"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Margin="8,0,0,0"
+                    Content="incl. pockets"
+                    IsChecked="{Binding ProcessPockets}"
+                    IsEnabled="{Binding GrooveMillDirection, ConverterParameter={x:Static xnc:GrooveMillDirection.MillsToGrooves}, Converter={StaticResource EnumToBool}}"
+                    Style="{StaticResource MenuCheckBoxStyle}"
+                    ToolTip="Also convert axis-parallel rectangular pockets (&lt;mr&gt;) to grooves" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

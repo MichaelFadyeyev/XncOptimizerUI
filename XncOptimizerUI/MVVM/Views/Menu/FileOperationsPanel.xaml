@@ -1,0 +1,57 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.FileOperationsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  File operations buttons: open, close and save the project  -->
+    <Grid x:Name="FileOperationsGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Button
+            x:Name="OpenFileButton"
+            Grid.Row="0"
+            Grid.Column="0"
+            Command="{Binding OpenFileCommand}"
+            Content="Open"
+            Style="{StaticResource FileOpsButtonStyle}" />
+
+        <Button
+            x:Name="CloseFileButton"
+            Grid.Row="0"
+            Grid.Column="1"
+            Background="{StaticResource DangerButtonBrush}"
+            Command="{Binding CloseFileCommand}"
+            Content="Close"
+            Style="{StaticResource FileOpsButtonStyle}" />
+
+        <Button
+            x:Name="SaveFileButton"
+            Grid.Row="1"
+            Grid.Column="0"
+            Command="{Binding SaveFileCommand}"
+            Content="Save"
+            Style="{StaticResource FileOpsButtonStyle}" />
+
+        <!--  Save as: not implemented yet  -->
+        <Button
+            x:Name="SaveFileAsButton"
+            Grid.Row="1"
+            Grid.Column="1"
+            Content="Save as..."
+            IsEnabled="False"
+            Style="{StaticResource FileOpsButtonStyle}" />
+    </Grid>
+</UserControl>

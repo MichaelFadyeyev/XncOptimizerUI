@@ -1,0 +1,75 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.MillingEllipsesGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Selected part milling ellipses (<me>), read-only  -->
+    <DataGrid
+        x:Name="MillingEllipsesDataGrid"
+        ItemsSource="{Binding MillingEllipses}"
+        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        <DataGrid.Columns>
+
+            <!--  Check: feeds SelectedPartMachiningVM's checked ellipses  -->
+            <common:RowCheckColumn x:Name="EllipsesCheckColumn" />
+
+            <!--  Ellipse identity  -->
+            <DataGridTextColumn
+                x:Name="EllipsesNumberColumn"
+                Width="Auto"
+                Binding="{Binding Number}"
+                Header="#" />
+            <DataGridTextColumn
+                x:Name="EllipsesSideColumn"
+                Width="Auto"
+                Binding="{Binding Side}"
+                Header="Side" />
+
+            <!--  Center  -->
+            <DataGridTextColumn
+                x:Name="EllipsesCenterXColumn"
+                Width="*"
+                Binding="{Binding CenterX}"
+                Header="Center X" />
+            <DataGridTextColumn
+                x:Name="EllipsesCenterYColumn"
+                Width="*"
+                Binding="{Binding CenterY}"
+                Header="Center Y" />
+
+            <!--  Cut: depth, radii, angle, tool to center line position  -->
+            <DataGridTextColumn
+                x:Name="EllipsesDepthColumn"
+                Width="*"
+                Binding="{Binding Depth}"
+                Header="Depth" />
+            <DataGridTextColumn
+                x:Name="EllipsesLengthColumn"
+                Width="*"
+                Binding="{Binding Length}"
+                Header="Length R" />
+            <DataGridTextColumn
+                x:Name="EllipsesWidthColumn"
+                Width="*"
+                Binding="{Binding Width}"
+                Header="Width R" />
+            <DataGridTextColumn
+                x:Name="EllipsesAngleColumn"
+                Width="*"
+                Binding="{Binding Angle}"
+                Header="Angle°" />
+            <DataGridTextColumn
+                x:Name="EllipsesTclColumn"
+                Width="*"
+                Binding="{Binding ToolToCenterLine}"
+                Header="TCL" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

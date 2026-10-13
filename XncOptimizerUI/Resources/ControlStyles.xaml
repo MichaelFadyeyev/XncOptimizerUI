@@ -27,12 +27,9 @@
         </Style.Triggers>
     </Style>
 
-    <!--  Resolves a PartVM.*BandingId to "<internal symbol> <name>" (values: id, BandOptions)  -->
-    <helpers:BandCaptionConverter x:Key="BandCaption" />
-
     <!--
         Parts grid edge-band cell, display mode: plain text "<internal symbol> <name>", also as
-        tooltip. Each column sets Text through a BandCaption MultiBinding.
+        tooltip (BandColumn sets Text through a BandCaptionConverter MultiBinding).
     -->
     <Style x:Key="BandCaptionTextStyle" TargetType="TextBlock">
         <Setter Property="VerticalAlignment" Value="Center" />
@@ -44,7 +41,7 @@
         Parts grid edge-band select, edit mode only: lists ProjectCatalogVM.BandOptions (empty option
         first) and shows each band as "<internal symbol> <name>", both in the box and in the
         drop-down. Opens its list when it appears; closing the list returns the cell to text.
-        Each column binds only SelectedValue to its PartVM.*BandingId.
+        BandColumn binds only SelectedValue to its PartVM.*BandingId.
     -->
     <Style x:Key="BandSelectComboBoxStyle" TargetType="ComboBox">
         <Setter Property="ItemsSource" Value="{Binding DataContext.Catalog.BandOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
@@ -57,6 +54,31 @@
                 </DataTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!--  Program table of the selected part: declared columns only, no new-row line, whole-row selection  -->
+    <Style x:Key="ProgramGridStyle" TargetType="DataGrid">
+        <Setter Property="AutoGenerateColumns" Value="False" />
+        <Setter Property="CanUserAddRows" Value="False" />
+        <Setter Property="SelectionUnit" Value="FullRow" />
+    </Style>
+
+    <!--  Machining table in the selected part's operations list: height capped, rows checkable together  -->
+    <Style
+        x:Key="OperationGridStyle"
+        BasedOn="{StaticResource ProgramGridStyle}"
+        TargetType="DataGrid">
+        <Setter Property="MaxHeight" Value="250" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="SelectionMode" Value="Extended" />
+    </Style>
+
+    <!--  Machining table without editable cells (only its check boxes)  -->
+    <Style
+        x:Key="ReadOnlyOperationGridStyle"
+        BasedOn="{StaticResource OperationGridStyle}"
+        TargetType="DataGrid">
+        <Setter Property="IsReadOnly" Value="True" />
     </Style>
 
     <!--

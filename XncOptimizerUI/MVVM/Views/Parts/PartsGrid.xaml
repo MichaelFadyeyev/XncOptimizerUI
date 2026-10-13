@@ -1,0 +1,98 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Parts.PartsGrid"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:parts="clr-namespace:XncOptimizerUI.MVVM.Views.Parts"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:AppViewModel,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--
+        Parts list: the parts passing the filter; sizes, name, texture flag and edge bands
+        editable in place (the band select finds its options through the grid's DataContext)
+    -->
+    <DataGrid
+        x:Name="PartsDataGrid"
+        AutoGenerateColumns="False"
+        CanUserAddRows="False"
+        EnableRowVirtualization="True"
+        ItemsSource="{Binding PartsList.Parts, UpdateSourceTrigger=PropertyChanged}"
+        SelectedItem="{Binding PartsList.SelectedPart}"
+        VirtualizingPanel.VirtualizationMode="Recycling">
+        <DataGrid.Columns>
+
+            <!--  Check: the parts batch commands act on  -->
+            <common:RowCheckColumn x:Name="PartsCheckColumn" />
+
+            <!--  Number, sizes and count  -->
+            <DataGridTextColumn
+                x:Name="PartsNumberColumn"
+                Width="2*"
+                Binding="{Binding Number}"
+                Header="No" />
+            <DataGridTextColumn
+                x:Name="PartsLengthColumn"
+                Width="5*"
+                Binding="{Binding Length}"
+                Header="Length" />
+            <DataGridTextColumn
+                x:Name="PartsWidthColumn"
+                Width="5*"
+                Binding="{Binding Width}"
+                Header="Width" />
+            <DataGridTextColumn
+                x:Name="PartsCountColumn"
+                Width="5*"
+                Binding="{Binding Count}"
+                Header="Count" />
+
+            <!--  Consider texture (txt) flag  -->
+            <DataGridTemplateColumn
+                x:Name="PartsTxtColumn"
+                Width="5*"
+                Header="Txt">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <CheckBox
+                            x:Name="PartTxtCheckBox"
+                            HorizontalAlignment="Center"
+                            IsChecked="{Binding ConsiderTexture, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <!--  Edge bands: "<internal symbol> <name>" text, band select on click  -->
+            <parts:BandColumn
+                x:Name="PartsTopBandColumn"
+                Width="15*"
+                BandingIdPath="TopBandingId"
+                Header="Top Band" />
+            <parts:BandColumn
+                x:Name="PartsBottomBandColumn"
+                Width="15*"
+                BandingIdPath="BottomBandingId"
+                Header="Bottom Band" />
+            <parts:BandColumn
+                x:Name="PartsLeftBandColumn"
+                Width="15*"
+                BandingIdPath="LeftBandingId"
+                Header="Left Band" />
+            <parts:BandColumn
+                x:Name="PartsRightBandColumn"
+                Width="15*"
+                BandingIdPath="RightBandingId"
+                Header="Right Band" />
+
+            <!--  Part name  -->
+            <DataGridTextColumn
+                x:Name="PartsNameColumn"
+                Width="22*"
+                Binding="{Binding Name}"
+                Header="Name" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

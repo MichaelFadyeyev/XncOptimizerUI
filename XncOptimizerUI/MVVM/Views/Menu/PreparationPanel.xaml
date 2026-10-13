@@ -1,0 +1,95 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.PreparationPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:PreparationPanelVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Preparation commands: grouping identical parts, preparing the labelled parts for a split  -->
+    <StackPanel x:Name="PreparationStack">
+
+        <!--  Group by XNC: one product good per group of identical parts  -->
+        <StackPanel x:Name="GroupByXncPanel" Style="{StaticResource MenuCommandPanelStyle}">
+            <Button
+                x:Name="GroupByXncButton"
+                Margin="0,0,0,5"
+                Command="{Binding ExecuteOptimizeCommand}"
+                Content="Group by XNC"
+                Style="{StaticResource CommandButtonStyle}" />
+        </StackPanel>
+
+        <!--  Prep. for split along X: command and the label selecting the parts to prepare  -->
+        <Border x:Name="PrepForSplitBorder" Style="{StaticResource MenuGroupBorderStyle}">
+            <StackPanel x:Name="PrepForSplitStack">
+                <Button
+                    x:Name="PrepForSplitButton"
+                    Command="{Binding ExecutePrepForSplitAlongXCommand}"
+                    Content="Prep. For Split Along X"
+                    Style="{StaticResource CommandButtonStyle}" />
+
+                <Label
+                    x:Name="NewLabelCaption"
+                    Content="Add new label:"
+                    Style="{StaticResource MenuCaptionLabelStyle}" />
+
+                <!--  New label input and its ADD button  -->
+                <Grid
+                    x:Name="NewLabelGrid"
+                    Margin="0,5,0,0"
+                    HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        x:Name="NewLabelTextBox"
+                        Grid.Column="0"
+                        Height="24"
+                        Text="{Binding Labels.NewLabelToProcess, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Button
+                        x:Name="AddLabelButton"
+                        Grid.Column="1"
+                        Command="{Binding Labels.AddNewLabelCommand}"
+                        Content="ADD"
+                        Style="{StaticResource InlineOptionButtonStyle}" />
+                </Grid>
+
+                <Label
+                    x:Name="SelectLabelCaption"
+                    Content="Select label to process:"
+                    Style="{StaticResource MenuCaptionLabelStyle}" />
+
+                <!--  Label to process and its DEL button  -->
+                <Grid
+                    x:Name="SelectLabelGrid"
+                    Margin="0,5,0,0"
+                    HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <ComboBox
+                        x:Name="LabelComboBox"
+                        Grid.Column="0"
+                        Height="24"
+                        ItemsSource="{Binding Labels.LabelsToProcess}"
+                        SelectedItem="{Binding Labels.SelectedLabel}" />
+
+                    <Button
+                        x:Name="DeleteLabelButton"
+                        Grid.Column="1"
+                        Command="{Binding Labels.DeleteLabelCommand}"
+                        Content="DEL"
+                        Style="{StaticResource InlineOptionButtonStyle}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

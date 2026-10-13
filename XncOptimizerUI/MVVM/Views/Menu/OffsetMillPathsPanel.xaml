@@ -1,0 +1,97 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.OffsetMillPathsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:validators="clr-namespace:XncOptimizerUI.MVVM.Validators"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    xmlns:xnc="clr-namespace:XncOptimizerUI.MVVM.Models.Xnc"
+    d:DataContext="{d:DesignInstance Type=viewmodels:MillOffsetPanelVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Offset mill paths: offset distance (mm), side of the traversal direction, path types  -->
+    <Border x:Name="OffsetMillPathsBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="OffsetMillPathsStack">
+            <Button
+                x:Name="OffsetMillPathsButton"
+                Command="{Binding OffsetMillPathsCommand}"
+                Content="Offset mill path"
+                Style="{StaticResource CommandButtonStyle}" />
+
+            <!--  Distance and side on the first row, path types below  -->
+            <Grid x:Name="OffsetMillPathsOptionsGrid" Margin="0,7,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBox
+                    x:Name="MillOffsetTextBox"
+                    Grid.Column="0"
+                    Margin="0"
+                    FontSize="10"
+                    Style="{StaticResource CompactTextBoxStyle}"
+                    Text="{validators:DecimalBinding MillOffset}"
+                    ToolTip="Offset distance, mm (greater than 0)" />
+
+                <TextBlock
+                    x:Name="MillOffsetUnitText"
+                    Grid.Column="1"
+                    Margin="2,0,8,0"
+                    VerticalAlignment="Center"
+                    FontSize="10"
+                    Text="mm" />
+
+                <RadioButton
+                    x:Name="MillOffsetRightRadio"
+                    Grid.Column="2"
+                    Content="R"
+                    GroupName="MillOffsetSide"
+                    IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Right}, Converter={StaticResource EnumToBool}}"
+                    Style="{StaticResource MenuRadioButtonStyle}"
+                    ToolTip="Offset to the right of the traversal direction" />
+
+                <RadioButton
+                    x:Name="MillOffsetLeftRadio"
+                    Grid.Column="3"
+                    Margin="8,0,0,0"
+                    Content="L"
+                    GroupName="MillOffsetSide"
+                    IsChecked="{Binding MillOffsetSide, ConverterParameter={x:Static xnc:MillOffsetSide.Left}, Converter={StaticResource EnumToBool}}"
+                    Style="{StaticResource MenuRadioButtonStyle}"
+                    ToolTip="Offset to the left of the traversal direction" />
+
+                <!--  Mill path types to process  -->
+                <CheckBox
+                    x:Name="OffsetOpenMillPathsCheckBox"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="4"
+                    Margin="0,4,0,0"
+                    Content="open paths"
+                    IsChecked="{Binding OffsetOpenMillPaths}"
+                    Style="{StaticResource MenuCheckBoxStyle}"
+                    ToolTip="Offset open milling contours (&lt;ms&gt; paths that do not return to the entry point)" />
+
+                <CheckBox
+                    x:Name="OffsetClosedMillPathsCheckBox"
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="4"
+                    Content="closed paths / rect. / ellipses"
+                    IsChecked="{Binding OffsetClosedMillPaths}"
+                    Style="{StaticResource MenuCheckBoxStyle}"
+                    ToolTip="Offset closed milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

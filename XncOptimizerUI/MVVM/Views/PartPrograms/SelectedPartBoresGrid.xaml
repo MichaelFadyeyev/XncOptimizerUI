@@ -2,6 +2,7 @@
     x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartBoresGrid"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -17,28 +18,13 @@
     <DataGrid
         x:Name="BoresDataGrid"
         helpers:DataGridCellEditBehavior.CommitToRow="True"
-        AutoGenerateColumns="False"
-        CanUserAddRows="False"
         ItemsSource="{Binding Bores}"
         SelectedItem="{Binding SelectedBore}"
-        SelectionMode="Extended"
-        SelectionUnit="FullRow">
+        Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
             <!--  Check: feeds SelectedPartMachiningVM.CheckedBores  -->
-            <DataGridTemplateColumn
-                x:Name="BoresCheckColumn"
-                Width="Auto"
-                Header="Check">
-                <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                        <CheckBox
-                            x:Name="BoreCheckBox"
-                            HorizontalAlignment="Center"
-                            IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
+            <common:RowCheckColumn x:Name="BoresCheckColumn" />
 
             <!--  Read-only bore identity  -->
             <DataGridTextColumn

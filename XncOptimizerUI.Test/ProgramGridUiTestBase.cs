@@ -35,17 +35,10 @@ namespace XncOptimizerUI.Test
         {
             if (Application.Current is not null) return;
 
-            var assembly = typeof(App).Assembly.GetName().Name;
-            _ = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-
-            // The dictionaries App.xaml merges.
-            foreach (var dictionary in new[] { "ControlStyles.xaml", "PartPreviewResources.xaml" })
-            {
-                Application.Current!.Resources.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri($"pack://application:,,,/{assembly};component/Resources/{dictionary}")
-                });
-            }
+            // The application resources exactly as App.xaml declares them; OnStartup (DI, main
+            // window) only runs from Application.Run.
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.InitializeComponent();
         }
 
         /// <summary>

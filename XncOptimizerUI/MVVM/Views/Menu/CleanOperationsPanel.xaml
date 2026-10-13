@@ -1,0 +1,52 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.CleanOperationsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:CleanOutsidePanelVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Clean operations: removes bores / grooves / mills lying outside the part (checked parts, or all when none is checked)  -->
+    <Border x:Name="CleanOperationsBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="CleanOperationsStack">
+            <Button
+                x:Name="CleanOperationsButton"
+                Command="{Binding CleanOutsideOperationsCommand}"
+                Content="Clean operations"
+                Style="{StaticResource CommandButtonStyle}"
+                ToolTip="Remove operations lying outside the part from the checked parts (all parts when none is checked)" />
+
+            <Label
+                x:Name="CleanOutsideLabel"
+                Content="Clean outside:"
+                Style="{StaticResource MenuCaptionLabelStyle}" />
+
+            <!--  Operation types to clean  -->
+            <StackPanel x:Name="CleanOutsideKindsStack" Orientation="Horizontal">
+                <CheckBox
+                    x:Name="CleanOutsideBoresCheckBox"
+                    Content="Bores"
+                    IsChecked="{Binding CleanOutsideBores}"
+                    Style="{StaticResource MenuCheckBoxStyle}" />
+
+                <CheckBox
+                    x:Name="CleanOutsideGroovesCheckBox"
+                    Margin="8,0,0,0"
+                    Content="Grooves"
+                    IsChecked="{Binding CleanOutsideGrooves}"
+                    Style="{StaticResource MenuCheckBoxStyle}" />
+
+                <CheckBox
+                    x:Name="CleanOutsideMillsCheckBox"
+                    Margin="8,0,0,0"
+                    Content="Mills"
+                    IsChecked="{Binding CleanOutsideMills}"
+                    Style="{StaticResource MenuCheckBoxStyle}"
+                    ToolTip="Milling contours, rectangles (&lt;mr&gt;) and ellipses (&lt;me&gt;)" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

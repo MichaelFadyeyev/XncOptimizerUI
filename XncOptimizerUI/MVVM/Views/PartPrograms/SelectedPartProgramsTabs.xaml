@@ -1,0 +1,120 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartProgramsTabs"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:partPrograms="clr-namespace:XncOptimizerUI.MVVM.Views.PartPrograms"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Selected part programs: machining tables, tools, variables and the programs' XML  -->
+    <TabControl x:Name="SelectedPartProgramsTabControl">
+
+        <!--  Operations: one table per machining kind the programs contain  -->
+        <TabItem
+            x:Name="SelectedPartOperationsTab"
+            Width="100"
+            Header="Operations">
+            <ScrollViewer
+                x:Name="SelectedPartOperationsScrollViewer"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="SelectedPartMachiningGrids">
+
+                    <!--  Bores  -->
+                    <Label
+                        x:Name="SelectedPartBoresLabel"
+                        Content="Bores"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:SelectedPartBoresGrid x:Name="SelectedPartBoresGrid" Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}" />
+
+                    <!--  Grooves and the TCL column explanation  -->
+                    <Label
+                        x:Name="SelectedPartGroovesLabel"
+                        Content="Grooves"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:SelectedPartGroovesGrid x:Name="SelectedPartGroovesGrid" Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock
+                        x:Name="SelectedPartGroovesTclExplanation"
+                        Style="{StaticResource HintTextStyle}"
+                        Text="TCL is grooving tool to center line position"
+                        Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
+
+                    <!--  Milling contours  -->
+                    <Label
+                        x:Name="MillingContoursLabel"
+                        Content="Milling contours"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasMillingContours, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:MillingContoursGrid x:Name="MillingContoursGrid" Visibility="{Binding HasMillingContours, Converter={StaticResource BoolToVis}}" />
+
+                    <!--  Milling ellipses  -->
+                    <Label
+                        x:Name="MillingEllipsesLabel"
+                        Content="Milling ellipses"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasMillingEllipses, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:MillingEllipsesGrid x:Name="MillingEllipsesGrid" Visibility="{Binding HasMillingEllipses, Converter={StaticResource BoolToVis}}" />
+
+                    <!--  Milling rectangles  -->
+                    <Label
+                        x:Name="MillingRectanglesLabel"
+                        Content="Milling rectangles"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:MillingRectanglesGrid x:Name="MillingRectanglesGrid" Visibility="{Binding HasMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!--  Tools declared by the programs  -->
+        <TabItem
+            x:Name="SelectedPartToolsTab"
+            Width="100"
+            Header="Tools">
+            <ScrollViewer
+                x:Name="SelectedPartToolsScrollViewer"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="SelectedPartToolsStack">
+                    <Label
+                        x:Name="ToolsLabel"
+                        Content="Tools"
+                        Style="{StaticResource SectionLabelStyle}"
+                        Visibility="{Binding HasTools, Converter={StaticResource BoolToVis}}" />
+                    <partPrograms:ToolsGrid x:Name="ToolsGrid" Visibility="{Binding HasTools, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!--  Variables: <var> declarations, editable  -->
+        <TabItem
+            x:Name="SelectedPartVariablesTab"
+            Width="100"
+            Header="Variables">
+            <partPrograms:SelectedPartVariablesGrid
+                x:Name="SelectedPartVariablesGrid"
+                VerticalAlignment="Top"
+                Visibility="{Binding HasVariables, Converter={StaticResource BoolToVis}}" />
+        </TabItem>
+
+        <!--  XNC list: the programs' XML, read-only  -->
+        <TabItem
+            x:Name="SelectedPartXncListTab"
+            Width="100"
+            Header="XNC List">
+            <TextBox
+                x:Name="ProgramsTextBox"
+                HorizontalScrollBarVisibility="Auto"
+                IsReadOnly="True"
+                Text="{Binding ProgramsText, Mode=OneWay}"
+                TextWrapping="NoWrap"
+                VerticalScrollBarVisibility="Auto" />
+        </TabItem>
+    </TabControl>
+</UserControl>

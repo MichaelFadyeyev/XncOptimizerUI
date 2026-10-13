@@ -1,0 +1,71 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Menu.ReplaceXncPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Panels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:SourcePartVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Replace XNCs: copies the source part's programs to the checked parts  -->
+    <Border x:Name="ReplaceXncBorder" Style="{StaticResource MenuGroupBorderStyle}">
+        <StackPanel x:Name="ReplaceXncStack">
+            <Button
+                x:Name="ReplaceXncButton"
+                Command="{Binding ReplaceXNCsCommand}"
+                Content="Replace XNCs"
+                Style="{StaticResource CommandButtonStyle}" />
+
+            <Label
+                x:Name="SourcePartCaption"
+                Margin="5,2,0,0"
+                Content="Source part to copy from:"
+                Style="{StaticResource MenuCaptionLabelStyle}" />
+
+            <!--  Source part summary and its SET / RESET buttons  -->
+            <Grid
+                x:Name="SourcePartGrid"
+                Margin="5,0,5,5"
+                HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    x:Name="SourcePartInfoText"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Height="60"
+                    VerticalAlignment="Center"
+                    FontSize="10"
+                    Text="{Binding SourcePartInfo}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTip="{Binding SourcePartInfo}" />
+
+                <Button
+                    x:Name="SetSourcePartButton"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Command="{Binding SetSourcePartCommand}"
+                    Content="SET"
+                    Style="{StaticResource CellOptionButtonStyle}" />
+
+                <Button
+                    x:Name="ResetSourcePartButton"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Command="{Binding ResetSourcePartCommand}"
+                    Content="RESET"
+                    Style="{StaticResource CellOptionButtonStyle}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

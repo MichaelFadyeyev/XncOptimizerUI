@@ -1,0 +1,13 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--  Separators: menu group frames and grid splitters  -->
+    <SolidColorBrush x:Key="SeparatorBrush" Color="#BCBCBC" />
+
+    <!--  Background of a button that discards work (Close)  -->
+    <SolidColorBrush x:Key="DangerButtonBrush" Color="#FF6A3D" />
+
+    <!--  Secondary, explanatory text  -->
+    <SolidColorBrush x:Key="HintTextBrush" Color="#808080" />
+</ResourceDictionary>

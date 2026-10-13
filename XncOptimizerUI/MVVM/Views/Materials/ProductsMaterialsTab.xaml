@@ -1,0 +1,115 @@
+<UserControl
+    x:Class="XncOptimizerUI.MVVM.Views.Materials.ProductsMaterialsTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Parts"
+    d:DataContext="{d:DesignInstance Type=viewmodels:ProjectCatalogVM,
+                                     IsDesignTimeCreatable=False}"
+    mc:Ignorable="d">
+
+    <!--  Project catalog: products, sheets and bands, vertically centered  -->
+    <Grid x:Name="ProductsMaterialsGrid" VerticalAlignment="Center">
+        <StackPanel x:Name="ProductsMaterialsStack" MaxWidth="1200">
+
+            <!--  Products  -->
+            <StackPanel x:Name="ProductsSection" Margin="0,15,0,0">
+                <Label
+                    x:Name="ProductsLabel"
+                    Content="Products"
+                    Style="{StaticResource SectionLabelStyle}" />
+                <DataGrid
+                    x:Name="ProductsDataGrid"
+                    MaxHeight="450"
+                    AutoGenerateColumns="False"
+                    ItemsSource="{Binding Products}"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn
+                            x:Name="ProductsNameColumn"
+                            Width="80*"
+                            Binding="{Binding Name}"
+                            Header="Name" />
+                        <DataGridTextColumn
+                            x:Name="ProductsCodeColumn"
+                            Width="10*"
+                            Binding="{Binding Code}"
+                            Header="Code" />
+                        <DataGridTextColumn
+                            x:Name="ProductsCountColumn"
+                            Width="10*"
+                            Binding="{Binding Count}"
+                            Header="Count" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+
+            <!--  Sheets  -->
+            <StackPanel x:Name="SheetsSection" Margin="0,15,0,0">
+                <Label
+                    x:Name="SheetsLabel"
+                    Content="Sheets"
+                    Style="{StaticResource SectionLabelStyle}" />
+                <DataGrid
+                    x:Name="SheetsDataGrid"
+                    MaxHeight="450"
+                    AutoGenerateColumns="False"
+                    ItemsSource="{Binding Sheets}"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn
+                            x:Name="SheetsCodeColumn"
+                            Width="10*"
+                            Binding="{Binding Code}"
+                            Header="Code" />
+                        <DataGridTextColumn
+                            x:Name="SheetsNameColumn"
+                            Width="90*"
+                            Binding="{Binding Name}"
+                            Header="Name" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+
+            <!--  Bands  -->
+            <StackPanel x:Name="BandsSection" Margin="0,15,0,0">
+                <Label
+                    x:Name="BandsLabel"
+                    Content="Bands"
+                    Style="{StaticResource SectionLabelStyle}" />
+                <DataGrid
+                    x:Name="BandsDataGrid"
+                    MaxHeight="450"
+                    HorizontalContentAlignment="Right"
+                    AutoGenerateColumns="False"
+                    ItemsSource="{Binding Bands}"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    SelectedItem="{Binding SelectedBand}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn
+                            x:Name="BandsCodeColumn"
+                            Width="10*"
+                            Binding="{Binding Code}"
+                            Header="Code" />
+                        <DataGridTextColumn
+                            x:Name="BandsNameColumn"
+                            Width="80*"
+                            Binding="{Binding Name}"
+                            Header="Name" />
+                        <DataGridTextColumn
+                            x:Name="BandsInternalSymbolColumn"
+                            Width="5*"
+                            Binding="{Binding InternalSymbol}"
+                            Header="Int. Sign" />
+                        <DataGridTextColumn
+                            x:Name="BandsExternalSymbolColumn"
+                            Width="5*"
+                            Binding="{Binding ExternalSymbol}"
+                            Header="Ext. Sign" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
