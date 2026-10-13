@@ -2,7 +2,6 @@ using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Services;
 using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test

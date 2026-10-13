@@ -4,7 +4,6 @@ using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.Test
 {

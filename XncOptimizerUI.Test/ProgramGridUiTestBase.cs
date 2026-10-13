@@ -8,7 +8,6 @@ using NSubstitute;
 using NUnit.Framework.Interfaces;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
-using XncOptimizerUI.Services;
 
 namespace XncOptimizerUI.Test
 {

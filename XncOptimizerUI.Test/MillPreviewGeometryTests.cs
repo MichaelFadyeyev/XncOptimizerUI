@@ -1,6 +1,5 @@
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.Views.PartPreview;
-using XncOptimizerUI.Services.Xnc;
 using XncOptimizerUI.Services.Xnc.Geometry;
 
 namespace XncOptimizerUI.Test

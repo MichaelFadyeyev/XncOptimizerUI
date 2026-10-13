@@ -3,7 +3,6 @@ using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
-using XncOptimizerUI.Services;
 using XncOptimizerUI.Services.Xnc;
 
 namespace XncOptimizerUI.Test
