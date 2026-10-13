@@ -1,6 +1,6 @@
 max_trees = 16
 root = ""
-base_branch = "dev-07"
+base_branch = "dev-08"
 
 # Worktree root directory (relative to repo root or absolute path).
 # Worktrees are placed under {root}/.treehouse/. Default: $HOME
