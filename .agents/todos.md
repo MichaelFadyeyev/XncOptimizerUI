@@ -87,6 +87,13 @@ per selected part. Deferred:
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
 
+## Settings screen
+
+- Add a settings screen (the inactive "Options" button in `MVVM/Views/Menu/OptionsPanel.xaml`)
+  that edits the saw width through `IConfigService.UpdateSawWidth()` and reports failures
+  through `IDialogService.ShowError()`. Both methods are kept, unused, for this screen - never
+  delete them as dead code (user decision, 2026-10-13).
+
 ## Milling direction conventions
 
 Confirmed with the user while building "Offset mill path" (card 030): arc `dir="true"` is a

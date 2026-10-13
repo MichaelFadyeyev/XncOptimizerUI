@@ -238,11 +238,10 @@ primitives, and `SelectedPartMachiningVM` rebuilds all table rows whenever the s
 - ✅ **Re-opening a file after `ExecuteOptimizeCommand` silently renamed its first part.** `AppViewModel.OnSelectedPartChanging` auto-saves the *previously* selected part whenever `SelectedPart` changes, by looking it up in whatever document the project session currently has open. `OpenFile()` called `LoadProject(fullPath, true)` — which switches the session to the newly chosen file via `Open` — *before* releasing the old selection; the eventual `SelectedPart = null` inside `ReadItems()` then fired the auto-save against the *new* document using the *stale* `PartVM` from the previous one. After running "Execute Optimize" (which renames grouped parts with a `[groupCode]` prefix in the new `_opt.project` result and re-selects that renamed part), re-opening the original source file replayed that stale renamed name into the freshly-opened document and saved it — corrupting the source on disk, even though `GroupIdenticalElements` itself never writes to the original path. Fixed by releasing `SelectedPart` in `OpenFile()` *before* `LoadProject` switches documents (mirroring the pattern `CloseFile()` already used). Covered by `AppViewModelTests.OpenFile_AfterExecuteOptimize_ReopeningSourceLeavesFirstPartNameUnchanged` and `ProjectServicesTests.GroupIdenticalElements_DoesNotTouchSourceFileOnDisk` / `TestData/td-execute-optimize.project`.
 
 **Still present:**
-- **Unused interface method**: `IConfigService.UpdateSawWidth()` (interface + implementation) is defined but has no callers. There is no UI control to change the saw-width at runtime; it can only be changed by hand-editing the JSON config file. These may be stubs for a future "settings" dialog.
+- **Kept for the planned settings screen**: `IConfigService.UpdateSawWidth()` and `IDialogService.ShowError()` have no callers yet. The saw width can only be changed by hand-editing the JSON config file until the settings screen exists. Do not delete them (user decision, 2026-10-13); see `.agents/todos.md`.
 - **Batch failures**: `IdenticalPartsGrouper` and `SplitAlongXPreparer` still change the document as they go; a failure part-way leaves the in-memory document partly changed (nothing is saved). The XNC batch operations are atomic (`XncBatchRunner`).
 
 **New observations:**
-- `IConfigService.UpdateSawWidth()` is now an interface method (was item 45 of previous list), but remains unreachable from the UI (no settings dialog wired to it).
 - XNC program reading and replacement are now fully implemented and tested (`ReplaceXncPrograms`, `ReadXncPrograms`, `GetXncProgramsCount`).
 
 # For developers / contributors
@@ -259,5 +258,5 @@ See [[project-file-processing-skill]] (`.agents/skills/project-file-processing-s
 - UI commands are methods in the view model that owns the area (`AppViewModel` for the file commands, a `Panels/` VM per menu group, ...) decorated with `[RelayCommand]` (from `CommunityToolkit.Mvvm`). Bind them in XAML with `Command="{Binding CommandName}"` under a `DataContext` set to that child (e.g. `{Binding MillOffset}`). A new view model is registered in `App.AddViewModels`; a new batch command goes through `BatchCommandRunner`.
 
 **Refactoring / cleanup priorities:**
-1. Wire `UpdateSawWidth()` to a UI control (settings panel), or delete the method and interface member.
+1. Add the settings screen that uses `UpdateSawWidth()` and `ShowError()` (never delete them; see `.agents/todos.md`).
 2. Continue the refactoring plan: split the big test files per class and update the docs (phase 6).
