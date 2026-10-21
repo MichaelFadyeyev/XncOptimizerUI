@@ -1,15 +1,17 @@
 using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Linq;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models;
+using XncOptimizerUI.Services.Xnc;
 
 namespace XncOptimizerUI.Services.Project
 {
     /// <summary>
     /// Writes an edited <see cref="Part"/> (name, size, texture, edge bands) back into its
-    /// <c>&lt;part&gt;</c>, keeping the dependent data in step: the XNC operation names, every EL
-    /// operation's part list and the joint size. Does not save.
+    /// <c>&lt;part&gt;</c>, keeping the dependent data in step: the XNC operation names and program
+    /// sizes, every EL operation's part list and the joint size. Does not save.
     /// </summary>
     internal sealed partial class PartUpdater(ProjectDocument document, ProjectReader reader)
     {
@@ -44,6 +46,7 @@ namespace XncOptimizerUI.Services.Project
             ApplyBanding(log, element, part, bands);
             SyncBandOperationParts(element);
             ApplyJointSizes(element, bands);
+            ApplyProgramSizes(part);
 
             return log.Changed();
         }
@@ -187,6 +190,40 @@ namespace XncOptimizerUI.Services.Project
 
             element.SetJLengthValue(element.GetLengthDecimalValue() - Thickness("ell") - Thickness("elr"));
             element.SetJWidthValue(element.GetWidthDecimalValue() - Thickness("elt") - Thickness("elb"));
+        }
+
+        /// <summary>
+        /// Writes the part's size into each of its XNC programs: <c>dx</c>/<c>dy</c> = <c>l</c>/<c>w</c>,
+        /// swapped on an odd <c>turn</c> (a quarter turn swaps the program axes, see
+        /// <see cref="XncProgramRotator"/>). Only the size changes; element coordinates keep their
+        /// text, so expressions over <c>dx</c>/<c>dy</c> follow the new size.
+        /// </summary>
+        private void ApplyProgramSizes(Part part) =>
+            document.XncOperationsOf(part.Id).ToList().ForEach(operation => ApplyProgramSize(operation, part));
+
+        /// <summary>Rewrites the program of <paramref name="operation"/> only when its size differs.</summary>
+        private static void ApplyProgramSize(XElement operation, Part part)
+        {
+            var (dx, dy) = ProgramSizeFor(operation.GetTurnIntValue(), part);
+            var programDocument = XncProgramText.Load(operation);
+            var program = XncProgramText.Root(programDocument);
+
+            if (program.GetDxValue() == dx && program.GetDyValue() == dy)
+            {
+                return;
+            }
+
+            program.SetAttributeValue("dx", dx);
+            program.SetAttributeValue("dy", dy);
+            XncProgramText.Write(operation, XncProgramText.Serialize(programDocument));
+        }
+
+        /// <summary>Program <c>dx</c>/<c>dy</c> texts of <paramref name="part"/> at <paramref name="turn"/>.</summary>
+        private static (string Dx, string Dy) ProgramSizeFor(int turn, Part part)
+        {
+            var (length, width) = (XmlConvert.ToString(part.Length), XmlConvert.ToString(part.Width));
+
+            return turn % 2 == 0 ? (length, width) : (width, length);
         }
 
         [GeneratedRegex(@"^(\[.*?\])(.*)", RegexOptions.CultureInvariant)]

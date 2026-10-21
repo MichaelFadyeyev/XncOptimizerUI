@@ -41,6 +41,67 @@ namespace XncOptimizerUI.Test
             Assert.That(reopened.Reader.ReadParts().First(p => p.Id == part.Id).Length, Is.EqualTo(newLength));
         }
 
+        [Test]
+        public void UpdatePart_WithNewDimensions_WritesProgramSizeAndJointSize()
+        {
+            // td.project part 1: l=2301, w=263, jl=2297, jw=261; its program dx=2301 dy=263 (turn 0).
+            var service = OpenAndRead(CreateService(), ProjectPath);
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
+            part.Length = 2000m;
+            part.Width = 300.5m;
+
+            var log = string.Empty;
+            service.Editor.UpdatePart(part).Into(ref log);
+
+            var saved = SaveAndLoadProductPart(service, 1);
+            var program = ReadSavedProgram(ProjectPath, 1);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That((string?)program.Attribute("dx"), Is.EqualTo("2000"));
+                Assert.That((string?)program.Attribute("dy"), Is.EqualTo("300.5"));
+                Assert.That((string?)saved.Attribute("jl"), Is.EqualTo("1996"), "jl = 2000 - 2 - 2");
+                Assert.That((string?)saved.Attribute("jw"), Is.EqualTo("298.5"), "jw = 300.5 - 2");
+            });
+        }
+
+        [Test]
+        public void UpdatePart_WithNewDimensions_OnTurnedProgram_WritesSwappedProgramSize()
+        {
+            var service = OpenAndRead(CreateService(), ProjectPath);
+            var log = string.Empty;
+            service.Editor.RotatePart(1, 1, flipEdgeGrooveTcl: true).Into(ref log);
+
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
+            part.Length = 2000m;
+            part.Width = 300m;
+            service.Editor.UpdatePart(part).Into(ref log);
+            service.Session.Save();
+
+            var program = ReadSavedProgram(ProjectPath, 1);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That((string?)program.Attribute("dx"), Is.EqualTo("300"), "turn 1: dx = w");
+                Assert.That((string?)program.Attribute("dy"), Is.EqualTo("2000"), "turn 1: dy = l");
+            });
+        }
+
+        [Test]
+        public void UpdatePart_WithUnchangedSize_LeavesProgramTextUntouched()
+        {
+            var service = OpenAndRead(CreateService(), ProjectPath);
+            var programBefore = XncOperationsOf(XDocument.Load(ProjectPath), 1).Single().Attribute("program")!.Value;
+            var part = service.Reader.ReadParts().Single(p => p.Id == 1);
+            part.ConsiderTexture = !part.ConsiderTexture;
+
+            var log = string.Empty;
+            service.Editor.UpdatePart(part).Into(ref log);
+            service.Session.Save();
+
+            Assert.That(XncOperationsOf(XDocument.Load(ProjectPath), 1).Single().Attribute("program")!.Value, Is.EqualTo(programBefore));
+        }
+
         /// <summary>
         /// Regression: sizes were written with the user's culture, so on a Ukrainian
         /// (comma-decimal) Windows a fractional length was saved as <c>l="1380,5"</c>.

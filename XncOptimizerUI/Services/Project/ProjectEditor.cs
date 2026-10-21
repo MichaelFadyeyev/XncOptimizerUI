@@ -94,8 +94,7 @@ namespace XncOptimizerUI.Services.Project
         /// <summary>Rotated program text of one operation, or <c>null</c> when it already has the target turn.</summary>
         private static string? RotatedProgram(XElement operation, int targetTurn, bool flipEdgeGrooveTcl)
         {
-            var currentTurn = int.TryParse(operation.GetTurnValue(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var turn) ? turn : 0;
-            var quarterTurns = XncProgramRotator.NormalizeQuarterTurns(targetTurn - currentTurn);
+            var quarterTurns = XncProgramRotator.NormalizeQuarterTurns(targetTurn - operation.GetTurnIntValue());
 
             if (quarterTurns == 0)
             {

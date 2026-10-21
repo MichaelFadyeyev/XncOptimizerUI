@@ -89,6 +89,9 @@ namespace XncOptimizerUI.Extensions
         public static string? GetDzValue(this XElement element) => element.Attribute("dz")?.Value;
         public static string? GetSideValue(this XElement element) => element.Attribute("side")?.Value;
         public static string? GetTurnValue(this XElement element) => element.Attribute("turn")?.Value;
+        /// <summary>The operation's <c>turn</c> (0..3 quarter turns); missing or not an integer reads as 0.</summary>
+        public static int GetTurnIntValue(this XElement element) =>
+            int.TryParse(element.GetTurnValue(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var turn) ? turn : 0;
         public static void SetTurnValue(this XElement element, int value) => element.SetAttributeValue("turn", value.ToString(CultureInfo.InvariantCulture));
         public static string? GetDValue(this XElement element) => element.Attribute("d")?.Value;
         public static string? GetExprValue(this XElement element) => element.Attribute("expr")?.Value;
