@@ -83,6 +83,13 @@ per selected part. Deferred:
   on `turn` still overlays inconsistent frames until it is rotated once (rotation brings
   every program to the same turn). Selection of bores/grooves/mills is local to the render
   pass, not yet wired into `AppViewModel` (shapes carry `BoreTag`/`GrooveTag`/`MillTag`).
+- **Outside-elements warning** — show a warning in the part preview when the selected
+  part's programs have elements outside the part (e.g. after its `l`/`w` shrank: `UpdatePart`
+  rewrites program `dx`/`dy` but never shifts or clamps plain-number coordinates - user
+  decision, 2026-10-21). Reuse `Services/Xnc/Outside/OutsideOperationDetector` (the "Clean
+  operations" geometry) to find them; expose the result on `PartPreviewVM` and draw it as a
+  preview overlay (e.g. text near the turn label), refreshed on part selection, rotation and
+  program edits.
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
   `LeftBandingId` / `RightBandingId` once base drawing is stable.
