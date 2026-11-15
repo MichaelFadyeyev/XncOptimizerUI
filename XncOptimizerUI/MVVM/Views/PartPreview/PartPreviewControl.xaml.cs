@@ -86,7 +86,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             }
         }
 
-        /// <summary>Follows the shown part's texture flag, which the Parts grid edits in place.</summary>
+        /// <summary>Follows the shown part's texture flag and edge bands, which the Parts grid edits in place.</summary>
         private void WatchPart(PartVM? part)
         {
             if (ReferenceEquals(_part, part))
@@ -109,9 +109,15 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
         private void OnPartPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(PartVM.ConsiderTexture))
+            switch (e.PropertyName)
             {
-                Render();
+                case nameof(PartVM.ConsiderTexture):
+                case nameof(PartVM.TopBandingId):
+                case nameof(PartVM.BottomBandingId):
+                case nameof(PartVM.LeftBandingId):
+                case nameof(PartVM.RightBandingId):
+                    Render();
+                    break;
             }
         }
 
@@ -153,7 +159,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             PartCanvas.Width = layout.CanvasWidth;
             PartCanvas.Height = layout.CanvasHeight;
 
-            var scene = new PartPreviewScene(viewModel.Programs, part.ConsiderTexture, viewModel.TurnText);
+            var scene = new PartPreviewScene(viewModel.Programs, part.ConsiderTexture, viewModel.TurnText, viewModel.BandSymbols);
             PartPreviewRenderer.DrawPart(PartCanvas, layout, scene, Palette);
             PartPreviewRenderer.DrawOverlay(
                 PreviewOverlayCanvas,

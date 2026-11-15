@@ -51,6 +51,10 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
         public string BandSymbol(int? bandId) =>
             bandId == null ? string.Empty : Bands.First(b => b.Id == bandId).ExternalSymbol;
 
+        /// <summary>The internal symbol (<c>elSymbol</c>) of band <paramref name="bandId"/>; empty for an unbanded edge or an unknown band.</summary>
+        public string BandInternalSymbol(int? bandId) =>
+            bandId == null ? string.Empty : Bands.FirstOrDefault(b => b.Id == bandId)?.InternalSymbol ?? string.Empty;
+
         /// <summary>Sheet <paramref name="sheetId"/>, or <c>null</c> when the project has no such sheet.</summary>
         public SheetVM? FindSheet(int sheetId) => Sheets.FirstOrDefault(s => s.Id == sheetId);
         #endregion

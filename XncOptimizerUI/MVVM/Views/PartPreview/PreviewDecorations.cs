@@ -2,12 +2,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
     /// <summary>
-    /// The non-machining marks of the part preview: the texture mark on the Face rectangle, and
-    /// the axis glyph and turn label pinned to the viewport.
+    /// The non-machining marks of the part preview: the texture mark on the Face rectangle, the
+    /// edge-band symbols beside the side views, and the axis glyph and turn label pinned to the
+    /// viewport.
     /// </summary>
     internal static class PreviewDecorations
     {
@@ -73,6 +75,55 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
                 yield return line;
             }
+        }
+
+        /// <summary>
+        /// The edge-band symbol of each banded side, facing the centre of that side's view from
+        /// outside: centred along the side view, <see cref="BandSymbolStyle.Gap"/> beyond its outer
+        /// edge. Unbanded sides get nothing.
+        /// </summary>
+        public static IEnumerable<UIElement> BandSymbols(PartPreviewLayout layout, EdgeBandSymbols symbols, BandSymbolStyle style) =>
+            layout.Bands
+                .Select(band => (band.Rect, Side: BandSide(band.Side, symbols)))
+                .Where(band => !string.IsNullOrEmpty(band.Side.Symbol))
+                .Select(band => BandSymbol(band.Side.Symbol, band.Rect, band.Side.Outward, style));
+
+        /// <summary>The symbol shown at <paramref name="side"/> and the unit vector pointing away from the face there.</summary>
+        private static (string Symbol, Vector Outward) BandSide(string side, EdgeBandSymbols symbols) => side switch
+        {
+            "Top" => (symbols.Top, new Vector(0, -1)),
+            "Right" => (symbols.Right, new Vector(1, 0)),
+            "Bottom" => (symbols.Bottom, new Vector(0, 1)),
+            "Left" => (symbols.Left, new Vector(-1, 0)),
+            _ => throw new ArgumentOutOfRangeException(nameof(side), side, "Unknown side view."),
+        };
+
+        /// <summary>
+        /// <paramref name="symbol"/> centred on the centre of <paramref name="band"/> pushed
+        /// <paramref name="outward"/> by half the band, the gap and half the label.
+        /// </summary>
+        private static TextBlock BandSymbol(string symbol, PxRect band, Vector outward, BandSymbolStyle style)
+        {
+            var label = new TextBlock
+            {
+                Text = symbol,
+                Foreground = style.Foreground,
+                FontSize = style.FontSize,
+                FontWeight = FontWeights.Bold,
+            };
+
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            var size = label.DesiredSize;
+            var halfAcross = (Math.Abs(outward.X) * (band.Width + size.Width) / 2)
+                + (Math.Abs(outward.Y) * (band.Height + size.Height) / 2);
+            var bandCenter = new Point(band.Left + (band.Width / 2), band.Top + (band.Height / 2));
+            var labelCenter = bandCenter + (outward * (halfAcross + style.Gap));
+
+            Canvas.SetLeft(label, labelCenter.X - (size.Width / 2));
+            Canvas.SetTop(label, labelCenter.Y - (size.Height / 2));
+
+            return label;
         }
 
         /// <summary>

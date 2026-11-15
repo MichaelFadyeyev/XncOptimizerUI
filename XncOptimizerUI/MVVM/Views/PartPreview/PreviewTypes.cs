@@ -115,6 +115,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         Brush TurnLabel,
         double TurnLabelFontSize);
 
+    /// <summary>Styling of the edge-band symbols: bold text of <see cref="FontSize"/>, <see cref="Gap"/> px beyond its side view.</summary>
+    internal readonly record struct BandSymbolStyle(Brush Foreground, double FontSize, double Gap);
+
     /// <summary>
     /// How a shape is stroked: <see cref="Thickness"/> px, and dashes and gaps of
     /// <see cref="DashPx"/> px each, or solid when <c>null</c>.

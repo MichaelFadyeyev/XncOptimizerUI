@@ -92,7 +92,8 @@ per selected part. Deferred:
   program edits.
 - **Banding visualisation** — inner cream outline seen in `UiExamples/td-displaying-simple.png`
   represents edge-band material; render from `PartVM.TopBandingId` / `BottomBandingId` /
-  `LeftBandingId` / `RightBandingId` once base drawing is stable.
+  `LeftBandingId` / `RightBandingId` (turned like `PartPreviewVM.BandSymbols`, which already
+  draws each band's internal symbol beside its side view) once base drawing is stable.
 
 ## Settings screen
 

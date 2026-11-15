@@ -10,6 +10,7 @@ using IOPath = System.IO.Path;
 using ShapePath = System.Windows.Shapes.Path;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 using XncOptimizerUI.MVVM.Views.PartPreview;
 using XncOptimizerUI.Services.Xnc;
 
@@ -48,6 +49,7 @@ namespace XncOptimizerUI.Test
         private static readonly Brush AxisX = Named(Colors.Crimson);
         private static readonly Brush AxisY = Named(Colors.Green);
         private static readonly Brush TurnLabel = Named(Colors.SlateGray);
+        private static readonly Brush BandSymbol = Named(Colors.Olive);
 
         private static readonly Dictionary<Brush, string> BrushNames = new()
         {
@@ -65,6 +67,7 @@ namespace XncOptimizerUI.Test
             [AxisX] = nameof(AxisX),
             [AxisY] = nameof(AxisY),
             [TurnLabel] = nameof(TurnLabel),
+            [BandSymbol] = nameof(BandSymbol),
         };
 
         private static readonly BoreBrushes BoreBrushes = new(
@@ -78,10 +81,14 @@ namespace XncOptimizerUI.Test
             new PartPreviewMetrics(GapMm, Margin: 24, MinBandThickness: 1),
             new PartBrushes(Face, Edge, Outline, OutlineThickness: 2, Texture, TextureThickness: 1),
             new DecorationBrushes(AxisX, AxisY, AxisThickness: 1.5, TurnLabel, TurnLabelFontSize: 24),
+            new BandSymbolStyle(BandSymbol, FontSize: 24, Gap: 5),
             BoreBrushes,
             MillBrushes);
 
         private static readonly Size SceneViewport = new(800, 600);
+
+        /// <summary>Edge-band symbols of every scene part, in the part's own frame (turn 0).</summary>
+        private static readonly EdgeBandSymbols PartBandSymbols = new(Top: "T", Right: "R", Bottom: "B", Left: "L");
 
         private static readonly string[] Fixtures =
         [
@@ -178,12 +185,16 @@ namespace XncOptimizerUI.Test
                 .Concat(GroovePreviewRenderer.DrawGrooves(programs, layout, BoreBrushes));
         }
 
-        /// <summary>Draws like <c>PartPreviewControl</c>: sized by the first program, with the texture mark.</summary>
+        /// <summary>Draws like <c>PartPreviewControl</c>: sized by the first program, with the texture mark and the band symbols turned by its turn.</summary>
         private static (Size CanvasSize, IEnumerable<UIElement> Part, IEnumerable<UIElement> Overlay) RenderScene(List<XncProgram> programs, double zoom)
         {
             var first = programs[0];
             var layout = PartPreviewLayout.Fit(SceneViewport.Width, SceneViewport.Height, first.Dx, first.Dy, first.Dz, zoom, Palette.Metrics)!;
-            var scene = new PartPreviewScene(programs, ConsiderTexture: true, TurnText: $"{first.TurnDegrees}°");
+            var scene = new PartPreviewScene(
+                programs,
+                ConsiderTexture: true,
+                TurnText: $"{first.TurnDegrees}°",
+                BandSymbols: PartBandSymbols.Turned(first.Turn));
             var part = new Canvas();
             var overlay = new Canvas();
 

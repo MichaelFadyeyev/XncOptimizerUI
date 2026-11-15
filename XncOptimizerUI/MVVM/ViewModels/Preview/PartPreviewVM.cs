@@ -61,6 +61,17 @@ namespace XncOptimizerUI.MVVM.ViewModels.Preview
                 }
             }
         }
+
+        /// <summary>
+        /// Internal symbol of each edge band of <see cref="Part"/>, on the preview side the edge is
+        /// drawn at: the part's edges turned by the first program's <see cref="Turn"/>.
+        /// Computed on read and not observable - band selects edit the part in place, so the
+        /// preview re-reads it on every redraw.
+        /// </summary>
+        public EdgeBandSymbols BandSymbols =>
+            Part is null
+                ? EdgeBandSymbols.None
+                : EdgeBandSymbols.Of(Part, _catalog.BandInternalSymbol).Turned(Turn ?? 0);
         #endregion
 
         #region ObservableProperties

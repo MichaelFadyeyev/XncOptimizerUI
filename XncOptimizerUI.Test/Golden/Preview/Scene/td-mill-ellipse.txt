@@ -17,6 +17,10 @@ Line (222.306, 287.917) -> (222.306, 283.652) | stroke=SideTrue thickness=1 tag=
 Line (0, 0) -> (236.925, 0) offset (281.537, 257.353) | stroke=Texture thickness=1
 Line (0, 0) -> (236.925, 0) offset (281.537, 300) | stroke=Texture thickness=1
 Line (0, 0) -> (236.925, 0) offset (281.537, 342.647) | stroke=Texture thickness=1
+TextBlock "T" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "B" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "L" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "R" | foreground=BandSymbol size=24 weight=Bold
 Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
 Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
 Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5
@@ -47,6 +51,10 @@ Line (420.612, 467.524) -> (420.612, 458.994) | stroke=SideTrue thickness=1 tag=
 Line (0, 0) -> (473.85, 0) offset (539.075, 406.397) | stroke=Texture thickness=1
 Line (0, 0) -> (473.85, 0) offset (539.075, 491.69) | stroke=Texture thickness=1
 Line (0, 0) -> (473.85, 0) offset (539.075, 576.983) | stroke=Texture thickness=1
+TextBlock "T" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "B" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "L" | foreground=BandSymbol size=24 weight=Bold
+TextBlock "R" | foreground=BandSymbol size=24 weight=Bold
 Ellipse at (9, 9) size 6 x 6 | stroke=AxisX thickness=1.5 fill=#00FFFFFF
 Line (12, 12) -> (34, 12) | stroke=AxisX thickness=1.5
 Line (34, 12) -> (29, 7) | stroke=AxisX thickness=1.5

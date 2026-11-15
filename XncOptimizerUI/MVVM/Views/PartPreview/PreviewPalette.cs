@@ -11,6 +11,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         PartPreviewMetrics Metrics,
         PartBrushes Part,
         DecorationBrushes Decorations,
+        BandSymbolStyle BandSymbols,
         BoreBrushes Bores,
         MillBrushes Mills)
     {
@@ -50,6 +51,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                     Number("AxisThickness"),
                     Brush("TurnLabelBrush"),
                     Number("TurnLabelFontSize")),
+                new BandSymbolStyle(
+                    Brush("BandSymbolBrush"),
+                    Number("BandSymbolFontSize"),
+                    Number("BandSymbolGap")),
                 bores,
                 new MillBrushes(
                     part.Face,

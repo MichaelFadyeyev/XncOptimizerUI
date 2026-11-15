@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 
 namespace XncOptimizerUI.MVVM.Views.PartPreview
 {
@@ -10,7 +11,12 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <param name="Programs">The part's XNC programs; the first one's <c>turn</c> orients the texture mark.</param>
     /// <param name="ConsiderTexture">Whether the texture mark is drawn.</param>
     /// <param name="TurnText">The turn label, e.g. "90°"; empty draws none.</param>
-    internal readonly record struct PartPreviewScene(IReadOnlyList<XncProgram> Programs, bool ConsiderTexture, string TurnText);
+    /// <param name="BandSymbols">The edge-band symbol beside each side view, already turned to the screen sides.</param>
+    internal readonly record struct PartPreviewScene(
+        IReadOnlyList<XncProgram> Programs,
+        bool ConsiderTexture,
+        string TurnText,
+        EdgeBandSymbols BandSymbols);
 
     /// <summary>
     /// Draws the part preview: the Face rectangle and its four side views, the machining over
@@ -21,7 +27,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// <summary>
         /// Draws the part onto <paramref name="canvas"/>: the four side views, the Face rectangle,
         /// then mills, bores and grooves (<see cref="MillPreviewRenderer.DrawMills"/> first, since
-        /// their cut-off fills cover the face) and the texture mark. Every side-view and Face
+        /// their cut-off fills cover the face), the texture mark and the edge-band symbols. Every side-view and Face
         /// rectangle carries its side ("Face"/"Top"/"Bottom"/"Left"/"Right") as
         /// <see cref="FrameworkElement.Tag"/>, so a future click handler can tell which surface
         /// was hit.
@@ -44,6 +50,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 var programTurn = scene.Programs.Count > 0 ? scene.Programs[0].Turn : 0;
                 AddAll(canvas, PreviewDecorations.TextureIndicator(layout.FaceRect, programTurn, palette.Part));
             }
+
+            AddAll(canvas, PreviewDecorations.BandSymbols(layout, scene.BandSymbols, palette.BandSymbols));
         }
 
         /// <summary>

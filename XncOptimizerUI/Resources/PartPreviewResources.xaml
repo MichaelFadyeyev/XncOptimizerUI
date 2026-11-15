@@ -12,15 +12,18 @@
     <SolidColorBrush x:Key="AxisXBrush" Color="#D00000" />
     <SolidColorBrush x:Key="AxisYBrush" Color="#0A7A0A" />
     <SolidColorBrush x:Key="TurnLabelBrush" Color="#444444" />
+    <SolidColorBrush x:Key="BandSymbolBrush" Color="#444444" />
 
     <!--  Part preview: line widths and screen-space metrics (px)  -->
     <sys:Double x:Key="PartOutlineThickness">2</sys:Double>
     <sys:Double x:Key="PartTextureLineThickness">1</sys:Double>
     <sys:Double x:Key="AxisThickness">1.5</sys:Double>
     <sys:Double x:Key="TurnLabelFontSize">24</sys:Double>
+    <sys:Double x:Key="BandSymbolFontSize">24</sys:Double>
+    <sys:Double x:Key="BandSymbolGap">5</sys:Double>
     <sys:Double x:Key="MinEdgeProjectionThickness">1</sys:Double>
     <sys:Double x:Key="ProjectionGapMm">10</sys:Double>
-    <sys:Double x:Key="PartPreviewMargin">24</sys:Double>
+    <sys:Double x:Key="PartPreviewMargin">40</sys:Double>
 
     <!--  Part preview: bore overlay colors  -->
     <SolidColorBrush x:Key="BoreSideTrueBrush" Color="#444444" />

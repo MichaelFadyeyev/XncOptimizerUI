@@ -1,6 +1,7 @@
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.MVVM.ViewModels.Preview;
 
 namespace XncOptimizerUI.Test
 {
@@ -170,7 +171,46 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.Preview.DisplayWidth, Is.Zero);
                 Assert.That(vm.Preview.Turn, Is.Null);
                 Assert.That(vm.Preview.TurnText, Is.Empty);
+                Assert.That(vm.Preview.BandSymbols, Is.EqualTo(EdgeBandSymbols.None));
             });
+        }
+
+        [Test]
+        public void BandSymbols_WithNoPrograms_ShowsInternalSymbolsOnTheirOwnSides()
+        {
+            SeedTwoParts(); // Полиця: top band 1 ("i1"), bottom band 2 ("i2")
+            Project.XncPrograms = [];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.That(vm.Preview.BandSymbols, Is.EqualTo(new EdgeBandSymbols(Top: "i1", Right: "", Bottom: "i2", Left: "")));
+        }
+
+        [Test]
+        public void BandSymbols_FollowFirstProgramTurn()
+        {
+            SeedTwoParts();
+            Project.XncPrograms = [new XncProgram { Side = true, Dx = 400, Dy = 600, Dz = 19, Turn = 1 }];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            // A quarter turn clockwise moves the top edge to the right and the bottom edge to the left.
+            Assert.That(vm.Preview.BandSymbols, Is.EqualTo(new EdgeBandSymbols(Top: "", Right: "i1", Bottom: "", Left: "i2")));
+        }
+
+        [Test]
+        public void BandSymbols_FollowBandEditsOfThePart()
+        {
+            SeedTwoParts();
+            Project.XncPrograms = [];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            vm.PartsList.SelectedPart!.LeftBandingId = 2;
+
+            Assert.That(vm.Preview.BandSymbols.Left, Is.EqualTo("i2"));
         }
     }
 }
