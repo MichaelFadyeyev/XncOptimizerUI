@@ -1,5 +1,6 @@
 using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using static XncOptimizerUI.MVVM.ViewModels.Machining.ExpressionCellValue;
 
 namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
@@ -17,10 +18,18 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         public string Diameter => MachiningNumber.Format(Tool.Diameter);
     }
 
-    /// <summary>One row of the selected part's milling contours table.</summary>
-    public sealed class MillingContourRowVM(int number, string side, XncMillingContour contour, Action<XncMillingContour, bool> onSelectionChanged)
-        : MachiningRowVM<XncMillingContour>(number, side, contour, onSelectionChanged)
+    /// <summary>
+    /// One row of the selected part's milling contours table. Only the entry depth (<c>&lt;ms&gt;</c>
+    /// <c>dp</c>) is editable: moving the entry or exit point would detach it from its arc segments.
+    /// </summary>
+    public sealed class MillingContourRowVM(
+        int number, string side, XncMillingContour contour, XncProgram program,
+        Action<XncMillingContour, bool> onSelectionChanged,
+        Func<MachiningElementRowVM<XncMillingContour>, MachiningAttribute, string, bool> onEdited)
+        : MachiningElementRowVM<XncMillingContour>(number, side, contour, program, CellValues, onSelectionChanged, onEdited)
     {
+        #region Properties
+
         public string ToolName => Model.ToolName;
 
         public string EntryX => MachiningNumber.Format(Model.Entry.X);
@@ -31,7 +40,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         public string ExitY => MachiningNumber.Format(Exit.Y);
 
-        public string Depth => MachiningNumber.Format(Model.EntryDepth);
+        public ExpressionCellVM Depth => CellOf(MachiningAttribute.Depth);
 
         public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
 
@@ -39,47 +48,99 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         /// <summary>Where the contour ends: its last segment's end, or the entry when it has no segment.</summary>
         private XncPoint Exit => Model.Segments.Count == 0 ? Model.Entry : Model.Segments[^1].End;
+
+        #endregion
+
+        #region Methods
+
+        private static IEnumerable<ExpressionCellValue> CellValues(XncMillingContour contour) =>
+            [Of(contour.Source, MachiningAttribute.Depth, contour.EntryDepth)];
+
+        #endregion
     }
 
-    /// <summary>One row of the selected part's milling ellipses table.</summary>
-    public sealed class MillingEllipseRowVM(int number, string side, XncMillingEllipse ellipse, Action<XncMillingEllipse, bool> onSelectionChanged)
-        : MachiningRowVM<XncMillingEllipse>(number, side, ellipse, onSelectionChanged)
+    /// <summary>One row of the selected part's milling ellipses table: center, semi-axes, angle and depth are editable cells.</summary>
+    public sealed class MillingEllipseRowVM(
+        int number, string side, XncMillingEllipse ellipse, XncProgram program,
+        Action<XncMillingEllipse, bool> onSelectionChanged,
+        Func<MachiningElementRowVM<XncMillingEllipse>, MachiningAttribute, string, bool> onEdited)
+        : MachiningElementRowVM<XncMillingEllipse>(number, side, ellipse, program, CellValues, onSelectionChanged, onEdited)
     {
+        #region Properties
+
         public string ToolName => Model.ToolName;
 
-        public string CenterX => MachiningNumber.Format(Model.Center.X);
+        public ExpressionCellVM CenterX => CellOf(MachiningAttribute.X);
 
-        public string CenterY => MachiningNumber.Format(Model.Center.Y);
+        public ExpressionCellVM CenterY => CellOf(MachiningAttribute.Y);
 
-        public string Length => MachiningNumber.Format(Model.Length);
+        public ExpressionCellVM Length => CellOf(MachiningAttribute.Length);
 
-        public string Width => MachiningNumber.Format(Model.Width);
+        public ExpressionCellVM Width => CellOf(MachiningAttribute.Width);
 
-        public string Angle => MachiningNumber.Format(Model.Angle);
+        public ExpressionCellVM Angle => CellOf(MachiningAttribute.Angle);
 
-        public string Depth => MachiningNumber.Format(Model.Depth);
+        public ExpressionCellVM Depth => CellOf(MachiningAttribute.Depth);
 
         public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
+
+        #endregion
+
+        #region Methods
+
+        private static IEnumerable<ExpressionCellValue> CellValues(XncMillingEllipse ellipse) =>
+        [
+            Of(ellipse.Source, MachiningAttribute.X, ellipse.Center.X),
+            Of(ellipse.Source, MachiningAttribute.Y, ellipse.Center.Y),
+            Of(ellipse.Source, MachiningAttribute.Length, ellipse.Length),
+            Of(ellipse.Source, MachiningAttribute.Width, ellipse.Width),
+            Of(ellipse.Source, MachiningAttribute.Angle, ellipse.Angle),
+            Of(ellipse.Source, MachiningAttribute.Depth, ellipse.Depth)
+        ];
+
+        #endregion
     }
 
-    /// <summary>One row of the selected part's milling rectangles table.</summary>
-    public sealed class MillingRectangleRowVM(int number, string side, XncMillingRectangle rectangle, Action<XncMillingRectangle, bool> onSelectionChanged)
-        : MachiningRowVM<XncMillingRectangle>(number, side, rectangle, onSelectionChanged)
+    /// <summary>One row of the selected part's milling rectangles table: center, size, angle, corner radius and depth are editable cells.</summary>
+    public sealed class MillingRectangleRowVM(
+        int number, string side, XncMillingRectangle rectangle, XncProgram program,
+        Action<XncMillingRectangle, bool> onSelectionChanged,
+        Func<MachiningElementRowVM<XncMillingRectangle>, MachiningAttribute, string, bool> onEdited)
+        : MachiningElementRowVM<XncMillingRectangle>(number, side, rectangle, program, CellValues, onSelectionChanged, onEdited)
     {
-        public string CenterX => MachiningNumber.Format(Model.Origin.X);
+        #region Properties
 
-        public string CenterY => MachiningNumber.Format(Model.Origin.Y);
+        public ExpressionCellVM CenterX => CellOf(MachiningAttribute.X);
 
-        public string Length => MachiningNumber.Format(Model.Length);
+        public ExpressionCellVM CenterY => CellOf(MachiningAttribute.Y);
 
-        public string Width => MachiningNumber.Format(Model.Width);
+        public ExpressionCellVM Length => CellOf(MachiningAttribute.Length);
 
-        public string Angle => MachiningNumber.Format(Model.Angle);
+        public ExpressionCellVM Width => CellOf(MachiningAttribute.Width);
 
-        public string CornerRadius => MachiningNumber.Format(Model.CornerRadius);
+        public ExpressionCellVM Angle => CellOf(MachiningAttribute.Angle);
 
-        public string Depth => MachiningNumber.Format(Model.Depth);
+        public ExpressionCellVM CornerRadius => CellOf(MachiningAttribute.CornerRadius);
+
+        public ExpressionCellVM Depth => CellOf(MachiningAttribute.Depth);
 
         public string ToolToCenterLine => MachiningDisplay.ToolPositionCode(Model.Position);
+
+        #endregion
+
+        #region Methods
+
+        private static IEnumerable<ExpressionCellValue> CellValues(XncMillingRectangle rectangle) =>
+        [
+            Of(rectangle.Source, MachiningAttribute.X, rectangle.Origin.X),
+            Of(rectangle.Source, MachiningAttribute.Y, rectangle.Origin.Y),
+            Of(rectangle.Source, MachiningAttribute.Length, rectangle.Length),
+            Of(rectangle.Source, MachiningAttribute.Width, rectangle.Width),
+            Of(rectangle.Source, MachiningAttribute.Angle, rectangle.Angle),
+            Of(rectangle.Source, MachiningAttribute.CornerRadius, rectangle.CornerRadius),
+            Of(rectangle.Source, MachiningAttribute.Depth, rectangle.Depth)
+        ];
+
+        #endregion
     }
 }

@@ -4,77 +4,80 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
     d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
-    <!--  Selected part milling rectangles (<mr>), read-only  -->
+    <!--
+        Selected part milling rectangles (<mr>): center, depth, size, angle and corner radius
+        editable in place (click the selected cell or F2), each cell committed on its own
+    -->
     <DataGrid
         x:Name="MillingRectanglesDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
         ItemsSource="{Binding MillingRectangles}"
-        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        SelectedItem="{Binding SelectedMillingRectangle}"
+        Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
             <!--  Check: feeds SelectedPartMachiningVM's checked rectangles  -->
             <common:RowCheckColumn x:Name="RectanglesCheckColumn" />
 
-            <!--  Rectangle identity  -->
+            <!--  Read-only rectangle identity  -->
             <DataGridTextColumn
                 x:Name="RectanglesNumberColumn"
                 Width="Auto"
                 Binding="{Binding Number}"
-                Header="#" />
+                Header="#"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="RectanglesSideColumn"
                 Width="Auto"
                 Binding="{Binding Side}"
-                Header="Side" />
+                Header="Side"
+                IsReadOnly="True" />
 
-            <!--  Center  -->
-            <DataGridTextColumn
+            <!--  Center: edits the authored x / y  -->
+            <common:ExpressionColumn
                 x:Name="RectanglesCenterXColumn"
-                Width="*"
-                Binding="{Binding CenterX}"
+                Cell="CenterX"
                 Header="Center X" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="RectanglesCenterYColumn"
-                Width="*"
-                Binding="{Binding CenterY}"
+                Cell="CenterY"
                 Header="Center Y" />
 
-            <!--  Cut: depth, size, angle, tool to center line position, corner radius  -->
-            <DataGridTextColumn
+            <!--  Cut: depth, size, angle (edit dp / l / w / a), tool to center line position (read-only), corner radius (edits r)  -->
+            <common:ExpressionColumn
                 x:Name="RectanglesDepthColumn"
-                Width="*"
-                Binding="{Binding Depth}"
+                Cell="Depth"
                 Header="Depth" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="RectanglesLengthColumn"
-                Width="*"
-                Binding="{Binding Length}"
+                Cell="Length"
                 Header="Length" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="RectanglesWidthColumn"
-                Width="*"
-                Binding="{Binding Width}"
+                Cell="Width"
                 Header="Width" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="RectanglesAngleColumn"
-                Width="*"
-                Binding="{Binding Angle}"
+                Cell="Angle"
                 Header="Angle°" />
             <DataGridTextColumn
                 x:Name="RectanglesTclColumn"
                 Width="*"
                 Binding="{Binding ToolToCenterLine}"
-                Header="TCL" />
-            <DataGridTextColumn
+                Header="TCL"
+                IsReadOnly="True" />
+            <common:ExpressionColumn
                 x:Name="RectanglesCornerRadiusColumn"
-                Width="*"
-                Binding="{Binding CornerRadius}"
+                Cell="CornerRadius"
                 Header="Corn.R" />
+
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

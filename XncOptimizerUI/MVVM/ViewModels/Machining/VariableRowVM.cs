@@ -38,6 +38,9 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         public string Side { get; }
 
+        /// <summary>Id of the XNC operation whose program declares the variable.</summary>
+        public int OperationId => _program.OperationId;
+
         public string Name => Variable.Name;
 
         public string Type => Variable.Type.XmlName();

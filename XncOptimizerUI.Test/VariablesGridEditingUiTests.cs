@@ -32,7 +32,7 @@ namespace XncOptimizerUI.Test
                 Assert.Multiple(() =>
                 {
                     Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "22")));
-                    Assert.That(vm.Machining.Bores.Single().Depth, Is.EqualTo("22"));
+                    Assert.That(vm.Machining.Bores.Single().Depth.Display, Is.EqualTo("22"));
                     Assert.That(vm.Log.Text, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
                     Assert.That(FindDescendant<TextBox>(grid), Is.Null, "cell left edit mode");
                 });

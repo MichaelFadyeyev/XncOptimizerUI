@@ -152,9 +152,9 @@ namespace XncOptimizerUI.Test
 
             // In-cell program edits (saved in place)
             yield return new("edit-bore-x_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "dx/2-10").Into(ref log)));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, MachiningAttribute.X, "dx/2-10").Into(ref log)));
             yield return new("edit-bore-depth_bore-depth-variable", "td-bore-depth-variable.project",
-                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10").Into(ref log)));
+                EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateBore(operationId, 0, MachiningAttribute.Depth, "throughBoreDepth-10").Into(ref log)));
             yield return new("edit-variable-name_bore-depth-variable", "td-bore-depth-variable.project",
                 EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Name, "holeDepth").Into(ref log)));
             yield return new("edit-variable-expr_bore-depth-variable", "td-bore-depth-variable.project",

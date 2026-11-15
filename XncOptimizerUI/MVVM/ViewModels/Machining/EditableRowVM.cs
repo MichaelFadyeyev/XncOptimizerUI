@@ -9,7 +9,9 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// write into draft properties; each draft keeps one validation error reported through
     /// <see cref="INotifyDataErrorInfo"/> (which turns the bound editor red). A cell commit saves
     /// every changed draft through its owner and is refused while any draft is invalid; beginning
-    /// or cancelling an edit resets the drafts to the committed values.
+    /// or cancelling an edit resets the drafts to the committed values. Used by rows with
+    /// heterogeneous drafts (variables); numeric element rows use <see cref="MachiningElementRowVM{TModel}"/>
+    /// with one <see cref="ExpressionCellVM"/> per cell instead.
     /// </summary>
     public abstract class EditableRowVM : ObservableObject, INotifyDataErrorInfo, ICellEditableRow
     {

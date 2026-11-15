@@ -7,7 +7,7 @@ using XncOptimizerUI.MVVM.ViewModels.Machining;
 namespace XncOptimizerUI.Test
 {
     /// <summary>
-    /// <see cref="SelectedPartMachiningVM"/>: machining tables, program text and in-cell bore and variable edits.
+    /// <see cref="SelectedPartMachiningVM"/>: machining tables, program text and in-cell bore, groove, mill and variable edits.
     /// </summary>
     [TestFixture]
     public class SelectedPartMachiningVMTests : AppViewModelTestBase
@@ -178,10 +178,10 @@ namespace XncOptimizerUI.Test
                     Is.EqualTo(Enumerable.Range(1, 6)));
                 Assert.That(vm.Machining.Grooves.Select(g => g.Side),
                     Is.EqualTo(new[] { "Front", "Left", "Right", "Top", "Bottom", "Back" }));
-                Assert.That(vm.Machining.Grooves[0].StartX, Is.EqualTo("1"));
-                Assert.That(vm.Machining.Grooves[0].EndY, Is.EqualTo("4"));
-                Assert.That(vm.Machining.Grooves[0].Depth, Is.EqualTo("5"));
-                Assert.That(vm.Machining.Grooves[0].Width, Is.EqualTo("6"));
+                Assert.That(vm.Machining.Grooves[0].StartX.Display, Is.EqualTo("1"));
+                Assert.That(vm.Machining.Grooves[0].EndY.Display, Is.EqualTo("4"));
+                Assert.That(vm.Machining.Grooves[0].Depth.Display, Is.EqualTo("5"));
+                Assert.That(vm.Machining.Grooves[0].Width.Display, Is.EqualTo("6"));
                 Assert.That(vm.Machining.Grooves[0].ToolToCenterLine, Is.EqualTo("C"));
                 Assert.That(vm.Machining.Grooves[1].ToolToCenterLine, Is.EqualTo("L"));
                 Assert.That(vm.Machining.Grooves[2].ToolToCenterLine, Is.EqualTo("R"));
@@ -268,19 +268,19 @@ namespace XncOptimizerUI.Test
             var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
-            row.XInput = "dx-32";
+            row.X.Input = "dx-32";
             var committed = row.TryCommitCellEdit();
 
-            Project.Editor.Received(1).UpdateBore(5, 0, BoreAttribute.X, "dx-32");
+            Project.Editor.Received(1).UpdateBore(5, 0, MachiningAttribute.X, "dx-32");
             Assert.Multiple(() =>
             {
                 Assert.That(committed, Is.True);
                 Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.Machining.Bores[0], Is.SameAs(row));
                 Assert.That(vm.Machining.SelectedBore, Is.SameAs(row));
-                Assert.That(row.X, Is.EqualTo("368"));
-                Assert.That(row.XInput, Is.EqualTo("dx-32"));
-                Assert.That(vm.Machining.CheckedBores, Is.EqualTo(new[] { row.Bore }));
+                Assert.That(row.X.Display, Is.EqualTo("368"));
+                Assert.That(row.X.Input, Is.EqualTo("dx-32"));
+                Assert.That(vm.Machining.CheckedBores, Is.EqualTo(new[] { row.Model }));
                 Assert.That(vm.Machining.Programs.Single().Bores[0].X, Is.EqualTo(368));
                 Assert.That(vm.Log.Text, Does.Contain("Bore #1 x = \"dx-32\", saved"));
             });
@@ -341,7 +341,7 @@ namespace XncOptimizerUI.Test
                 Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
                 Assert.That(vm.Machining.Variables.Single(), Is.SameAs(row));
                 Assert.That((row.Expr, row.Value), Is.EqualTo(("dz+4", "23")));
-                Assert.That(vm.Machining.Bores.Single().Depth, Is.EqualTo("23"));
+                Assert.That(vm.Machining.Bores.Single().Depth.Display, Is.EqualTo("23"));
                 Assert.That(vm.Log.Text, Does.Contain("Variable #1 expr = \"dz+4\", saved"));
             });
         }
@@ -375,12 +375,12 @@ namespace XncOptimizerUI.Test
             var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
-            row.XInput = "2*-3";
+            row.X.Input = "2*-3";
 
             Assert.Multiple(() =>
             {
                 Assert.That(row.HasErrors, Is.True);
-                Assert.That(row.GetErrors(nameof(BoreRowVM.XInput)).Cast<string>().Single(), Does.Contain("sign"));
+                Assert.That(row.X.GetErrors(nameof(ExpressionCellVM.Input)).Cast<string>().Single(), Does.Contain("sign"));
                 Assert.That(row.TryCommitCellEdit(), Is.False);
                 Assert.That(Project.Calls, Does.Not.Contain(nameof(IProjectEditor.UpdateBore)));
             });
@@ -393,12 +393,12 @@ namespace XncOptimizerUI.Test
             var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
-            row.XInput = "1,5";
+            row.X.Input = "1,5";
             row.CancelCellEdit();
 
             Assert.Multiple(() =>
             {
-                Assert.That(row.XInput, Is.EqualTo("100"));
+                Assert.That(row.X.Input, Is.EqualTo("100"));
                 Assert.That(row.HasErrors, Is.False);
             });
         }
@@ -410,7 +410,7 @@ namespace XncOptimizerUI.Test
             var row = vm.Machining.Bores[0];
 
             row.BeginCellEdit();
-            row.XInput = " 100 ";
+            row.X.Input = " 100 ";
 
             Assert.Multiple(() =>
             {
@@ -428,13 +428,132 @@ namespace XncOptimizerUI.Test
             var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
-            row.DepthInput = "dz";
+            row.Depth.Input = "dz";
 
             Assert.Multiple(() =>
             {
                 Assert.That(row.TryCommitCellEdit(), Is.False);
                 Assert.That(row.HasErrors, Is.True);
-                Assert.That(row.Depth, Is.EqualTo("10"));
+                Assert.That(row.Depth.Display, Is.EqualTo("10"));
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
+            });
+        }
+
+        private static XncProgram ProgramWithGroovesAndRectangle(string secondGrooveY2Text, double secondGrooveY2) => new()
+        {
+            OperationId = 5,
+            Side = true,
+            Dx = 400,
+            Dy = 800,
+            Dz = 19,
+            Tools = [new XncTool { Name = "Cut4", Diameter = 4 }],
+            Groovings =
+            [
+                new XncGrooving
+                {
+                    ToolName = "Cut4", Start = new XncPoint(0, 50), End = new XncPoint(400, 50), Depth = 4, Width = 4,
+                    Source = new XncElementSource(0, new Dictionary<string, string> { ["y2"] = "50" })
+                },
+                new XncGrooving
+                {
+                    ToolName = "Cut4", Start = new XncPoint(0, 100), End = new XncPoint(400, secondGrooveY2), Depth = 4, Width = 4,
+                    Source = new XncElementSource(1, new Dictionary<string, string> { ["y2"] = secondGrooveY2Text })
+                }
+            ],
+            MillingRectangles =
+            [
+                new XncMillingRectangle
+                {
+                    ToolName = "Cut4", Origin = new XncPoint(200, 400), Length = 100, Width = 40, Depth = 8,
+                    Source = new XncElementSource(0, new Dictionary<string, string> { ["dp"] = "8" })
+                }
+            ]
+        };
+
+        private AppViewModel OpenWithGrooves()
+        {
+            SeedTwoParts();
+            Project.XncPrograms = [ProgramWithGroovesAndRectangle("100", 100)];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            return vm;
+        }
+
+        [Test]
+        public void EditingGrooveEndY_CommitsExpression_SavesAndUpdatesRowInPlace()
+        {
+            var vm = OpenWithGrooves();
+            Project.Editor.UpdateMachiningElement(default, default, default, default, default!)
+                .ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramWithGroovesAndRectangle("dy-35", 765)]));
+            var row = vm.Machining.Grooves[1];
+            var rectangleRow = vm.Machining.MillingRectangles[0];
+            vm.Machining.SelectedGroove = row;
+            row.IsSelected = true;
+            var savesBefore = Project.SaveCount;
+
+            row.BeginCellEdit();
+            row.EndY.Input = "dy-35";
+            var committed = row.TryCommitCellEdit();
+
+            Project.Editor.Received(1).UpdateMachiningElement(5, XncElementKind.Groove, 1, MachiningAttribute.Y2, "dy-35");
+            Assert.Multiple(() =>
+            {
+                Assert.That(committed, Is.True);
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(vm.Machining.Grooves[1], Is.SameAs(row));
+                Assert.That(vm.Machining.SelectedGroove, Is.SameAs(row));
+                Assert.That(vm.Machining.MillingRectangles[0], Is.SameAs(rectangleRow), "other tables untouched");
+                Assert.That(row.EndY.Display, Is.EqualTo("765"));
+                Assert.That(row.EndY.Input, Is.EqualTo("dy-35"));
+                Assert.That(vm.Machining.CheckedGrooves, Is.EqualTo(new[] { row.Model }));
+                Assert.That(vm.Machining.Programs.Single().Groovings[1].End.Y, Is.EqualTo(765));
+                Assert.That(vm.Log.Text, Does.Contain("Groove #2 y2 = \"dy-35\", saved"));
+            });
+        }
+
+        [Test]
+        public void EditingRectangleDepth_AfterGrooveEdit_StillFindsItsOperation()
+        {
+            var vm = OpenWithGrooves();
+            Project.Editor.UpdateMachiningElement(default, default, default, default, default!)
+                .ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramWithGroovesAndRectangle("dy-35", 765)]));
+            var groove = vm.Machining.Grooves[1];
+            var rectangle = vm.Machining.MillingRectangles[0];
+
+            groove.BeginCellEdit();
+            groove.EndY.Input = "dy-35";
+            groove.TryCommitCellEdit();
+            rectangle.BeginCellEdit();
+            rectangle.Depth.Input = "dz";
+            var committed = rectangle.TryCommitCellEdit();
+
+            Project.Editor.Received(1).UpdateMachiningElement(5, XncElementKind.Rectangle, 0, MachiningAttribute.Depth, "dz");
+            Assert.Multiple(() =>
+            {
+                Assert.That(committed, Is.True);
+                Assert.That(vm.Log.Text, Does.Contain("Rectangle #1 dp = \"dz\", saved"));
+            });
+        }
+
+        [Test]
+        public void EditingGroove_WhenServiceRejects_KeepsEditAndSavesNothing()
+        {
+            var vm = OpenWithGrooves();
+            Project.Editor.UpdateMachiningElement(default, default, default, default, default!)
+                .ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            var row = vm.Machining.Grooves[0];
+            var savesBefore = Project.SaveCount;
+
+            row.BeginCellEdit();
+            row.Width.Input = "tool.dia*2";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.TryCommitCellEdit(), Is.False);
+                Assert.That(row.Width.HasErrors, Is.True);
+                Assert.That(row.Width.Display, Is.EqualTo("4"));
                 Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
             });
         }

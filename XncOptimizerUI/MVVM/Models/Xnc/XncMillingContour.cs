@@ -4,7 +4,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// A milling contour: an entry point (<c>&lt;ms&gt;</c>) followed by its line and
     /// arc segments (<c>&lt;ml&gt;</c>/<c>&lt;mac&gt;</c>).
     /// </summary>
-    public class XncMillingContour
+    public class XncMillingContour : IXncEditableElement
     {
         /// <summary>Name of the tool used for the whole contour (the <c>name</c> attribute).</summary>
         public string ToolName { get; init; } = string.Empty;
@@ -36,5 +36,8 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
 
         /// <summary>Line and arc moves that make up the contour, in order.</summary>
         public IReadOnlyList<XncMillingSegment> Segments { get; init; } = [];
+
+        /// <summary>Position among the program's elements of the same tag and the authored attribute texts.</summary>
+        public XncElementSource Source { get; init; } = XncElementSource.None;
     }
 }

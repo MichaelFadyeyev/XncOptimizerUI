@@ -254,9 +254,10 @@ rewrites one attribute of the `boreIndex`-th bore element (document order among
 `bf`/`bt`/`bb`/`bl`/`br`) of the operation's program. Editable attributes per element:
 `bf` → `x`, `y`; `bt`/`bb` → `x`, `z`; `bl`/`br` → `y`, `z`; all → `dp` (the pinned edge
 coordinate is never an attribute). The text is written **as typed** (trimmed), so an expression
-such as `dx-32` stays parametric. Accepted input (`Services/Xnc/BoreExpression.cs`): digits,
-one `.` per number, `dx`/`dy`/`dz` only (no `<var>`s, no `tool.dia`), `+ - * /`, parentheses;
-a `+`/`-` sign only at the start or right after `(`; must evaluate to a finite number; `dp > 0`.
+such as `dx-32` stays parametric. Accepted input (`Services/Xnc/MachiningExpression.cs`): digits,
+one `.` per number, `dx`/`dy`/`dz`, the program's numeric `<var>`s and `tool.dia` of the element's
+tool, `+ - * /`, parentheses; a `+`/`-` sign only at the start or right after `(`; must evaluate to
+a finite number; `dp > 0`.
 Writing `z` removes `m="true"` (an explicit `z` replaces the middle pin).
 
 ### 6.3 Groovings — `<gr>`

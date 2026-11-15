@@ -4,72 +4,86 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
     d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
-    <!--  Selected part milling contours (<ms> paths), read-only  -->
+    <!--
+        Selected part milling contours (<ms> + segments): only the entry depth is editable in
+        place (moving the entry / exit point would detach it from its arc segments)
+    -->
     <DataGrid
         x:Name="MillingContoursDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
         ItemsSource="{Binding MillingContours}"
-        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        SelectedItem="{Binding SelectedMillingContour}"
+        Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
             <!--  Check: feeds SelectedPartMachiningVM's checked contours  -->
             <common:RowCheckColumn x:Name="ContoursCheckColumn" />
 
-            <!--  Contour identity  -->
+            <!--  Read-only contour identity  -->
             <DataGridTextColumn
                 x:Name="ContoursNumberColumn"
                 Width="Auto"
                 Binding="{Binding Number}"
-                Header="#" />
+                Header="#"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="ContoursSideColumn"
                 Width="Auto"
                 Binding="{Binding Side}"
-                Header="Side" />
+                Header="Side"
+                IsReadOnly="True" />
 
-            <!--  Entry and exit points  -->
+            <!--  Read-only entry and exit points  -->
             <DataGridTextColumn
                 x:Name="ContoursEntryXColumn"
                 Width="*"
                 Binding="{Binding EntryX}"
-                Header="Entry X" />
+                Header="Entry X"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="ContoursEntryYColumn"
                 Width="*"
                 Binding="{Binding EntryY}"
-                Header="Entry Y" />
+                Header="Entry Y"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="ContoursExitXColumn"
                 Width="*"
                 Binding="{Binding ExitX}"
-                Header="Exit X" />
+                Header="Exit X"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="ContoursExitYColumn"
                 Width="*"
                 Binding="{Binding ExitY}"
-                Header="Exit Y" />
+                Header="Exit Y"
+                IsReadOnly="True" />
 
-            <!--  Cut: depth, tool to center line position, segment count  -->
-            <DataGridTextColumn
+            <!--  Cut: entry depth (edits the <ms> dp), tool to center line position, segment count  -->
+            <common:ExpressionColumn
                 x:Name="ContoursDepthColumn"
-                Width="*"
-                Binding="{Binding Depth}"
+                Cell="Depth"
                 Header="Depth" />
             <DataGridTextColumn
                 x:Name="ContoursTclColumn"
                 Width="*"
                 Binding="{Binding ToolToCenterLine}"
-                Header="TCL" />
+                Header="TCL"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="ContoursSegmentsColumn"
                 Width="*"
                 Binding="{Binding Segments}"
-                Header="Segments" />
+                Header="Segments"
+                IsReadOnly="True" />
+
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

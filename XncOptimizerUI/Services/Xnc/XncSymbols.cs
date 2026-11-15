@@ -70,6 +70,38 @@ namespace XncOptimizerUI.Services.Xnc
         }
 
         /// <summary>
+        /// Symbols an element's own expressions resolve against, as XncProgramReader resolves them:
+        /// <see cref="SeedProgramSymbols"/> plus <c>tool.dia</c> of the element's declared tool.
+        /// </summary>
+        public static XncSymbolTable SeedElementSymbols(XElement program, XElement element)
+        {
+            var symbols = SeedProgramSymbols(program);
+
+            if (element.GetNameValue() is { } toolName && ReadToolDiameters(program).TryGetValue(toolName, out var diameter))
+            {
+                symbols.SetToolDiameter(diameter);
+            }
+
+            return symbols;
+        }
+
+        /// <summary>
+        /// Symbols of an already read <paramref name="element"/>: <see cref="ProgramSymbols"/> plus
+        /// <c>tool.dia</c> of its tool - the model-side counterpart of <see cref="SeedElementSymbols"/>.
+        /// </summary>
+        public static XncSymbolTable ElementSymbols(XncProgram program, IXncMachiningElement element)
+        {
+            var symbols = ProgramSymbols(program);
+
+            if (program.FindTool(element.ToolName) is { } tool)
+            {
+                symbols.SetToolDiameter(tool.Diameter);
+            }
+
+            return symbols;
+        }
+
+        /// <summary>
         /// Symbols a variable's expression may use: <c>dx</c>/<c>dy</c>/<c>dz</c> plus the numeric
         /// variables declared before <paramref name="variable"/> - the model-side counterpart of
         /// <see cref="SeedProgramSymbols(XElement, XElement?)"/> with a stop element.

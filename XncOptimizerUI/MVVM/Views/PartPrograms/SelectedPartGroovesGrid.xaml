@@ -4,72 +4,76 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
     d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
-    <!--  Selected part grooves (<gr>), read-only  -->
+    <!--
+        Selected part grooves (<gr>): start / end points, depth and width editable in place
+        (click the selected cell or F2), each cell committed on its own through GrooveRowVM
+    -->
     <DataGrid
         x:Name="GroovesDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
         ItemsSource="{Binding Grooves}"
-        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        SelectedItem="{Binding SelectedGroove}"
+        Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
             <!--  Check: feeds SelectedPartMachiningVM's checked grooves  -->
             <common:RowCheckColumn x:Name="GroovesCheckColumn" />
 
-            <!--  Groove identity  -->
+            <!--  Read-only groove identity  -->
             <DataGridTextColumn
                 x:Name="GroovesNumberColumn"
                 Width="Auto"
                 Binding="{Binding Number}"
-                Header="#" />
+                Header="#"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="GroovesSideColumn"
                 Width="Auto"
                 Binding="{Binding Side}"
-                Header="Side" />
+                Header="Side"
+                IsReadOnly="True" />
 
-            <!--  Start and end points  -->
-            <DataGridTextColumn
+            <!--  Start and end points: edit the authored x1 / y1 / x2 / y2  -->
+            <common:ExpressionColumn
                 x:Name="GroovesStartXColumn"
-                Width="*"
-                Binding="{Binding StartX}"
+                Cell="StartX"
                 Header="Start X" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="GroovesStartYColumn"
-                Width="*"
-                Binding="{Binding StartY}"
+                Cell="StartY"
                 Header="Start Y" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="GroovesEndXColumn"
-                Width="*"
-                Binding="{Binding EndX}"
+                Cell="EndX"
                 Header="End X" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="GroovesEndYColumn"
-                Width="*"
-                Binding="{Binding EndY}"
+                Cell="EndY"
                 Header="End Y" />
 
-            <!--  Cut: depth, width, tool to center line position  -->
-            <DataGridTextColumn
+            <!--  Cut: depth and width (edit dp / t), tool to center line position (read-only)  -->
+            <common:ExpressionColumn
                 x:Name="GroovesDepthColumn"
-                Width="*"
-                Binding="{Binding Depth}"
+                Cell="Depth"
                 Header="Depth" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="GroovesWidthColumn"
-                Width="*"
-                Binding="{Binding Width}"
+                Cell="Width"
                 Header="Width" />
             <DataGridTextColumn
                 x:Name="GroovesTclColumn"
                 Width="*"
                 Binding="{Binding ToolToCenterLine}"
-                Header="TCL" />
+                Header="TCL"
+                IsReadOnly="True" />
+
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

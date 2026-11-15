@@ -52,8 +52,11 @@ namespace XncOptimizerUI.Services.Project
             return log.Changed();
         }
 
-        public OperationResult UpdateBore(int operationId, int boreIndex, BoreAttribute attribute, string expression) =>
+        public OperationResult UpdateBore(int operationId, int boreIndex, MachiningAttribute attribute, string expression) =>
             EditProgram(operationId, $"Bore #{boreIndex + 1}", program => XncProgramEdits.SetBoreAttribute(program, boreIndex, attribute, expression));
+
+        public OperationResult UpdateMachiningElement(int operationId, XncElementKind kind, int index, MachiningAttribute attribute, string expression) =>
+            EditProgram(operationId, $"{kind.DisplayName()} #{index + 1}", program => XncProgramEdits.SetElementAttribute(program, kind, index, attribute, expression));
 
         public OperationResult UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value) =>
             EditProgram(operationId, $"Variable #{variableIndex + 1}", program => XncProgramEdits.SetVariableAttribute(program, variableIndex, attribute, value));

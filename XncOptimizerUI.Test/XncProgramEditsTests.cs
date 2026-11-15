@@ -5,7 +5,8 @@ using XncOptimizerUI.MVVM.Models.Xnc;
 namespace XncOptimizerUI.Test
 {
     /// <summary>
-    /// <see cref="Services.Xnc.XncProgramEdits"/> through <see cref="IProjectEditor.UpdateBore"/> and
+    /// <see cref="Services.Xnc.XncProgramEdits"/> through <see cref="IProjectEditor.UpdateBore"/>,
+    /// <see cref="IProjectEditor.UpdateMachiningElement"/> and
     /// <see cref="IProjectEditor.UpdateVariable"/>.
     /// </summary>
     [TestFixture]
@@ -34,7 +35,7 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, " dx-32 ").Into(ref log);
+            var result = service.Editor.UpdateBore(operationId, 0, MachiningAttribute.X, " dx-32 ").Into(ref log);
             service.Session.Save();
 
             var bore = service.Reader.ReadXncPrograms(2).Single().Bores[0];
@@ -53,7 +54,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "dz").Into(ref log), Is.True, log);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, MachiningAttribute.Depth, "dz").Into(ref log), Is.True, log);
 
             var bore = service.Reader.ReadXncPrograms(2).Single().Bores[0];
             Assert.That((bore.Depth, bore.Through, bore.DepthText), Is.EqualTo((19d, true, "dz")));
@@ -68,7 +69,7 @@ namespace XncOptimizerUI.Test
             var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "dx/2-10").Into(ref log);
+            var result = service.Editor.UpdateBore(operationId, 0, MachiningAttribute.X, "dx/2-10").Into(ref log);
             service.Session.Save();
 
             var bore = service.Reader.ReadXncPrograms(1).Single().Bores[0];
@@ -90,7 +91,7 @@ namespace XncOptimizerUI.Test
             var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "throughBoreDepth-10").Into(ref log), Is.True, log);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, MachiningAttribute.Depth, "throughBoreDepth-10").Into(ref log), Is.True, log);
 
             var bore = service.Reader.ReadXncPrograms(1).Single().Bores[0];
             Assert.That((bore.Depth, bore.Through, bore.DepthText), Is.EqualTo((10d, false, "throughBoreDepth-10")));
@@ -104,7 +105,7 @@ namespace XncOptimizerUI.Test
             var operationId = service.Reader.ReadXncPrograms(1).Single().OperationId;
 
             var log = string.Empty;
-            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "blindBoreDepth").Into(ref log);
+            var result = service.Editor.UpdateBore(operationId, 0, MachiningAttribute.Depth, "blindBoreDepth").Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -120,7 +121,7 @@ namespace XncOptimizerUI.Test
             var (service, path, operationId) = OpenForBoreEdit("td-bl-65-bore.project");
 
             var log = string.Empty;
-            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.Z, "6").Into(ref log);
+            var result = service.Editor.UpdateBore(operationId, 0, MachiningAttribute.Z, "6").Into(ref log);
             service.Session.Save();
 
             var element = SavedBoreElement(path, 0);
@@ -143,7 +144,7 @@ namespace XncOptimizerUI.Test
             var before = service.Reader.ReadXncPrograms(2).Single().Bores[0].XText;
 
             var log = string.Empty;
-            var result = service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, expression).Into(ref log);
+            var result = service.Editor.UpdateBore(operationId, 0, MachiningAttribute.X, expression).Into(ref log);
 
             Assert.Multiple(() =>
             {
@@ -159,7 +160,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bores-large.project");
 
             var log = string.Empty;
-            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.Depth, "dz-dz").Into(ref log), Is.False);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, MachiningAttribute.Depth, "dz-dz").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("Depth must be greater than 0"));
         }
 
@@ -169,7 +170,7 @@ namespace XncOptimizerUI.Test
             var (service, _, operationId) = OpenForBoreEdit("td-bl-65-bore.project");
 
             var log = string.Empty;
-            Assert.That(service.Editor.UpdateBore(operationId, 0, BoreAttribute.X, "10").Into(ref log), Is.False);
+            Assert.That(service.Editor.UpdateBore(operationId, 0, MachiningAttribute.X, "10").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("<bl> has no editable 'x' attribute"));
         }
 
@@ -181,10 +182,128 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.Multiple(() =>
             {
-                Assert.That(service.Editor.UpdateBore(999, 0, BoreAttribute.X, "10").Into(ref log), Is.False);
-                Assert.That(service.Editor.UpdateBore(operationId, 99, BoreAttribute.X, "10").Into(ref log), Is.False);
+                Assert.That(service.Editor.UpdateBore(999, 0, MachiningAttribute.X, "10").Into(ref log), Is.False);
+                Assert.That(service.Editor.UpdateBore(operationId, 99, MachiningAttribute.X, "10").Into(ref log), Is.False);
                 Assert.That(log, Does.Contain("XNC operation not found."));
                 Assert.That(log, Does.Contain("bore not found in the program."));
+            });
+        }
+
+        // --- Groove and mill attribute editing (one program with every editable kind) ---
+
+        private const string GroovesAndMillsProgram = """
+            <program dx="600" dy="300" dz="18">
+              <tool name="Cut4" d="4" />
+              <tool name="Mill10" d="10" />
+              <var name="pocketDepth" type="double" expr="dz-10" />
+              <gr x1="-10" y1="50" x2="dx+10" y2="50" dp="4" t="4" c="0" p="0" name="Cut4" />
+              <gr x1="-10" y1="100" x2="dx+10" y2="100" dp="4" t="4" c="0" p="0" name="Cut4" />
+              <ms x="20" y="20" dp="5" c="0" name="Mill10" />
+              <ml x="200" y="20" />
+              <ms x="20" y="40" dp="5" c="0" name="Mill10" />
+              <ml x="200" y="40" />
+              <me x="300" y="150" l="20" w="10" a="0" dp="pocketDepth" c="3" name="Mill10" />
+              <mr x="450" y="150" l="100" w="40" a="0" r="0" dp="8" c="3" name="Mill10" />
+            </program>
+            """;
+
+        private string SingleProgramPath => Path.Combine(TempDirectory, "single-program.project");
+
+        private static IEnumerable<TestCaseData> ElementEdits()
+        {
+            yield return new TestCaseData(XncElementKind.Groove, 1, MachiningAttribute.Y2, " dy-35 ", "gr", "dy-35");
+            yield return new TestCaseData(XncElementKind.Groove, 0, MachiningAttribute.GrooveWidth, "tool.dia*2", "gr", "tool.dia*2");
+            yield return new TestCaseData(XncElementKind.Contour, 1, MachiningAttribute.Depth, "pocketDepth", "ms", "pocketDepth");
+            yield return new TestCaseData(XncElementKind.Ellipse, 0, MachiningAttribute.Angle, "-30", "me", "-30");
+            yield return new TestCaseData(XncElementKind.Rectangle, 0, MachiningAttribute.CornerRadius, "tool.dia/2", "mr", "tool.dia/2");
+            yield return new TestCaseData(XncElementKind.Rectangle, 0, MachiningAttribute.X, "dx-150", "mr", "dx-150");
+        }
+
+        [TestCaseSource(nameof(ElementEdits))]
+        public void UpdateMachiningElement_WritesTrimmedExpressionToTheIndexedElement(
+            XncElementKind kind, int index, MachiningAttribute attribute, string typed, string tag, string expected)
+        {
+            var service = OpenSingleProgramProject(GroovesAndMillsProgram);
+            var before = ReadSavedProgram(SingleProgramPath, 1);
+
+            var log = string.Empty;
+            var result = service.Editor.UpdateMachiningElement(1, kind, index, attribute, typed).Into(ref log);
+            service.Session.Save();
+
+            var saved = ReadSavedProgram(SingleProgramPath, 1).Elements(tag).ToList();
+            var untouched = before.Elements(tag).Where((_, i) => i != index).Select(e => e.ToString());
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(saved[index].Attribute(attribute.XmlName())!.Value, Is.EqualTo(expected));
+                Assert.That(saved.Where((_, i) => i != index).Select(e => e.ToString()), Is.EqualTo(untouched));
+            });
+        }
+
+        [Test]
+        public void UpdateMachiningElement_ReadBackKeepsAuthoredTextAndValue()
+        {
+            var service = OpenSingleProgramProject(GroovesAndMillsProgram);
+
+            var log = string.Empty;
+            Assert.That(service.Editor.UpdateMachiningElement(1, XncElementKind.Groove, 1, MachiningAttribute.X2, "dx-5").Into(ref log), Is.True, log);
+
+            var groove = service.Reader.ReadXncPrograms(1).Single().Groovings[1];
+            Assert.Multiple(() =>
+            {
+                Assert.That(groove.End.X, Is.EqualTo(595));
+                Assert.That(groove.Source.Index, Is.EqualTo(1));
+                Assert.That(groove.Source.Text("x2"), Is.EqualTo("dx-5"));
+            });
+        }
+
+        [TestCase(XncElementKind.Groove, MachiningAttribute.Depth, "0", "Depth must be greater than 0")]
+        [TestCase(XncElementKind.Ellipse, MachiningAttribute.Width, "-1", "Width must be greater than 0")]
+        [TestCase(XncElementKind.Rectangle, MachiningAttribute.Length, "dz-dz", "Length must be greater than 0")]
+        [TestCase(XncElementKind.Rectangle, MachiningAttribute.CornerRadius, "-2", "Corner radius must not be negative")]
+        [TestCase(XncElementKind.Groove, MachiningAttribute.X1, "blind", "Unknown variable 'blind'")]
+        public void UpdateMachiningElement_InvalidValue_RejectedAndUnchanged(
+            XncElementKind kind, MachiningAttribute attribute, string typed, string reason)
+        {
+            var service = OpenSingleProgramProject(GroovesAndMillsProgram);
+            var before = ReadSavedProgram(SingleProgramPath, 1).ToString();
+
+            var log = string.Empty;
+            var result = service.Editor.UpdateMachiningElement(1, kind, 0, attribute, typed).Into(ref log);
+            service.Session.Save();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain(reason));
+                Assert.That(ReadSavedProgram(SingleProgramPath, 1).ToString(), Is.EqualTo(before));
+            });
+        }
+
+        [TestCase(XncElementKind.Contour, MachiningAttribute.X, "<ms> has no editable 'x' attribute")]
+        [TestCase(XncElementKind.Groove, MachiningAttribute.Width, "<gr> has no editable 'w' attribute")]
+        [TestCase(XncElementKind.Ellipse, MachiningAttribute.CornerRadius, "<me> has no editable 'r' attribute")]
+        public void UpdateMachiningElement_AttributeNotEditedByItsTable_Rejected(XncElementKind kind, MachiningAttribute attribute, string reason)
+        {
+            var service = OpenSingleProgramProject(GroovesAndMillsProgram);
+
+            var log = string.Empty;
+            Assert.That(service.Editor.UpdateMachiningElement(1, kind, 0, attribute, "10").Into(ref log), Is.False);
+            Assert.That(log, Does.Contain(reason));
+        }
+
+        [Test]
+        public void UpdateMachiningElement_UnknownOperationOrElement_Rejected()
+        {
+            var service = OpenSingleProgramProject(GroovesAndMillsProgram);
+
+            var log = string.Empty;
+            Assert.Multiple(() =>
+            {
+                Assert.That(service.Editor.UpdateMachiningElement(999, XncElementKind.Groove, 0, MachiningAttribute.X1, "10").Into(ref log), Is.False);
+                Assert.That(service.Editor.UpdateMachiningElement(1, XncElementKind.Ellipse, 1, MachiningAttribute.X, "10").Into(ref log), Is.False);
+                Assert.That(log, Does.Contain("XNC operation not found."));
+                Assert.That(log, Does.Contain("<me> not found in the program."));
             });
         }
 

@@ -73,16 +73,8 @@
         <Setter Property="SelectionMode" Value="Extended" />
     </Style>
 
-    <!--  Machining table without editable cells (only its check boxes)  -->
-    <Style
-        x:Key="ReadOnlyOperationGridStyle"
-        BasedOn="{StaticResource OperationGridStyle}"
-        TargetType="DataGrid">
-        <Setter Property="IsReadOnly" Value="True" />
-    </Style>
-
     <!--
-        Program table cell text editor (bores X / Y / Depth, variables). Invalid
+        Program table cell text editor (bore, groove and mill numeric cells, variables). Invalid
         input (INotifyDataErrorInfo error on the bound draft) turns text and border red and shows
         the reason as tooltip; the default error adorner is suppressed so it does not overlap
         neighbouring cells.

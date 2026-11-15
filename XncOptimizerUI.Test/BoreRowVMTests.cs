@@ -6,7 +6,7 @@ namespace XncOptimizerUI.Test
     [TestFixture]
     public class BoreRowVMTests
     {
-        private readonly List<(BoreAttribute Attribute, string Text)> _edits = [];
+        private readonly List<(MachiningAttribute Attribute, string Text)> _edits = [];
 
         [SetUp]
         public void SetUp() => _edits.Clear();
@@ -17,12 +17,14 @@ namespace XncOptimizerUI.Test
             Dy = 300,
             Dz = 18,
             Bores = bores,
+            Tools = [new XncTool { Name = "Bore8", Diameter = 8 }],
             Variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase) { ["throughBoreDepth"] = 20 }
         };
 
         private static XncBore FaceBore(string depthText, double depth) => new()
         {
             Surface = BoreSurface.Face,
+            ToolName = "Bore8",
             X = 300,
             XText = "DX/2",
             Y = 150,
@@ -46,14 +48,14 @@ namespace XncOptimizerUI.Test
             var row = Row(FaceBore(depthText, depth));
 
             row.BeginCellEdit();
-            row.XInput = "dx/2-10";
+            row.X.Input = "dx/2-10";
             var committed = row.TryCommitCellEdit();
 
             Assert.Multiple(() =>
             {
                 Assert.That(row.HasErrors, Is.False);
                 Assert.That(committed, Is.True);
-                Assert.That(_edits, Is.EqualTo(new[] { (BoreAttribute.X, "dx/2-10") }));
+                Assert.That(_edits, Is.EqualTo(new[] { (MachiningAttribute.X, "dx/2-10") }));
             });
         }
 
@@ -74,10 +76,10 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(row.X, Is.EqualTo("33.333"));
-                Assert.That(row.XToolTip, Is.EqualTo("dx/18 = 33.333333333333336"));
-                Assert.That(row.YToolTip, Is.Null);
-                Assert.That(row.DepthToolTip, Is.EqualTo("throughBoreDepth = 20"));
+                Assert.That(row.X.Display, Is.EqualTo("33.333"));
+                Assert.That(row.X.ToolTip, Is.EqualTo("dx/18 = 33.333333333333336"));
+                Assert.That(row.Y.ToolTip, Is.Null);
+                Assert.That(row.Depth.ToolTip, Is.EqualTo("throughBoreDepth = 20"));
             });
         }
 
@@ -87,30 +89,49 @@ namespace XncOptimizerUI.Test
             var row = Row(FaceBore("10", 10));
             var applied = FaceBore("dz-2", 16);
             var changed = new List<string?>();
-            row.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+            row.Depth.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
             row.Apply(applied, Program(applied));
 
             Assert.Multiple(() =>
             {
-                Assert.That(row.DepthToolTip, Is.EqualTo("dz-2 = 16"));
-                Assert.That(changed, Does.Contain(nameof(BoreRowVM.DepthToolTip)));
+                Assert.That(row.Model, Is.SameAs(applied));
+                Assert.That(row.Depth.ToolTip, Is.EqualTo("dz-2 = 16"));
+                Assert.That(row.Depth.Input, Is.EqualTo("dz-2"));
+                Assert.That(changed, Does.Contain(nameof(ExpressionCellVM.ToolTip)));
+            });
+        }
+
+        [TestCase(BoreSurface.Face, MachiningAttribute.X, MachiningAttribute.Y)]
+        [TestCase(BoreSurface.Top, MachiningAttribute.X, MachiningAttribute.Z)]
+        [TestCase(BoreSurface.Bottom, MachiningAttribute.X, MachiningAttribute.Z)]
+        [TestCase(BoreSurface.Left, MachiningAttribute.Z, MachiningAttribute.Y)]
+        [TestCase(BoreSurface.Right, MachiningAttribute.Z, MachiningAttribute.Y)]
+        public void Columns_EditTheBoresPositionInThePartPlane(BoreSurface surface, MachiningAttribute x, MachiningAttribute y)
+        {
+            var row = Row(new XncBore { Surface = surface, Depth = 10 });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(row.X.Attribute, Is.EqualTo(x));
+                Assert.That(row.Y.Attribute, Is.EqualTo(y));
+                Assert.That(row.Depth.Attribute, Is.EqualTo(MachiningAttribute.Depth));
             });
         }
 
         [Test]
-        public void DepthInput_AcceptsProgramVariable()
+        public void DepthInput_AcceptsProgramVariableAndToolDiameter()
         {
             var row = Row(FaceBore("10", 10));
 
             row.BeginCellEdit();
-            row.DepthInput = "throughBoreDepth";
+            row.Depth.Input = "throughBoreDepth-tool.dia";
 
             Assert.Multiple(() =>
             {
                 Assert.That(row.HasErrors, Is.False);
                 Assert.That(row.TryCommitCellEdit(), Is.True);
-                Assert.That(_edits, Is.EqualTo(new[] { (BoreAttribute.Depth, "throughBoreDepth") }));
+                Assert.That(_edits, Is.EqualTo(new[] { (MachiningAttribute.Depth, "throughBoreDepth-tool.dia") }));
             });
         }
 
@@ -120,12 +141,12 @@ namespace XncOptimizerUI.Test
             var row = Row(FaceBore("10", 10));
 
             row.BeginCellEdit();
-            row.DepthInput = "blindBoreDepth";
+            row.Depth.Input = "blindBoreDepth";
 
             Assert.Multiple(() =>
             {
                 Assert.That(row.HasErrors, Is.True);
-                Assert.That(row.GetErrors(nameof(BoreRowVM.DepthInput)).Cast<string>().Single(),
+                Assert.That(row.Depth.GetErrors(nameof(ExpressionCellVM.Input)).Cast<string>().Single(),
                     Does.Contain("Unknown variable 'blindBoreDepth'"));
                 Assert.That(row.TryCommitCellEdit(), Is.False);
                 Assert.That(_edits, Is.Empty);

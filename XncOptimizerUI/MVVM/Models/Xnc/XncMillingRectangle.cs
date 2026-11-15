@@ -5,7 +5,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// frame, not a contour of segments. Attribute meanings are inferred from the fixture
     /// (see <c>.claude/skills/project-file-processing-skill/references/xnc-program-format.md</c> &#167;6.6).
     /// </summary>
-    public class XncMillingRectangle
+    public class XncMillingRectangle : IXncEditableElement
     {
         /// <summary>Name of the tool used (the <c>name</c> attribute).</summary>
         public string ToolName { get; init; } = string.Empty;
@@ -42,5 +42,8 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
 
         /// <summary>Start offset in the XY plane (the optional <c>sxy</c> attribute), or null when absent.</summary>
         public double? StartOffsetXY { get; init; }
+
+        /// <summary>Position among the program's elements of the same tag and the authored attribute texts.</summary>
+        public XncElementSource Source { get; init; } = XncElementSource.None;
     }
 }

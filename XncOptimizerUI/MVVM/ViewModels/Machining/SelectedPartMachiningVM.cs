@@ -9,8 +9,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// The XNC programs of the selected part: the program tables (bores, grooves, mills, tools,
-    /// variables), their check boxes, the "XNC List" text, and the in-cell bore and variable edits,
-    /// which are written to the program and saved in place.
+    /// variables), their check boxes, the "XNC List" text, and the in-cell bore, groove, mill and
+    /// variable edits, which are written to the program and saved in place.
     /// </summary>
     public sealed partial class SelectedPartMachiningVM : ObservableObject
     {
@@ -89,6 +89,10 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         [NotifyPropertyChangedFor(nameof(HasGrooves))]
         private ObservableCollection<GrooveRowVM> _grooves = [];
 
+        /// <summary>The groove row selected in the grooves <c>DataGrid</c>, whose cells are edited in place.</summary>
+        [ObservableProperty]
+        private GrooveRowVM? _selectedGroove;
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasTools))]
         private ObservableCollection<ToolRowVM> _tools = [];
@@ -105,13 +109,25 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         [NotifyPropertyChangedFor(nameof(HasMillingContours))]
         private ObservableCollection<MillingContourRowVM> _millingContours = [];
 
+        /// <summary>The contour row selected in the milling contours <c>DataGrid</c> (its depth is edited in place).</summary>
+        [ObservableProperty]
+        private MillingContourRowVM? _selectedMillingContour;
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasMillingEllipses))]
         private ObservableCollection<MillingEllipseRowVM> _millingEllipses = [];
 
+        /// <summary>The ellipse row selected in the milling ellipses <c>DataGrid</c>, whose cells are edited in place.</summary>
+        [ObservableProperty]
+        private MillingEllipseRowVM? _selectedMillingEllipse;
+
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(HasMillingRectangles))]
         private ObservableCollection<MillingRectangleRowVM> _millingRectangles = [];
+
+        /// <summary>The rectangle row selected in the milling rectangles <c>DataGrid</c>, whose cells are edited in place.</summary>
+        [ObservableProperty]
+        private MillingRectangleRowVM? _selectedMillingRectangle;
 
         /// <summary>The "XNC List" text: one line per program element (see <see cref="ProgramsSummary"/>).</summary>
         [ObservableProperty]
@@ -185,12 +201,31 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// with any pending grid edit of the part) and refreshes the bores and the preview.
         /// Returns <c>false</c> when nothing was written, so the cell stays in edit mode.
         /// </summary>
-        private bool OnBoreRowEdited(BoreRowVM row, BoreAttribute attribute, string expression) =>
+        private bool OnBoreRowEdited(MachiningElementRowVM<XncBore> row, MachiningAttribute attribute, string expression) =>
             SaveProgramEdit(
-                Programs.FirstOrDefault(p => p.Bores.Contains(row.Bore))?.OperationId,
+                row.OperationId,
                 $"Bore #{row.Number} {attribute.XmlName()} = \"{expression}\"",
-                operationId => _project.Editor.UpdateBore(operationId, row.Bore.Index, attribute, expression),
-                RefreshBoresInPlace);
+                operationId => _project.Editor.UpdateBore(operationId, row.Model.Index, attribute, expression),
+                part => RefreshRowsInPlace(part, Bores, program => program.Bores, CheckedBores));
+
+        /// <summary>
+        /// The cell edit handler of a groove or mill table: writes one committed cell edit of an
+        /// element of <paramref name="kind"/> into its program, saves the file in place and
+        /// refreshes that table (rows from <paramref name="rows"/>) and the preview. The handler
+        /// returns <c>false</c> when nothing was written, so the cell stays in edit mode.
+        /// </summary>
+        private Func<MachiningElementRowVM<TModel>, MachiningAttribute, string, bool> ElementEditHandler<TModel, TRow>(
+            XncElementKind kind,
+            Func<ObservableCollection<TRow>> rows,
+            Func<XncProgram, IEnumerable<TModel>> elements,
+            CheckedSet<TModel> checkedSet)
+            where TModel : IXncEditableElement
+            where TRow : MachiningElementRowVM<TModel> =>
+            (row, attribute, expression) => SaveProgramEdit(
+                row.OperationId,
+                $"{kind.DisplayName()} #{row.Number} {attribute.XmlName()} = \"{expression}\"",
+                operationId => _project.Editor.UpdateMachiningElement(operationId, kind, row.Model.Source.Index, attribute, expression),
+                part => RefreshRowsInPlace(part, rows(), elements, checkedSet));
 
         /// <summary>
         /// Writes one committed variable cell edit into its program, saves the file in place and
@@ -199,7 +234,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// </summary>
         private bool OnVariableRowEdited(VariableRowVM row, XncVariableAttribute attribute, string value) =>
             SaveProgramEdit(
-                Programs.FirstOrDefault(p => p.DeclaredVariables.Contains(row.Variable))?.OperationId,
+                row.OperationId,
                 $"Variable #{row.Number} {attribute.XmlName()} = \"{value}\"",
                 operationId => _project.Editor.UpdateVariable(operationId, row.Variable.Index, attribute, value),
                 RefreshAfterVariableEdit);
@@ -208,16 +243,16 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// Applies <paramref name="edit"/> to the program of XNC operation <paramref name="operationId"/>
         /// of the selected part, saves the file in place and runs <paramref name="refresh"/>.
         /// </summary>
-        private bool SaveProgramEdit(int? operationId, string description, Func<int, OperationResult> edit, Action<PartVM> refresh)
+        private bool SaveProgramEdit(int operationId, string description, Func<int, OperationResult> edit, Action<PartVM> refresh)
         {
             var part = _parts.SelectedPart;
 
-            if (part is null || operationId is null || !_workspace.IsOpen)
+            if (part is null || !_workspace.IsOpen)
             {
                 return false;
             }
 
-            if (!_saver.SaveWithPendingEdits(part, () => edit(operationId.Value), description))
+            if (!_saver.SaveWithPendingEdits(part, () => edit(operationId), description))
             {
                 return false;
             }
@@ -228,18 +263,26 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         }
 
         /// <summary>
-        /// Re-reads <paramref name="part"/>'s programs after a bore edit and updates the bore rows
-        /// in place - the collection is not replaced, because this runs while the bores
-        /// <c>DataGrid</c> is still ending its cell edit (replacing its items source then throws),
-        /// and in-place rows keep the grid's selection and the checkboxes. Bores do not affect the
-        /// other machining tables, so those are left alone.
+        /// Re-reads <paramref name="part"/>'s programs after a bore, groove or mill edit and updates
+        /// the edited table's <paramref name="rows"/> in place - the collection is not replaced,
+        /// because this runs while that <c>DataGrid</c> is still ending its cell edit (replacing its
+        /// items source then throws), and in-place rows keep the grid's selection and the
+        /// checkboxes (<paramref name="checkedSet"/> follows the re-read elements). One element does
+        /// not affect the other machining tables, so those are left alone; the re-read programs
+        /// redraw the preview.
         /// </summary>
-        private void RefreshBoresInPlace(PartVM part)
+        private void RefreshRowsInPlace<TModel, TRow>(
+            PartVM part,
+            ObservableCollection<TRow> rows,
+            Func<XncProgram, IEnumerable<TModel>> elements,
+            CheckedSet<TModel> checkedSet)
+            where TModel : IXncMachiningElement
+            where TRow : MachiningElementRowVM<TModel>
         {
-            var programs = _project.Reader.ReadXncPrograms(part.Id);
-            var bores = programs.SelectMany(program => program.Bores.Select(bore => (Bore: bore, Program: program))).ToList();
+            var (programs, readError) = ReadPrograms(part);
+            var reread = programs.SelectMany(program => elements(program).Select(element => (Element: element, Program: program))).ToList();
 
-            if (bores.Count != Bores.Count)
+            if (readError is not null || reread.Count != rows.Count)
             {
                 Refresh(part);
                 return;
@@ -247,17 +290,18 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
             ShowPrograms(part, programs, null);
 
-            Bores
-                .Zip(bores)
+            rows
+                .Zip(reread)
                 .ToList()
-                .ForEach(pair => ApplyBoreRow(pair.First, pair.Second.Bore, pair.Second.Program));
+                .ForEach(pair => ApplyRow(pair.First, pair.Second.Element, pair.Second.Program, checkedSet));
         }
 
-        /// <summary>Refreshes one row and keeps <see cref="CheckedBores"/> pointing at its current bore.</summary>
-        private void ApplyBoreRow(BoreRowVM row, XncBore bore, XncProgram program)
+        /// <summary>Refreshes one row and keeps <paramref name="checkedSet"/> pointing at its current element.</summary>
+        private static void ApplyRow<TModel>(MachiningElementRowVM<TModel> row, TModel element, XncProgram program, CheckedSet<TModel> checkedSet)
+            where TModel : IXncMachiningElement
         {
-            CheckedBores.Replace(row.Bore, bore);
-            row.Apply(bore, program);
+            checkedSet.Replace(row.Model, element);
+            row.Apply(element, program);
         }
 
         /// <summary>
@@ -316,25 +360,45 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
                 (number, program, variable) => new VariableRowVM(
                     number, MachiningDisplay.SideName(program.Side), variable, program, OnVariableRowEdited));
 
-        private ObservableCollection<GrooveRowVM> BuildGrooveRows(IReadOnlyList<XncProgram> programs) =>
-            BuildRows(programs, program => program.Groovings,
+        private ObservableCollection<GrooveRowVM> BuildGrooveRows(IReadOnlyList<XncProgram> programs)
+        {
+            var onEdited = ElementEditHandler<XncGrooving, GrooveRowVM>(
+                XncElementKind.Groove, () => Grooves, program => program.Groovings, CheckedGrooves);
+
+            return BuildRows(programs, program => program.Groovings,
                 (number, program, groove) => new GrooveRowVM(
-                    number, MachiningDisplay.GrooveSide(groove, program), groove, CheckedGrooves.Set));
+                    number, MachiningDisplay.GrooveSide(groove, program), groove, program, CheckedGrooves.Set, onEdited));
+        }
 
-        private ObservableCollection<MillingContourRowVM> BuildMillingContourRows(IReadOnlyList<XncProgram> programs) =>
-            BuildRows(programs, program => program.MillingContours,
+        private ObservableCollection<MillingContourRowVM> BuildMillingContourRows(IReadOnlyList<XncProgram> programs)
+        {
+            var onEdited = ElementEditHandler<XncMillingContour, MillingContourRowVM>(
+                XncElementKind.Contour, () => MillingContours, program => program.MillingContours, CheckedMillingContours);
+
+            return BuildRows(programs, program => program.MillingContours,
                 (number, program, contour) => new MillingContourRowVM(
-                    number, MachiningDisplay.SideName(program.Side), contour, CheckedMillingContours.Set));
+                    number, MachiningDisplay.SideName(program.Side), contour, program, CheckedMillingContours.Set, onEdited));
+        }
 
-        private ObservableCollection<MillingEllipseRowVM> BuildMillingEllipseRows(IReadOnlyList<XncProgram> programs) =>
-            BuildRows(programs, program => program.MillingEllipses,
+        private ObservableCollection<MillingEllipseRowVM> BuildMillingEllipseRows(IReadOnlyList<XncProgram> programs)
+        {
+            var onEdited = ElementEditHandler<XncMillingEllipse, MillingEllipseRowVM>(
+                XncElementKind.Ellipse, () => MillingEllipses, program => program.MillingEllipses, CheckedMillingEllipses);
+
+            return BuildRows(programs, program => program.MillingEllipses,
                 (number, program, ellipse) => new MillingEllipseRowVM(
-                    number, MachiningDisplay.SideName(program.Side), ellipse, CheckedMillingEllipses.Set));
+                    number, MachiningDisplay.SideName(program.Side), ellipse, program, CheckedMillingEllipses.Set, onEdited));
+        }
 
-        private ObservableCollection<MillingRectangleRowVM> BuildMillingRectangleRows(IReadOnlyList<XncProgram> programs) =>
-            BuildRows(programs, program => program.MillingRectangles,
+        private ObservableCollection<MillingRectangleRowVM> BuildMillingRectangleRows(IReadOnlyList<XncProgram> programs)
+        {
+            var onEdited = ElementEditHandler<XncMillingRectangle, MillingRectangleRowVM>(
+                XncElementKind.Rectangle, () => MillingRectangles, program => program.MillingRectangles, CheckedMillingRectangles);
+
+            return BuildRows(programs, program => program.MillingRectangles,
                 (number, program, rectangle) => new MillingRectangleRowVM(
-                    number, MachiningDisplay.SideName(program.Side), rectangle, CheckedMillingRectangles.Set));
+                    number, MachiningDisplay.SideName(program.Side), rectangle, program, CheckedMillingRectangles.Set, onEdited));
+        }
 
         /// <summary>Diameter of the program's tool <paramref name="toolName"/>, or <c>null</c> when it is not declared.</summary>
         private static string? ToolDiameter(XncProgram program, string toolName) =>

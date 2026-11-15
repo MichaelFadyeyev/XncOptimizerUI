@@ -45,7 +45,8 @@ and `SaveAsSuffixed(suffix)` (output names in `Services/Project/ProjectFileNames
 |---|---|
 | `UpdatePart(Part part)` | name/size/txt/bands back into `<part>` (`PartUpdater`): renames the part's XNC operations, syncs EL part lists, recalculates `jl`/`jw`; unchanged when nothing differs |
 | `RotatePart(int partId, int targetTurn, bool flipEdgeGrooveTcl)` | every XNC op of the part to absolute `turn` 0..3, program rotated from its own turn (`Services/Xnc/XncProgramRotator.cs`); `flipEdgeGrooveTcl=false` keeps edge-groove `c` as GibLab does |
-| `UpdateBore(int operationId, int boreIndex, BoreAttribute attribute, string expression)` | `Services/Xnc/XncProgramEdits.cs` |
+| `UpdateBore(int operationId, int boreIndex, MachiningAttribute attribute, string expression)` | `Services/Xnc/XncProgramEdits.cs` |
+| `UpdateMachiningElement(int operationId, XncElementKind kind, int index, MachiningAttribute attribute, string expression)` | groove / contour head / ellipse / rectangle attribute (`XncElementKinds.EditableAttributes`); `Services/Xnc/XncProgramEdits.cs` |
 | `UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value)` | `Services/Xnc/XncProgramEdits.cs` |
 
 ## `IProjectRestructuring` (`Services/Project/ProjectRestructuring.cs`) - saves a new file

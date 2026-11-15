@@ -1,7 +1,7 @@
 namespace XncOptimizerUI.MVVM.Models.Xnc
 {
     /// <summary>A straight groove cut by a <c>&lt;gr&gt;</c> element.</summary>
-    public class XncGrooving
+    public class XncGrooving : IXncEditableElement
     {
         /// <summary>Name of the tool used (the <c>name</c> attribute).</summary>
         public string ToolName { get; init; } = string.Empty;
@@ -33,5 +33,8 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
 
         /// <summary>Free-text label from the <c>comment</c> attribute.</summary>
         public string Comment { get; init; } = string.Empty;
+
+        /// <summary>Position among the program's elements of the same tag and the authored attribute texts.</summary>
+        public XncElementSource Source { get; init; } = XncElementSource.None;
     }
 }

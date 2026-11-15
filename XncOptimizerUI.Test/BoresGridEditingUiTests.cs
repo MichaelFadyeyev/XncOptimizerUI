@@ -48,9 +48,9 @@ namespace XncOptimizerUI.Test
 
         private static string InputOf(BoreRowVM row, int column) => column switch
         {
-            XColumn => row.XInput,
-            YColumn => row.YInput,
-            _ => row.DepthInput
+            XColumn => row.X.Input,
+            YColumn => row.Y.Input,
+            _ => row.Depth.Input
         };
     }
 }

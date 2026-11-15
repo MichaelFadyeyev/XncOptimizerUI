@@ -1,6 +1,6 @@
 namespace XncOptimizerUI.MVVM.Models.Xnc
 {
-    public class XncMillingEllipse
+    public class XncMillingEllipse : IXncEditableElement
     {
         public string ToolName { get; init; } = string.Empty;
         public XncPoint Center { get; init; }
@@ -16,5 +16,8 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
         public int LeadIn { get; init; }
         public int LeadOut { get; init; }
         public double? StartOffsetXY { get; init; }
+
+        /// <summary>Position among the program's elements of the same tag and the authored attribute texts.</summary>
+        public XncElementSource Source { get; init; } = XncElementSource.None;
     }
 }

@@ -32,10 +32,20 @@ namespace XncOptimizerUI.Contracts
         /// Sets <paramref name="attribute"/> of the bore at <paramref name="boreIndex"/> (document order
         /// among bore elements) in the program of XNC operation <paramref name="operationId"/> to
         /// <paramref name="expression"/>, written as typed (trimmed) so an expression such as
-        /// <c>dx-32</c> stays parametric; checked by <see cref="Services.Xnc.BoreExpression"/> against
-        /// the program's symbols. Setting <c>z</c> drops an <c>m="true"</c> middle pin.
+        /// <c>dx-32</c> stays parametric; checked by <see cref="Services.Xnc.MachiningExpression"/> against
+        /// the bore's symbols. Setting <c>z</c> drops an <c>m="true"</c> middle pin.
         /// </summary>
-        OperationResult UpdateBore(int operationId, int boreIndex, BoreAttribute attribute, string expression);
+        OperationResult UpdateBore(int operationId, int boreIndex, MachiningAttribute attribute, string expression);
+
+        /// <summary>
+        /// Sets <paramref name="attribute"/> of the <paramref name="index"/>-th element of
+        /// <paramref name="kind"/> (document order among <c>&lt;gr&gt;</c>, <c>&lt;ms&gt;</c>,
+        /// <c>&lt;me&gt;</c> or <c>&lt;mr&gt;</c> elements) in the program of XNC operation
+        /// <paramref name="operationId"/> to <paramref name="expression"/>, written as typed (trimmed);
+        /// checked by <see cref="Services.Xnc.MachiningExpression"/> against the element's symbols.
+        /// Refused for an attribute its table does not edit (<see cref="XncElementKinds.EditableAttributes"/>).
+        /// </summary>
+        OperationResult UpdateMachiningElement(int operationId, XncElementKind kind, int index, MachiningAttribute attribute, string expression);
 
         /// <summary>
         /// Sets <paramref name="attribute"/> of the <paramref name="variableIndex"/>-th <c>&lt;var&gt;</c>

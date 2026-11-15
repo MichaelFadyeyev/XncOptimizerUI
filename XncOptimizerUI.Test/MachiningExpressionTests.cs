@@ -4,7 +4,7 @@ using XncOptimizerUI.Services.Xnc;
 namespace XncOptimizerUI.Test
 {
     [TestFixture]
-    public class BoreExpressionTests
+    public class MachiningExpressionTests
     {
         private const double Dx = 1000;
         private const double Dy = 600;
@@ -24,9 +24,9 @@ namespace XncOptimizerUI.Test
             return symbols;
         }
 
-        private static (bool Valid, double Value, string? Error) Evaluate(string? text, BoreAttribute attribute = BoreAttribute.X)
+        private static (bool Valid, double Value, string? Error) Evaluate(string? text, MachiningAttribute attribute = MachiningAttribute.X)
         {
-            var valid = BoreExpression.TryEvaluate(text, attribute, Symbols(), out var value, out var error);
+            var valid = MachiningExpression.TryEvaluate(text, attribute, Symbols(), out var value, out var error);
 
             return (valid, value, error);
         }
@@ -87,7 +87,7 @@ namespace XncOptimizerUI.Test
         [TestCase("dz-dz")]
         public void Depth_MustBePositive(string text)
         {
-            var (valid, _, error) = Evaluate(text, BoreAttribute.Depth);
+            var (valid, _, error) = Evaluate(text, MachiningAttribute.Depth);
 
             Assert.Multiple(() =>
             {
@@ -96,14 +96,28 @@ namespace XncOptimizerUI.Test
             });
         }
 
-        [Test]
-        public void Coordinate_MayBeZeroOrNegative()
+        [TestCase(MachiningAttribute.GrooveWidth, "0", "Width must be greater than 0")]
+        [TestCase(MachiningAttribute.Width, "-2", "Width must be greater than 0")]
+        [TestCase(MachiningAttribute.Length, "dz-dz", "Length must be greater than 0")]
+        [TestCase(MachiningAttribute.CornerRadius, "-0.5", "Corner radius must not be negative")]
+        public void Size_OutOfRange_ReportsReason(MachiningAttribute attribute, string text, string reason)
         {
+            var (valid, _, error) = Evaluate(text, attribute);
+
             Assert.Multiple(() =>
             {
-                Assert.That(Evaluate("0").Valid, Is.True);
-                Assert.That(Evaluate("-1", BoreAttribute.Z).Valid, Is.True);
+                Assert.That(valid, Is.False);
+                Assert.That(error, Is.EqualTo(reason));
             });
         }
+
+        [TestCase(MachiningAttribute.X, "0")]
+        [TestCase(MachiningAttribute.Z, "-1")]
+        [TestCase(MachiningAttribute.X1, "-10")]
+        [TestCase(MachiningAttribute.Y2, "-dy")]
+        [TestCase(MachiningAttribute.Angle, "-45")]
+        [TestCase(MachiningAttribute.CornerRadius, "0")]
+        public void CoordinateAngleAndRadius_MayBeZeroOrNegativeWhereAllowed(MachiningAttribute attribute, string text) =>
+            Assert.That(Evaluate(text, attribute).Valid, Is.True);
     }
 }

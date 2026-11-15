@@ -4,72 +4,76 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:XncOptimizerUI.MVVM.ViewModels.Machining"
     d:DataContext="{d:DesignInstance Type=viewmodels:SelectedPartMachiningVM,
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
-    <!--  Selected part milling ellipses (<me>), read-only  -->
+    <!--
+        Selected part milling ellipses (<me>): center, depth, semi-axes and angle editable in
+        place (click the selected cell or F2), each cell committed on its own
+    -->
     <DataGrid
         x:Name="MillingEllipsesDataGrid"
+        helpers:DataGridCellEditBehavior.CommitToRow="True"
         ItemsSource="{Binding MillingEllipses}"
-        Style="{StaticResource ReadOnlyOperationGridStyle}">
+        SelectedItem="{Binding SelectedMillingEllipse}"
+        Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
             <!--  Check: feeds SelectedPartMachiningVM's checked ellipses  -->
             <common:RowCheckColumn x:Name="EllipsesCheckColumn" />
 
-            <!--  Ellipse identity  -->
+            <!--  Read-only ellipse identity  -->
             <DataGridTextColumn
                 x:Name="EllipsesNumberColumn"
                 Width="Auto"
                 Binding="{Binding Number}"
-                Header="#" />
+                Header="#"
+                IsReadOnly="True" />
             <DataGridTextColumn
                 x:Name="EllipsesSideColumn"
                 Width="Auto"
                 Binding="{Binding Side}"
-                Header="Side" />
+                Header="Side"
+                IsReadOnly="True" />
 
-            <!--  Center  -->
-            <DataGridTextColumn
+            <!--  Center: edits the authored x / y  -->
+            <common:ExpressionColumn
                 x:Name="EllipsesCenterXColumn"
-                Width="*"
-                Binding="{Binding CenterX}"
+                Cell="CenterX"
                 Header="Center X" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="EllipsesCenterYColumn"
-                Width="*"
-                Binding="{Binding CenterY}"
+                Cell="CenterY"
                 Header="Center Y" />
 
-            <!--  Cut: depth, radii, angle, tool to center line position  -->
-            <DataGridTextColumn
+            <!--  Cut: depth, semi-axes, angle (edit dp / l / w / a), tool to center line position (read-only)  -->
+            <common:ExpressionColumn
                 x:Name="EllipsesDepthColumn"
-                Width="*"
-                Binding="{Binding Depth}"
+                Cell="Depth"
                 Header="Depth" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="EllipsesLengthColumn"
-                Width="*"
-                Binding="{Binding Length}"
+                Cell="Length"
                 Header="Length R" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="EllipsesWidthColumn"
-                Width="*"
-                Binding="{Binding Width}"
+                Cell="Width"
                 Header="Width R" />
-            <DataGridTextColumn
+            <common:ExpressionColumn
                 x:Name="EllipsesAngleColumn"
-                Width="*"
-                Binding="{Binding Angle}"
+                Cell="Angle"
                 Header="Angle°" />
             <DataGridTextColumn
                 x:Name="EllipsesTclColumn"
                 Width="*"
                 Binding="{Binding ToolToCenterLine}"
-                Header="TCL" />
+                Header="TCL"
+                IsReadOnly="True" />
+
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

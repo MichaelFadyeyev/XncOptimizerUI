@@ -43,6 +43,36 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [Test]
+        public void GroovesAndMills_CarryIndexAmongTheirTag_AndAuthoredExpressionTexts()
+        {
+            var operation = new XElement("operation",
+                new XAttribute("typeId", "XNC"),
+                new XAttribute("program",
+                    "<program dx=\"600\" dy=\"300\" dz=\"18\"><tool name=\"Mill10\" d=\"10\"/>"
+                    + "<gr x1=\"0\" y1=\"50\" x2=\"dx\" y2=\"50\" dp=\"4\" t=\"4\" name=\"Mill10\"/>"
+                    + "<ms x=\"20\" y=\"20\" dp=\"dz/2\" c=\"0\" name=\"Mill10\"/><ml x=\"200\" y=\"20\"/>"
+                    + "<gr x1=\"0\" y1=\"100\" x2=\"dx-10\" y2=\"100\" dp=\"4\" t=\"4\" name=\"Mill10\" comment=\"second\"/>"
+                    + "<ms x=\"20\" y=\"40\" dp=\"5\" c=\"0\" name=\"Mill10\"/><ml x=\"200\" y=\"40\"/>"
+                    + "<me x=\"300\" y=\"150\" l=\"20\" w=\"10\" a=\"0\" dp=\"8\" c=\"3\" sxy=\"tool.dia/2\" name=\"Mill10\"/>"
+                    + "<mr x=\"dx-150\" y=\"150\" l=\"100\" w=\"40\" a=\"0\" r=\"0\" dp=\"8\" c=\"3\" name=\"Mill10\"/>"
+                    + "</program>"));
+
+            var program = XncProgramReader.Read(operation);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Groovings.Select(g => g.Source.Index), Is.EqualTo(new[] { 0, 1 }));
+                Assert.That(program.Groovings[1].Source.Text("x2"), Is.EqualTo("dx-10"));
+                Assert.That(program.Groovings[1].Source.Text("comment"), Is.Null, "only expression attributes");
+                Assert.That(program.MillingContours.Select(c => c.Source.Index), Is.EqualTo(new[] { 0, 1 }));
+                Assert.That(program.MillingContours[0].Source.Text("dp"), Is.EqualTo("dz/2"));
+                Assert.That(program.MillingEllipses.Single().Source.Text("sxy"), Is.EqualTo("tool.dia/2"));
+                Assert.That(program.MillingRectangles.Single().Source.Text("x"), Is.EqualTo("dx-150"));
+                Assert.That(program.MillingRectangles.Single().Source.Text("in"), Is.Null);
+            });
+        }
+
         private static XncProgram ReadWithTurn(string? turn)
         {
             var operation = new XElement("operation",

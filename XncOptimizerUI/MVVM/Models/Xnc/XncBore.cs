@@ -5,7 +5,7 @@ namespace XncOptimizerUI.MVVM.Models.Xnc
     /// Coordinates are resolved to millimetres in the part frame; for an edge bore the
     /// coordinate of the drilled edge is pinned to 0 or the panel size.
     /// </summary>
-    public class XncBore
+    public class XncBore : IXncMachiningElement
     {
         /// <summary>Which surface the hole is drilled into (from the element name).</summary>
         public BoreSurface Surface { get; init; }

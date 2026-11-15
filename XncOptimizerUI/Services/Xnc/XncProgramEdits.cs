@@ -6,8 +6,8 @@ using static XncOptimizerUI.Services.Xnc.XncSymbols;
 namespace XncOptimizerUI.Services.Xnc
 {
     /// <summary>
-    /// Single-attribute edits of a decoded XNC program made from the program tables: bore
-    /// coordinates/depth and <c>&lt;var&gt;</c> name/type/expr/comment. An unacceptable value
+    /// Single-attribute edits of a decoded XNC program made from the program tables: bore, groove and
+    /// mill coordinates/depth/sizes and <c>&lt;var&gt;</c> name/type/expr/comment. An unacceptable value
     /// throws <see cref="XncProgramFormatException"/> with the reason, before anything is changed.
     /// </summary>
     internal static class XncProgramEdits
@@ -16,7 +16,7 @@ namespace XncOptimizerUI.Services.Xnc
         /// Writes <paramref name="expression"/> (trimmed, as typed) to the bore's attribute; an
         /// explicit <c>z</c> replaces the <c>m="true"</c> middle pin.
         /// </summary>
-        public static void SetBoreAttribute(XElement program, int boreIndex, BoreAttribute attribute, string expression)
+        public static void SetBoreAttribute(XElement program, int boreIndex, MachiningAttribute attribute, string expression)
         {
             var bore = program.Elements().Where(e => XncTags.IsBore(e.Name.LocalName)).ElementAtOrDefault(boreIndex)
                 ?? throw new XncProgramFormatException("bore not found in the program.");
@@ -27,17 +27,31 @@ namespace XncOptimizerUI.Services.Xnc
                 throw new XncProgramFormatException($"<{bore.Name.LocalName}> has no editable '{attribute.XmlName()}' attribute.");
             }
 
-            if (!BoreExpression.TryEvaluate(expression, attribute, SeedProgramSymbols(program), out _, out var error))
-            {
-                throw new XncProgramFormatException($"invalid {attribute.XmlName()} \"{expression}\": {error}.");
-            }
+            WriteExpression(program, bore, attribute, expression);
 
-            bore.SetAttributeValue(attribute.XmlName(), expression.Trim());
-
-            if (attribute == BoreAttribute.Z)
+            if (attribute == MachiningAttribute.Z)
             {
                 bore.SetAttributeValue("m", null);
             }
+        }
+
+        /// <summary>
+        /// Writes <paramref name="expression"/> (trimmed, as typed) to <paramref name="attribute"/> of
+        /// the <paramref name="index"/>-th element of <paramref name="kind"/> (document order among the
+        /// elements of its tag); only the attributes its table edits are accepted.
+        /// </summary>
+        public static void SetElementAttribute(XElement program, XncElementKind kind, int index, MachiningAttribute attribute, string expression)
+        {
+            var tag = TagOf(kind);
+            var element = program.Elements(tag).ElementAtOrDefault(index)
+                ?? throw new XncProgramFormatException($"<{tag}> not found in the program.");
+
+            if (!kind.EditableAttributes().Contains(attribute))
+            {
+                throw new XncProgramFormatException($"<{tag}> has no editable '{attribute.XmlName()}' attribute.");
+            }
+
+            WriteExpression(program, element, attribute, expression);
         }
 
         public static void SetVariableAttribute(XElement program, int variableIndex, XncVariableAttribute attribute, string value)
@@ -55,6 +69,27 @@ namespace XncOptimizerUI.Services.Xnc
         }
 
         #region Methods
+
+        private static string TagOf(XncElementKind kind) => kind switch
+        {
+            XncElementKind.Groove => XncTags.Groove,
+            XncElementKind.Contour => XncTags.ContourStart,
+            XncElementKind.Ellipse => XncTags.Ellipse,
+            XncElementKind.Rectangle => XncTags.Rectangle,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+
+        /// <summary>Checks <paramref name="expression"/> against the element's symbols and range, then writes it trimmed.</summary>
+        private static void WriteExpression(XElement program, XElement element, MachiningAttribute attribute, string expression)
+        {
+            if (!MachiningExpression.TryEvaluate(expression, attribute, SeedElementSymbols(program, element), out _, out var error))
+            {
+                throw new XncProgramFormatException($"invalid {attribute.XmlName()} \"{expression}\": {error}.");
+            }
+
+            element.SetAttributeValue(attribute.XmlName(), expression.Trim());
+        }
+
 
         /// <summary>Renames the variable and every whole-identifier reference to it in the program's expressions.</summary>
         private static void RenameVariable(XElement program, XElement variable, string value)

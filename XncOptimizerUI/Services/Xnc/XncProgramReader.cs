@@ -122,7 +122,8 @@ namespace XncOptimizerUI.Services.Xnc
                 LeadIn = ParseInt(element.GetInValue()),
                 LeadOut = ParseInt(element.GetOutValue()),
                 StartOffsetXY = state.EvalOptional(element, "sxy"),
-                CurrentDepth = entryDepth
+                CurrentDepth = entryDepth,
+                Source = Source(element, state.ContourCount)
             });
         }
 
@@ -190,7 +191,8 @@ namespace XncOptimizerUI.Services.Xnc
                 SideCode = ParseInt(element.GetPValue()),
                 Z = state.EvalOptional(element, "z") ?? 0d,
                 Position = ParsePositionCode(element.GetCValue()),
-                Comment = element.GetCommentValue() ?? string.Empty
+                Comment = element.GetCommentValue() ?? string.Empty,
+                Source = Source(element, state.Groovings.Count)
             });
         }
 
@@ -200,6 +202,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             state.Ellipses.Add(new XncMillingEllipse
             {
+                Source = Source(element, state.Ellipses.Count),
                 ToolName = element.GetNameValue() ?? string.Empty,
                 Center = state.Point(element, "x", "y"),
                 Length = state.Eval(element, "l"),
@@ -220,6 +223,7 @@ namespace XncOptimizerUI.Services.Xnc
 
             state.Rectangles.Add(new XncMillingRectangle
             {
+                Source = Source(element, state.Rectangles.Count),
                 ToolName = element.GetNameValue() ?? string.Empty,
                 Origin = state.Point(element, "x", "y"),
                 Length = state.Eval(element, "l"),
@@ -234,6 +238,15 @@ namespace XncOptimizerUI.Services.Xnc
                 StartOffsetXY = state.EvalOptional(element, "sxy")
             });
         }
+
+        /// <summary>
+        /// The element's position among those of its tag read so far (<paramref name="index"/>) and its
+        /// authored expression attributes, so a table edit can find it again and show what was written.
+        /// </summary>
+        private static XncElementSource Source(XElement element, int index) =>
+            new(index, element.Attributes()
+                .Where(attribute => XncSymbols.ExpressionAttributes.Contains(attribute.Name.LocalName))
+                .ToDictionary(attribute => attribute.Name.LocalName, attribute => attribute.Value));
 
         #endregion
 
@@ -326,6 +339,9 @@ namespace XncOptimizerUI.Services.Xnc
             public List<XncVariable> DeclaredVariables { get; } = [];
 
             public List<XncBore> Bores { get; } = [];
+
+            /// <summary>Contours read so far, the open one excluded.</summary>
+            public int ContourCount => _contours.Count;
 
             public List<XncGrooving> Groovings { get; } = [];
 
@@ -434,6 +450,7 @@ namespace XncOptimizerUI.Services.Xnc
             public int LeadIn { get; init; }
             public int LeadOut { get; init; }
             public double? StartOffsetXY { get; init; }
+            public XncElementSource Source { get; init; } = XncElementSource.None;
 
             /// <summary>Running cut depth, seeded from the entry and updated by each segment's <c>dp</c>.</summary>
             public double CurrentDepth { get; set; }
@@ -450,7 +467,8 @@ namespace XncOptimizerUI.Services.Xnc
                 LeadIn = LeadIn,
                 LeadOut = LeadOut,
                 StartOffsetXY = StartOffsetXY,
-                Segments = Segments
+                Segments = Segments,
+                Source = Source
             };
         }
 
