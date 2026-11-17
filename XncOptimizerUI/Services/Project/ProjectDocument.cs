@@ -20,6 +20,12 @@ namespace XncOptimizerUI.Services.Project
         /// <summary>Path the document was opened from or last saved to; empty when nothing is open.</summary>
         public string FullPath { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// Web name of the non-UTF-8 encoding the open file was read in (e.g. <c>windows-1251</c>);
+        /// <see langword="null"/> when it was read as UTF-8 or nothing is open. Saving always writes UTF-8.
+        /// </summary>
+        public string? ConvertedFromEncoding { get; private set; }
+
         public bool IsOpen => _project != null;
 
         /// <summary>The <c>&lt;project&gt;</c> root element.</summary>
@@ -28,10 +34,12 @@ namespace XncOptimizerUI.Services.Project
 
         public void Open(string path)
         {
-            var document = XDocument.Load(path);
+            var (document, encoding) = ProjectFileEncoding.Load(path);
 
             _project = document.GetProject() ?? throw new InvalidDataException($"""File "{path}" contains wrong data""");
             _document = document;
+            ConvertedFromEncoding = ProjectFileEncoding.IsUtf8(encoding) ? null : encoding.WebName;
+            PrepareIfCadExport(document);
             FullPath = path;
             _directory = Path.GetDirectoryName(path) ?? string.Empty;
             _sourceFileName = Path.GetFileName(path);
@@ -41,6 +49,7 @@ namespace XncOptimizerUI.Services.Project
         {
             _document = null;
             _project = null;
+            ConvertedFromEncoding = null;
             FullPath = string.Empty;
             _directory = string.Empty;
             _sourceFileName = string.Empty;
@@ -84,6 +93,22 @@ namespace XncOptimizerUI.Services.Project
             }
 
             description.Value += line;
+        }
+
+        /// <summary>
+        /// A file read in another encoding is a CAD export: completed by <see cref="CadExportPreparer"/>
+        /// and saved as UTF-8 (<see cref="XDocument.Save(string)"/> writes in the declared encoding).
+        /// UTF-8 files are left as read, so they save byte-identical.
+        /// </summary>
+        private void PrepareIfCadExport(XDocument document)
+        {
+            if (ConvertedFromEncoding == null)
+            {
+                return;
+            }
+
+            CadExportPreparer.Prepare(Project);
+            document.Declaration = new XDeclaration("1.0", "UTF-8", document.Declaration?.Standalone);
         }
 
         /// <summary>Operations of one <c>typeId</c> (see <see cref="GibLabTypes"/>), in document order.</summary>

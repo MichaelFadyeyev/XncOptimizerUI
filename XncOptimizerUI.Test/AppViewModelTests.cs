@@ -258,6 +258,29 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
+        public void OpeningProject_ReadInWindows1251_LogsThatItWillBeSavedAsUtf8()
+        {
+            SeedTwoParts();
+            Project.ConvertedFromEncoding = "windows-1251";
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.That(vm.Log.Text, Does.Contain("File read as windows-1251 (CAD export): band symbols, part sizes and cut sheet parts added; it will be saved as UTF-8."));
+        }
+
+        [Test]
+        public void OpeningProject_ReadAsUtf8_DoesNotLogEncoding()
+        {
+            SeedTwoParts();
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            Assert.That(vm.Log.Text, Does.Not.Contain("File read as"));
+        }
+
+        [Test]
         public void OpeningProject_WithNoXncTurnDiscordance_DoesNotWarn()
         {
             SeedTwoParts();

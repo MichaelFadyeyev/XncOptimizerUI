@@ -6,6 +6,12 @@ namespace XncOptimizerUI.Contracts
         /// <summary>Path the project was opened from, or the file the last operation saved to; empty when none is open.</summary>
         string FullPath { get; }
 
+        /// <summary>
+        /// Web name of the non-UTF-8 encoding the open file was read in (e.g. <c>windows-1251</c>);
+        /// <see langword="null"/> when it was read as UTF-8. Saving always writes UTF-8.
+        /// </summary>
+        string? ConvertedFromEncoding { get; }
+
         void Open(string path);
 
         void Close();

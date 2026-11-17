@@ -80,6 +80,11 @@ namespace XncOptimizerUI.MVVM.ViewModels
         {
             FullPath = fullPath;
             log.Append($"Opened file: {FullPath}\n");
+
+            if (project.Session.ConvertedFromEncoding is { } encoding)
+            {
+                log.Append($"File read as {encoding} (CAD export): band symbols, part sizes and cut sheet parts added; it will be saved as UTF-8.\n");
+            }
         }
         #endregion
     }

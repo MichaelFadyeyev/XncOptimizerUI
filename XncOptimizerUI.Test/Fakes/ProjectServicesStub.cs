@@ -60,6 +60,9 @@ namespace XncOptimizerUI.Test.Fakes
 
         public IReadOnlyList<string> PartsWithXncTurnDiscordance { get; set; } = [];
 
+        /// <summary>What <see cref="IProjectSession.ConvertedFromEncoding"/> reports; <c>null</c> = read as UTF-8.</summary>
+        public string? ConvertedFromEncoding { get; set; }
+
         /// <summary>Message every operation reports (as a highlighted entry); <c>null</c> reports nothing.</summary>
         public string? ResultMessage { get; set; }
 
@@ -105,6 +108,7 @@ namespace XncOptimizerUI.Test.Fakes
             var fullPath = string.Empty;
 
             Session.FullPath.Returns(_ => fullPath);
+            Session.ConvertedFromEncoding.Returns(_ => ConvertedFromEncoding);
             Session.When(session => session.Open(Arg.Any<string>())).Do(call => fullPath = call.Arg<string>());
         }
 
