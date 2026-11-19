@@ -22,7 +22,7 @@ per selected part. Deferred:
   (`MVVM/Views/PartPreview/BorePreviewRenderer.cs`). A face-drilled bore
   (`XncBore.Surface == Face`) gets a circle + crossed center lines on the Face
   rectangle, plus a rectangle + center line on each of the four edge bands, colored by
-  the owning `XncProgram.Side` (all five projections toggle red together on click). An
+  the owning `XncProgram.Side` (all five projections turn red together while selected). An
   edge-drilled bore (`Top`/`Bottom`/`Left`/`Right`) is the mirror image: a circle +
   crossed center lines on the one band it was drilled from (perpendicular position from
   `bore.Z`, anchored to the band edge nearest the Face when `program.Side` is true, else
@@ -30,8 +30,8 @@ per selected part. Deferred:
   that same edge and always growing inward toward the panel center regardless of
   `Side`; both shapes always use `BoreBrushes.SideTrue` regardless of the owning
   program's actual `Side`, and neither uses `ThroughFill` (both projections stay
-  outline-only, unlike a face bore's front circle). Selection state is local to the
-  current render pass, not yet wired into `AppViewModel`.
+  outline-only, unlike a face bore's front circle). Selection is shared with the program
+  tables (see "Preview / table selection" in `code-analysis.md`).
   Groovings are drawn the same way by `GroovePreviewRenderer`
   (`MVVM/Views/PartPreview/GroovePreviewRenderer.cs`, dispatching to `FrontPlaneGrooveRenderer`/`EdgePlaneGrooveRenderer`), sharing the band/Face rectangle
   placement math with `BorePreviewRenderer` via `PartPreviewOverlayGeometry`. Unlike a
@@ -65,14 +65,14 @@ per selected part. Deferred:
   `FaceLayout.Band`, and drawn with the same `GrooveShapes.OffsetRectangle` helper as (1) so `c`
   positions its `t` width the same way) - all three always use `BoreBrushes.SideTrue`
   like an edge bore. All four of one edge-plane groove's shapes
-  (or five of a front-plane groove's) toggle red together on click, same as a bore.
+  (or five of a front-plane groove's) turn red together while selected, same as a bore.
   Verified against `TestData/td-grooving-preview.project` (front plane at both
   `side="true"`/`"false"`, plus one part per Right/Left/Top/Bottom plane).
   Mills (`<ms>` contours, `<mr>`, `<me>`) are drawn by `MillPreviewRenderer`
   (`MVVM/Views/PartPreview/MillPreviewRenderer.cs`, geometry in `MillPreviewGeometry.cs`) on
   the **Face rectangle only**: cut-off area fill (`c` right/left/pocket; through vs blind
   brush), swept strip, centre line, dashed tool path (offset via the shared
-  `Services/Xnc/Geometry/ContourOffsetGeometry.cs`), start marker; click toggles red like a groove.
+  `Services/Xnc/Geometry/ContourOffsetGeometry.cs`), start marker; red while selected like a groove.
   Still deferred for mills: edge-band projections; an open mill with an end inside the
   part gets no cut-off fill; overlapping cut-off fills stack per
   program as contours, then rectangles, then ellipses (a later blind fill can paint over an
@@ -81,8 +81,11 @@ per selected part. Deferred:
   and "Rotate part" (`RotatePart`, card 031) rewrites the coordinates whenever the turn
   changes, so overlays draw program coordinates directly. A part whose programs disagree
   on `turn` still overlays inconsistent frames until it is rotated once (rotation brings
-  every program to the same turn). Selection of bores/grooves/mills is local to the render
-  pass, not yet wired into `AppViewModel` (shapes carry `BoreTag`/`GrooveTag`/`MillTag`).
+  every program to the same turn).
+- **Selection while a cell is in edit mode** — a click on a preview element while a table
+  cell is being edited commits the cell first (window `PreviewMouseDown`), which re-reads
+  the programs and redraws the preview, so the clicked shape's element is stale and the
+  click selects nothing; a second click works. Could re-hit-test after the redraw.
 - **Outside-elements warning** — show a warning in the part preview when the selected
   part's programs have elements outside the part (e.g. after its `l`/`w` shrank: `UpdatePart`
   rewrites program `dx`/`dy` but never shifts or clamps plain-number coordinates - user
@@ -143,6 +146,38 @@ place exactly. Possible refinements:
 - **Parts list export culture** - CSV/clipboard sizes use the current culture on purpose
   (`AppViewModelTests.CopyPartsList_FormatsFractionalSizesWithCurrentCulture`); switch to
   invariant if the consumer needs it.
+
+## Selected / checked naming
+
+Clean up how the code names the two row states, so that **selected** always means "clicked
+(row selection in a table or a click on the part preview)" and **checked** always means "its
+check box is ticked". Apply each rename everywhere it is used: properties, fields,
+`OnXxxChanged` partials, methods, callbacks, interfaces, classes, XAML bindings, tests, and
+the docs (`code-analysis.md`, this file).
+
+- **Bores / grooves / mills (machining tables + preview)**
+  - Clicked state: `IsHighlighted` → `IsSelected`. This also covers `IHighlightableRow`,
+    `HighlightMode`, `Highlight`/`ClearHighlight`/`IsHighlighted(element)`/`HighlightChanged`
+    on `SelectedPartMachiningVM`, `IsElementHighlighted`/`HighlightElement` on `PartPreviewVM`,
+    and `Helpers/DataGridHighlightBehavior` (`SyncsRowHighlight`).
+  - Check box: `MachiningElementRowVM.IsSelected` → `IsChecked`. This also covers
+    `OnIsSelectedChanged` and the `onSelectionChanged` constructor callback (`Action<TModel, bool>`)
+    of `MachiningElementRowVM` and the row VMs.
+  - The test (and, later, the check box) assertions that use `row.IsSelected` mean checked.
+  - Rename in a fixed order: free the name first (`IsSelected` → `IsChecked`), then rename
+    `IsHighlighted` → `IsSelected`. Otherwise the two states collide in the middle of the rename.
+- **Parts table: same refactoring needed** (checked 2026-11-19)
+  - Check box: `PartVM.IsSelected` → `IsChecked`. `PartsListVM` already says "checked"
+    (`CheckedCount`, `CheckedParts`, `SetChecked`) but reads and writes `IsSelected`. Its
+    comments and `RebindCheckedCount` handler mention it, and so do many panel / list tests
+    (`Parts[0].IsSelected = true`).
+  - `MVVM/Views/Common/RowCheckColumn.cs` binds `IsSelected` for both the parts grid and the
+    machining tables, so it changes to `IsChecked` together with both row types.
+  - `SortToolsPanelVM.SelectedParts()` returns the checked (or all shown) parts: rename it,
+    e.g. `TargetParts()`.
+  - The clicked part (`PartsListVM.SelectedPart`, `SelectedPartChanged`,
+    `SelectedPartMachiningVM`, `SourcePartVM`'s use of `SelectedPart`) already follows the
+    rule and stays as it is.
 
 ## Test project layout
 

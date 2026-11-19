@@ -13,6 +13,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// scale up (keeping the point under the cursor), pannable with the pressed wheel while
     /// magnified, and refitted on resize keeping the relative scroll position. A new part or turn
     /// resets to fit-to-view. The axis glyph and turn label stay pinned to the viewport.
+    /// Bores, grooves and mills selected in the program tables are drawn red; a click on one
+    /// selects its table row (Ctrl toggles, Shift adds), a plain click elsewhere clears the selection.
     /// </summary>
     public partial class PartPreviewControl : UserControl
     {
@@ -22,6 +24,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         private PartPreviewVM? _viewModel;
         private PartVM? _part;
         private PreviewPalette? _palette;
+        private PreviewSelection _selection = PreviewSelection.None();
         private double _zoom = 1;
         private bool _isHandlingSizeChanged;
         private bool _isPanning;
@@ -40,6 +43,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             PartPreviewScrollViewer.PreviewMouseDown += OnMouseDown;
             PartPreviewScrollViewer.PreviewMouseMove += OnMouseMove;
             PartPreviewScrollViewer.PreviewMouseUp += OnMouseUp;
+            PartCanvas.MouseLeftButtonDown += OnCanvasClick;
         }
 
         #region Properties
@@ -52,6 +56,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             if (_viewModel is not null)
             {
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+                _viewModel.HighlightChanged -= OnHighlightChanged;
             }
 
             _viewModel = e.NewValue as PartPreviewVM;
@@ -59,6 +64,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             if (_viewModel is not null)
             {
                 _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+                _viewModel.HighlightChanged += OnHighlightChanged;
             }
 
             WatchPart(_viewModel?.Part);
@@ -121,6 +127,23 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             }
         }
 
+        /// <summary>Restyles the drawn machining to the new selection, without redrawing (keeps the scroll position).</summary>
+        private void OnHighlightChanged() => _selection.Refresh();
+
+        /// <summary>
+        /// A plain left click on the drawing that no bore, groove or mill took (they handle their
+        /// own clicks): clears the selection. A click with Ctrl or Shift held keeps it.
+        /// </summary>
+        private void OnCanvasClick(object sender, MouseButtonEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                return;
+            }
+
+            _viewModel?.ClearHighlight();
+        }
+
         private void ResetToFit()
         {
             _zoom = 1;
@@ -136,6 +159,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         {
             PartCanvas.Children.Clear();
             PreviewOverlayCanvas.Children.Clear();
+            _selection = PreviewSelection.None();
 
             if (_viewModel is not { Part: { } part } viewModel)
             {
@@ -159,7 +183,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             PartCanvas.Width = layout.CanvasWidth;
             PartCanvas.Height = layout.CanvasHeight;
 
-            var scene = new PartPreviewScene(viewModel.Programs, part.ConsiderTexture, viewModel.TurnText, viewModel.BandSymbols);
+            _selection = new PreviewSelection(viewModel.IsElementHighlighted, viewModel.HighlightElement);
+
+            var scene = new PartPreviewScene(viewModel.Programs, part.ConsiderTexture, viewModel.TurnText, viewModel.BandSymbols, _selection);
             PartPreviewRenderer.DrawPart(PartCanvas, layout, scene, Palette);
             PartPreviewRenderer.DrawOverlay(
                 PreviewOverlayCanvas,

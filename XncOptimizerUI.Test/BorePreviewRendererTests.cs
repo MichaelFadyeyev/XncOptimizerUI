@@ -57,7 +57,7 @@ namespace XncOptimizerUI.Test
                 Bores = [new XncBore { Surface = BoreSurface.Face, ToolName = "DRILL", Depth = 5, X = 20, Y = 20 }],
             };
 
-            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style);
+            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style, PreviewSelection.None());
 
             Assert.That(shapes.OfType<Ellipse>().Single().Width, Is.EqualTo(8));
         }
@@ -70,7 +70,7 @@ namespace XncOptimizerUI.Test
                 Bores = [new XncBore { Surface = surface, ToolName = "Drill", Depth = 5, X = 20, Y = 20, Z = 2 }],
             };
 
-            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style);
+            var shapes = BorePreviewRenderer.DrawBores([program], Layout, Style, PreviewSelection.None());
 
             return shapes.OfType<Line>().Take(4).ToArray();
         }

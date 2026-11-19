@@ -12,11 +12,13 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <param name="ConsiderTexture">Whether the texture mark is drawn.</param>
     /// <param name="TurnText">The turn label, e.g. "90°"; empty draws none.</param>
     /// <param name="BandSymbols">The edge-band symbol beside each side view, already turned to the screen sides.</param>
+    /// <param name="Selection">The selected bores, grooves and mills, shared with the program tables.</param>
     internal readonly record struct PartPreviewScene(
         IReadOnlyList<XncProgram> Programs,
         bool ConsiderTexture,
         string TurnText,
-        EdgeBandSymbols BandSymbols);
+        EdgeBandSymbols BandSymbols,
+        PreviewSelection Selection);
 
     /// <summary>
     /// Draws the part preview: the Face rectangle and its four side views, the machining over
@@ -41,9 +43,9 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
             canvas.Children.Add(SurfaceRectangle("Face", layout.FaceRect, palette.Part.Face, palette.Part));
 
-            AddAll(canvas, MillPreviewRenderer.DrawMills(scene.Programs, layout.Face, palette.Mills));
-            AddAll(canvas, BorePreviewRenderer.DrawBores(scene.Programs, layout.Face, palette.Bores));
-            AddAll(canvas, GroovePreviewRenderer.DrawGrooves(scene.Programs, layout.Face, palette.Bores));
+            AddAll(canvas, MillPreviewRenderer.DrawMills(scene.Programs, layout.Face, palette.Mills, scene.Selection));
+            AddAll(canvas, BorePreviewRenderer.DrawBores(scene.Programs, layout.Face, palette.Bores, scene.Selection));
+            AddAll(canvas, GroovePreviewRenderer.DrawGrooves(scene.Programs, layout.Face, palette.Bores, scene.Selection));
 
             if (scene.ConsiderTexture)
             {

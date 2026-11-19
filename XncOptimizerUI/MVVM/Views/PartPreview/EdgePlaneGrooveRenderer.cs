@@ -38,7 +38,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             public double AcrossPx(bool horizontal, bool near) => Layout.Band(horizontal, near).At(ZPx, fromInner: true);
         }
 
-        public static void Draw(ICollection<UIElement> shapes, XncProgram program, XncGrooving groove, FaceLayout layout, BoreBrushes brushes)
+        public static void Draw(ICollection<UIElement> shapes, XncProgram program, XncGrooving groove, FaceLayout layout, BoreBrushes brushes, PreviewSelection selection)
         {
             var overshootPx = layout.MmToPx(brushes.CenterLineOvershootMm);
             var surface = PlaneOf(groove);
@@ -68,7 +68,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             DrawCrossBandMarker(context, markerNear: true);
             DrawCrossBandMarker(context, markerNear: false);
 
-            context.Shapes.AttachClickToggle();
+            context.Shapes.AttachSelection(selection);
         }
 
         private static BoreSurface PlaneOf(XncGrooving groove) => groove.SideCode switch

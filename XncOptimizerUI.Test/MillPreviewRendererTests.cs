@@ -50,7 +50,7 @@ namespace XncOptimizerUI.Test
                 Lines: boreBrushes);
             var layout = new FaceLayout(0, 0, 100, 80, 1, 10, 5);
 
-            var shapes = MillPreviewRenderer.DrawMills([program], layout, millBrushes);
+            var shapes = MillPreviewRenderer.DrawMills([program], layout, millBrushes, PreviewSelection.None());
 
             var lines = shapes.OfType<Line>().ToArray();
             Assert.Multiple(() =>

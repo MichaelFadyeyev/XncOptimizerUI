@@ -43,7 +43,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             }
         }
 
-        public void AttachClickToggle() => sink.AttachClickToggle(brushes.Selected);
+        public void AttachSelection(PreviewSelection selection) => sink.AttachSelection(selection, brushes.Selected);
 
         private LineStyle Style(bool solid) => solid ? brushes.Bold : brushes.Dashed;
     }

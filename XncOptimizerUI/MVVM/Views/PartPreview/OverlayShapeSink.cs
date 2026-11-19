@@ -10,10 +10,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <summary>
     /// Collects the shapes of one machining element (a bore, groove or mill) into the given
     /// layers: each shape is tagged with the element, stroked in the element's normal brush and
-    /// remembered, so that <see cref="AttachClickToggle"/> can make a click on any of its click
-    /// targets switch all of its strokes to the selection brush and back.
+    /// remembered, so that <see cref="AttachSelection"/> can stroke all of them in the selection
+    /// brush while the element is selected and report clicks on its click targets.
     /// </summary>
-    internal sealed class OverlayShapeSink(object tag, Brush normal)
+    internal sealed class OverlayShapeSink(IPreviewElementTag tag, Brush normal)
     {
         private readonly List<Shape> _clickTargets = [];
         private readonly List<(Shape Shape, Brush Normal)> _stroked = [];
@@ -109,24 +109,26 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         }
 
         /// <summary>
-        /// Makes every click target toggle the element's selection: each click switches all of its
-        /// stroked shapes to <paramref name="selected"/> or back to each shape's own normal brush.
-        /// Selection is local to the current render pass.
+        /// Joins the element to <paramref name="selection"/>: while it is selected all of its
+        /// stroked shapes use <paramref name="selected"/>, else each shape its own normal brush;
+        /// a click on a click target is reported to the selection with the held modifier keys.
         /// </summary>
-        public void AttachClickToggle(Brush selected)
+        public void AttachSelection(PreviewSelection selection, Brush selected)
         {
-            var isSelected = false;
+            var element = tag.Element;
             var stroked = _stroked.ToArray();
 
-            void OnClick(object sender, MouseButtonEventArgs e)
+            selection.Register(element, isSelected =>
             {
-                isSelected = !isSelected;
-
                 foreach (var (shape, normalStroke) in stroked)
                 {
                     shape.Stroke = isSelected ? selected : normalStroke;
                 }
+            });
 
+            void OnClick(object sender, MouseButtonEventArgs e)
+            {
+                selection.Click(element, Keyboard.Modifiers);
                 e.Handled = true;
             }
 

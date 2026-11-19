@@ -27,7 +27,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// Face rectangle), toggle red together on click, since they represent the same physical
         /// hole.
         /// </summary>
-        public static IReadOnlyList<UIElement> DrawBores(IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes)
+        public static IReadOnlyList<UIElement> DrawBores(IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes, PreviewSelection selection)
         {
             var shapes = new List<UIElement>();
 
@@ -44,11 +44,11 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
 
                     if (bore.Surface == BoreSurface.Face)
                     {
-                        DrawFaceBore(shapes, program, bore, diameter, layout, brushes);
+                        DrawFaceBore(shapes, program, bore, diameter, layout, brushes, selection);
                     }
                     else
                     {
-                        DrawEdgeBore(shapes, program, bore, diameter, layout, brushes);
+                        DrawEdgeBore(shapes, program, bore, diameter, layout, brushes, selection);
                     }
                 }
             }
@@ -68,7 +68,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             XncBore bore,
             double diameter,
             FaceLayout layout,
-            BoreBrushes brushes)
+            BoreBrushes brushes,
+            PreviewSelection selection)
         {
             var sink = new OverlayShapeSink(new BoreTag(program, bore), program.Side ? brushes.SideTrue : brushes.SideFalse);
             var diameterPx = layout.MmToPx(diameter);
@@ -103,7 +104,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 sink.AddCentreLine(shapes, centreLine, depthLineStyle);
             }
 
-            sink.AttachClickToggle(brushes.Selected);
+            sink.AttachSelection(selection, brushes.Selected);
         }
 
         /// <summary>
@@ -121,7 +122,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             XncBore bore,
             double diameter,
             FaceLayout layout,
-            BoreBrushes brushes)
+            BoreBrushes brushes,
+            PreviewSelection selection)
         {
             var sink = new OverlayShapeSink(new BoreTag(program, bore), brushes.SideTrue);
             var diameterPx = layout.MmToPx(diameter);
@@ -148,7 +150,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             sink.AddRectangle(shapes, rect, brushes.Thin());
             sink.AddCentreLine(shapes, centreLine, brushes.Thin(brushes.DepthLineDashPx(bore.Depth, layout)));
 
-            sink.AttachClickToggle(brushes.Selected);
+            sink.AttachSelection(selection, brushes.Selected);
         }
     }
 }

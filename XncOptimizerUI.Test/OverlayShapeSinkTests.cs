@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using XncOptimizerUI.MVVM.ViewModels.Machining;
 using XncOptimizerUI.MVVM.Views.PartPreview;
 using XncOptimizerUI.Services.Xnc.Geometry;
 
@@ -11,7 +12,7 @@ namespace XncOptimizerUI.Test
     [Apartment(ApartmentState.STA)]
     public class OverlayShapeSinkTests
     {
-        private const string Tag = "element";
+        private static readonly ElementTag Tag = new("element");
 
         [Test]
         public void AddRectangle_placesATaggedOutlineWithAClickableTransparentInside()
@@ -73,42 +74,90 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
-        public void AttachClickToggle_switchesEveryTrackedStrokeOnEachClickOfAClickTarget()
+        public void AttachSelection_strokesEveryTrackedShapeInTheSelectedBrushWhileTheElementIsSelected()
         {
+            var selected = new HashSet<object>();
+            var selection = new PreviewSelection(selected.Contains, (_, _) => { });
             var layer = new List<UIElement>();
             var sink = new OverlayShapeSink(Tag, Brushes.Navy);
             var circle = sink.AddCircle(layer, new Vec2(0, 0), 4, new LineStyle(2));
             var centreLine = sink.AddCentreLine(layer, new PxLine(0, 0, 1, 1), new LineStyle(1));
             var ownBrush = sink.Add(layer, new Polyline(), Brushes.Black, isClickTarget: false);
             var untracked = sink.Add(layer, new Polyline { Stroke = Brushes.Wheat }, stroke: null, isClickTarget: true);
-            sink.AttachClickToggle(Brushes.Red);
+            sink.AttachSelection(selection, Brushes.Red);
 
-            Click(untracked);
-            var selected = (circle.Stroke, centreLine.Stroke, ownBrush.Stroke, untracked.Stroke);
-            Click(circle);
+            var initial = (circle.Stroke, centreLine.Stroke, ownBrush.Stroke, untracked.Stroke);
+            selected.Add(Tag.Element);
+            selection.Refresh();
+            var whileSelected = (circle.Stroke, centreLine.Stroke, ownBrush.Stroke, untracked.Stroke);
+            selected.Clear();
+            selection.Refresh();
             var deselected = (circle.Stroke, centreLine.Stroke, ownBrush.Stroke, untracked.Stroke);
 
             Assert.Multiple(() =>
             {
-                Assert.That(selected, Is.EqualTo((Brushes.Red, Brushes.Red, Brushes.Red, Brushes.Wheat)));
+                Assert.That(initial, Is.EqualTo((Brushes.Navy, Brushes.Navy, Brushes.Black, Brushes.Wheat)));
+                Assert.That(whileSelected, Is.EqualTo((Brushes.Red, Brushes.Red, Brushes.Red, Brushes.Wheat)));
                 Assert.That(deselected, Is.EqualTo((Brushes.Navy, Brushes.Navy, Brushes.Black, Brushes.Wheat)));
             });
         }
 
         [Test]
-        public void AttachClickToggle_ignoresClicksOnShapesThatAreNotClickTargets()
+        public void AttachSelection_drawsAnAlreadySelectedElementSelected()
         {
+            var selection = new PreviewSelection(element => element == Tag.Element, (_, _) => { });
+            var layer = new List<UIElement>();
+            var sink = new OverlayShapeSink(Tag, Brushes.Navy);
+            var circle = sink.AddCircle(layer, new Vec2(0, 0), 4, new LineStyle(2));
+
+            sink.AttachSelection(selection, Brushes.Red);
+
+            Assert.That(circle.Stroke, Is.SameAs(Brushes.Red));
+        }
+
+        [Test]
+        public void AttachSelection_reportsAClickOnAClickTargetWithItsElement()
+        {
+            var clicks = new List<(object Element, HighlightMode Mode)>();
+            var selection = new PreviewSelection(_ => false, (element, mode) => clicks.Add((element, mode)));
+            var layer = new List<UIElement>();
+            var sink = new OverlayShapeSink(Tag, Brushes.Navy);
+            var circle = sink.AddCircle(layer, new Vec2(0, 0), 4, new LineStyle(2));
+            sink.AttachSelection(selection, Brushes.Red);
+
+            var handled = Click(circle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(clicks, Is.EqualTo(new[] { (Tag.Element, HighlightMode.Replace) }));
+                Assert.That(handled, Is.True);
+            });
+        }
+
+        [Test]
+        public void AttachSelection_ignoresClicksOnShapesThatAreNotClickTargets()
+        {
+            var clicks = 0;
+            var selection = new PreviewSelection(_ => false, (_, _) => clicks++);
             var layer = new List<UIElement>();
             var sink = new OverlayShapeSink(Tag, Brushes.Navy);
             var line = sink.AddLine(layer, new PxLine(0, 0, 1, 1), new LineStyle(1));
-            sink.AttachClickToggle(Brushes.Red);
+            sink.AttachSelection(selection, Brushes.Red);
 
             Click(line);
 
-            Assert.That(line.Stroke, Is.SameAs(Brushes.Navy));
+            Assert.That(clicks, Is.Zero);
         }
 
-        private static void Click(UIElement element) =>
-            element.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+        /// <summary>Raises a left-button click on <paramref name="element"/>; returns whether it was handled.</summary>
+        private static bool Click(UIElement element)
+        {
+            var click = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent };
+            element.RaiseEvent(click);
+
+            return click.Handled;
+        }
+
+        private sealed record ElementTag(object Element) : IPreviewElementTag;
     }
 }

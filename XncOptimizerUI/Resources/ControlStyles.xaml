@@ -63,7 +63,10 @@
         <Setter Property="SelectionUnit" Value="FullRow" />
     </Style>
 
-    <!--  Machining table in the selected part's operations list: height capped, rows checkable together  -->
+    <!--
+        Machining table in the selected part's operations list: height capped, rows checkable
+        together, selected rows shared with the part preview (drawn red there, picked by clicks on it)
+    -->
     <Style
         x:Key="OperationGridStyle"
         BasedOn="{StaticResource ProgramGridStyle}"
@@ -71,6 +74,7 @@
         <Setter Property="MaxHeight" Value="250" />
         <Setter Property="Margin" Value="0,0,0,4" />
         <Setter Property="SelectionMode" Value="Extended" />
+        <Setter Property="helpers:DataGridHighlightBehavior.SyncsRowHighlight" Value="True" />
     </Style>
 
     <!--

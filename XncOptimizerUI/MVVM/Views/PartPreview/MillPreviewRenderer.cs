@@ -45,7 +45,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         }
 
         /// <summary>The shapes of every mill in <paramref name="programs"/>, bottom layer first.</summary>
-        public static IReadOnlyList<UIElement> DrawMills(IEnumerable<XncProgram> programs, FaceLayout layout, MillBrushes brushes)
+        public static IReadOnlyList<UIElement> DrawMills(IEnumerable<XncProgram> programs, FaceLayout layout, MillBrushes brushes, PreviewSelection selection)
         {
             var layers = new Layers();
 
@@ -53,7 +53,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             {
                 foreach (var (mill, path) in MillPaths(program))
                 {
-                    AddMill(layers, program, mill, path, layout, brushes);
+                    AddMill(layers, program, mill, path, layout, brushes, selection);
                 }
             }
 
@@ -79,7 +79,8 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             object mill,
             MillPath path,
             FaceLayout layout,
-            MillBrushes brushes)
+            MillBrushes brushes,
+            PreviewSelection selection)
         {
             var lines = brushes.Lines;
             var sideBrush = program.Side ? lines.SideTrue : lines.SideFalse;
@@ -141,7 +142,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 sink.AddLine(layers.Markers, arm, armStyle);
             }
 
-            sink.AttachClickToggle(lines.Selected);
+            sink.AttachSelection(selection, lines.Selected);
         }
 
         /// <summary>

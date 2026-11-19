@@ -19,6 +19,14 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private readonly PartsListVM _parts;
         private readonly PartEditSaver _saver;
 
+        // The part the program tables were last built for: a rebuild for the same part keeps the
+        // highlighted rows (see Show).
+        private PartVM? _shownPart;
+
+        // Set while one selection request updates several rows, so HighlightChanged is raised once.
+        private bool _isBatchingHighlight;
+        private bool _isHighlightChangePending;
+
         public SelectedPartMachiningVM(ProjectServices project, ProjectWorkspace workspace, PartsListVM parts, PartEditSaver saver)
         {
             _project = project;
@@ -34,6 +42,12 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// the list is unchanged, so the preview can follow every refresh.
         /// </summary>
         public event Action<PartVM?, IReadOnlyList<XncProgram>>? ProgramsRead;
+
+        /// <summary>
+        /// Raised when the highlighted (table-selected) bores, grooves or mills changed, or their
+        /// rows now show re-read elements, so the preview can restyle them.
+        /// </summary>
+        public event Action? HighlightChanged;
 
         #region Properties
         public bool HasBores => Bores.Count > 0;
@@ -152,6 +166,34 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             Variables = BuildVariableRows(programs);
         }
 
+        /// <summary>Whether the row showing <paramref name="element"/> (a bore, groove or mill, by reference) is highlighted.</summary>
+        public bool IsHighlighted(object element) =>
+            ElementRows().Any(row => row.IsHighlighted && ReferenceEquals(row.Element, element));
+
+        /// <summary>
+        /// Selects the row showing <paramref name="element"/> as a click on it in the preview does:
+        /// only it (<see cref="HighlightMode.Replace"/>, across every table), toggled, or added.
+        /// An element no row shows is ignored.
+        /// </summary>
+        public void Highlight(object element, HighlightMode mode) => BatchHighlight(() =>
+        {
+            if (ElementRows().FirstOrDefault(row => ReferenceEquals(row.Element, element)) is not { } target)
+            {
+                return;
+            }
+
+            if (mode == HighlightMode.Replace)
+            {
+                ElementRows().Where(row => !ReferenceEquals(row, target)).ToList().ForEach(row => row.IsHighlighted = false);
+            }
+
+            target.IsHighlighted = mode != HighlightMode.Toggle || !target.IsHighlighted;
+        });
+
+        /// <summary>Deselects every bore, groove and mill row.</summary>
+        public void ClearHighlight() =>
+            BatchHighlight(() => ElementRows().ToList().ForEach(row => row.IsHighlighted = false));
+
         private (IReadOnlyList<XncProgram> Programs, string? ReadError) ReadPrograms(PartVM? part)
         {
             if (part is null || !_workspace.IsOpen)
@@ -169,9 +211,16 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             }
         }
 
-        /// <summary>Programs text, preview and every program table but the variables.</summary>
+        /// <summary>
+        /// Programs text, preview and every program table but the variables. Rebuilt for the part
+        /// already shown (rotation, variable edit), each table keeps its highlighted row positions
+        /// while its row count is unchanged; another part starts with nothing highlighted.
+        /// </summary>
         private void Show(PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
         {
+            var keptHighlight = ReferenceEquals(part, _shownPart) ? HighlightedPositions() : [];
+            _shownPart = part;
+
             ShowPrograms(part, programs, readError);
 
             CheckedBores.Clear();
@@ -179,12 +228,89 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             CheckedMillingContours.Clear();
             CheckedMillingEllipses.Clear();
             CheckedMillingRectangles.Clear();
-            Bores = BuildBoreRows(programs);
-            Grooves = BuildGrooveRows(programs);
+            Bores = WatchHighlight(BuildBoreRows(programs));
+            Grooves = WatchHighlight(BuildGrooveRows(programs));
             Tools = BuildToolRows(programs);
-            MillingContours = BuildMillingContourRows(programs);
-            MillingEllipses = BuildMillingEllipseRows(programs);
-            MillingRectangles = BuildMillingRectangleRows(programs);
+            MillingContours = WatchHighlight(BuildMillingContourRows(programs));
+            MillingEllipses = WatchHighlight(BuildMillingEllipseRows(programs));
+            MillingRectangles = WatchHighlight(BuildMillingRectangleRows(programs));
+
+            RestoreHighlight(keptHighlight);
+        }
+
+        /// <summary>The bore, groove and mill tables, in a fixed order.</summary>
+        private IEnumerable<IReadOnlyList<IHighlightableRow>> ElementTables() =>
+            [Bores, Grooves, MillingContours, MillingEllipses, MillingRectangles];
+
+        private IEnumerable<IHighlightableRow> ElementRows() => ElementTables().SelectMany(rows => rows);
+
+        /// <summary>Per table (see <see cref="ElementTables"/>), its row count and highlighted row positions.</summary>
+        private List<(int Count, List<int> Highlighted)> HighlightedPositions() =>
+            [.. ElementTables().Select(rows => (
+                rows.Count,
+                rows.Select((row, i) => (row, i)).Where(entry => entry.row.IsHighlighted).Select(entry => entry.i).ToList()))];
+
+        /// <summary>Highlights the <paramref name="kept"/> rows of the rebuilt tables and tells the preview the rows changed.</summary>
+        private void RestoreHighlight(List<(int Count, List<int> Highlighted)> kept) => BatchHighlight(() =>
+        {
+            ElementTables()
+                .Zip(kept)
+                .Where(pair => pair.First.Count == pair.Second.Count)
+                .SelectMany(pair => pair.Second.Highlighted.Select(i => pair.First[i]))
+                .ToList()
+                .ForEach(row => row.IsHighlighted = true);
+
+            RaiseHighlightChanged();
+        });
+
+        /// <summary>Runs <paramref name="update"/> raising <see cref="HighlightChanged"/> at most once, after it.</summary>
+        private void BatchHighlight(Action update)
+        {
+            _isBatchingHighlight = true;
+
+            try
+            {
+                update();
+            }
+            finally
+            {
+                _isBatchingHighlight = false;
+            }
+
+            if (_isHighlightChangePending)
+            {
+                RaiseHighlightChanged();
+            }
+        }
+
+        private void RaiseHighlightChanged()
+        {
+            if (_isBatchingHighlight)
+            {
+                _isHighlightChangePending = true;
+                return;
+            }
+
+            _isHighlightChangePending = false;
+            HighlightChanged?.Invoke();
+        }
+
+        /// <summary>Follows the highlight of every row of <paramref name="rows"/>.</summary>
+        private ObservableCollection<TRow> WatchHighlight<TRow>(ObservableCollection<TRow> rows)
+            where TRow : IHighlightableRow
+        {
+            foreach (var row in rows)
+            {
+                row.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(IHighlightableRow.IsHighlighted))
+                    {
+                        RaiseHighlightChanged();
+                    }
+                };
+            }
+
+            return rows;
         }
 
         private void ShowPrograms(PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
@@ -294,6 +420,9 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
                 .Zip(reread)
                 .ToList()
                 .ForEach(pair => ApplyRow(pair.First, pair.Second.Element, pair.Second.Program, checkedSet));
+
+            // The rows now show the re-read elements the preview draws.
+            RaiseHighlightChanged();
         }
 
         /// <summary>Refreshes one row and keeps <paramref name="checkedSet"/> pointing at its current element.</summary>

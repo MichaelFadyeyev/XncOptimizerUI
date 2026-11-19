@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Media;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.Services.Xnc.Geometry;
@@ -83,14 +84,30 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// <summary>A line segment in canvas px.</summary>
     internal readonly record struct PxLine(double X1, double Y1, double X2, double Y2);
 
+    /// <summary>The <see cref="FrameworkElement.Tag"/> of every shape of one machining element: names the element the preview selects.</summary>
+    internal interface IPreviewElementTag
+    {
+        /// <summary>The bore, groove or mill, as read into its program (matched by reference with the table rows).</summary>
+        object Element { get; }
+    }
+
     /// <summary>Identifies the bore (and its owning program, for the <c>Side</c> colour) a shape belongs to.</summary>
-    internal readonly record struct BoreTag(XncProgram Program, XncBore Bore);
+    internal readonly record struct BoreTag(XncProgram Program, XncBore Bore) : IPreviewElementTag
+    {
+        public object Element => Bore;
+    }
 
     /// <summary>Identifies the groove (and its owning program, for the <c>Side</c> colour) a shape belongs to.</summary>
-    internal readonly record struct GrooveTag(XncProgram Program, XncGrooving Groove);
+    internal readonly record struct GrooveTag(XncProgram Program, XncGrooving Groove) : IPreviewElementTag
+    {
+        public object Element => Groove;
+    }
 
     /// <summary>Identifies the mill (<see cref="XncMillingContour"/>, <see cref="XncMillingRectangle"/> or <see cref="XncMillingEllipse"/>) and its owning program a shape belongs to.</summary>
-    internal readonly record struct MillTag(XncProgram Program, object Mill);
+    internal readonly record struct MillTag(XncProgram Program, object Mill) : IPreviewElementTag
+    {
+        public object Element => Mill;
+    }
 
     /// <summary>
     /// Screen-space metrics of the part drawing: the face-to-band gap (mm, scaled with the

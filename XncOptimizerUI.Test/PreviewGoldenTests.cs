@@ -180,9 +180,9 @@ namespace XncOptimizerUI.Test
             var layout = new FaceLayout(
                 Origin, Origin, first.Dx * Scale, first.Dy * Scale, Scale, GapMm * Scale, first.Dz * Scale);
 
-            return MillPreviewRenderer.DrawMills(programs, layout, MillBrushes)
-                .Concat(BorePreviewRenderer.DrawBores(programs, layout, BoreBrushes))
-                .Concat(GroovePreviewRenderer.DrawGrooves(programs, layout, BoreBrushes));
+            return MillPreviewRenderer.DrawMills(programs, layout, MillBrushes, PreviewSelection.None())
+                .Concat(BorePreviewRenderer.DrawBores(programs, layout, BoreBrushes, PreviewSelection.None()))
+                .Concat(GroovePreviewRenderer.DrawGrooves(programs, layout, BoreBrushes, PreviewSelection.None()));
         }
 
         /// <summary>Draws like <c>PartPreviewControl</c>: sized by the first program, with the texture mark and the band symbols turned by its turn.</summary>
@@ -194,7 +194,8 @@ namespace XncOptimizerUI.Test
                 programs,
                 ConsiderTexture: true,
                 TurnText: $"{first.TurnDegrees}°",
-                BandSymbols: PartBandSymbols.Turned(first.Turn));
+                BandSymbols: PartBandSymbols.Turned(first.Turn),
+                Selection: PreviewSelection.None());
             var part = new Canvas();
             var overlay = new Canvas();
 

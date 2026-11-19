@@ -17,7 +17,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         /// cross-band markers), toggle red together on click, since they represent the same
         /// physical groove.
         /// </summary>
-        public static IReadOnlyList<UIElement> DrawGrooves(IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes)
+        public static IReadOnlyList<UIElement> DrawGrooves(IEnumerable<XncProgram> programs, FaceLayout layout, BoreBrushes brushes, PreviewSelection selection)
         {
             var shapes = new List<UIElement>();
 
@@ -27,11 +27,11 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 {
                     if (groove.SideCode == 0)
                     {
-                        FrontPlaneGrooveRenderer.Draw(shapes, program, groove, layout, brushes);
+                        FrontPlaneGrooveRenderer.Draw(shapes, program, groove, layout, brushes, selection);
                     }
                     else
                     {
-                        EdgePlaneGrooveRenderer.Draw(shapes, program, groove, layout, brushes);
+                        EdgePlaneGrooveRenderer.Draw(shapes, program, groove, layout, brushes, selection);
                     }
                 }
             }

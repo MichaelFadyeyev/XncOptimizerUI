@@ -40,7 +40,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 GroovePreviewGeometry.ReachesBand(TrueBounds, Layout, horizontal, near);
         }
 
-        public static void Draw(ICollection<UIElement> shapes, XncProgram program, XncGrooving groove, FaceLayout layout, BoreBrushes brushes)
+        public static void Draw(ICollection<UIElement> shapes, XncProgram program, XncGrooving groove, FaceLayout layout, BoreBrushes brushes, PreviewSelection selection)
         {
             var overshootPx = layout.MmToPx(brushes.CenterLineOvershootMm);
             var sink = new OverlayShapeSink(new GrooveTag(program, groove), program.Side ? brushes.SideTrue : brushes.SideFalse);
@@ -71,7 +71,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 DrawDiagonalProjections(context);
             }
 
-            context.Shapes.AttachClickToggle();
+            context.Shapes.AttachSelection(selection);
         }
 
         /// <summary>
