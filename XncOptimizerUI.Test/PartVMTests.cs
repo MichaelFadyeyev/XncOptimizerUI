@@ -26,13 +26,13 @@ namespace XncOptimizerUI.Test
         [Test]
         public void Setter_WithTheCurrentValue_RaisesNothing()
         {
-            var vm = new PartVM(new Part { ConsiderTexture = true, TopBandingId = 3 }) { IsSelected = true };
+            var vm = new PartVM(new Part { ConsiderTexture = true, TopBandingId = 3 }) { IsChecked = true };
             var raised = new List<string?>();
             vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
 
             vm.ConsiderTexture = true;
             vm.TopBandingId = 3;
-            vm.IsSelected = true;
+            vm.IsChecked = true;
 
             Assert.That(raised, Is.Empty, "an unchanged value must not trigger the immediate part save");
         }

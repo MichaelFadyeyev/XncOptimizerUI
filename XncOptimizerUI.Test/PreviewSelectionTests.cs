@@ -7,23 +7,23 @@ namespace XncOptimizerUI.Test
     [TestFixture]
     public class PreviewSelectionTests
     {
-        [TestCase(ModifierKeys.None, HighlightMode.Replace)]
-        [TestCase(ModifierKeys.Alt, HighlightMode.Replace)]
-        [TestCase(ModifierKeys.Control, HighlightMode.Toggle)]
-        [TestCase(ModifierKeys.Shift, HighlightMode.Add)]
-        [TestCase(ModifierKeys.Control | ModifierKeys.Shift, HighlightMode.Toggle)]
-        public void ModeFor_CtrlTogglesShiftAddsElseReplaces(ModifierKeys modifiers, HighlightMode expected) =>
+        [TestCase(ModifierKeys.None, ElementSelectionMode.Replace)]
+        [TestCase(ModifierKeys.Alt, ElementSelectionMode.Replace)]
+        [TestCase(ModifierKeys.Control, ElementSelectionMode.Toggle)]
+        [TestCase(ModifierKeys.Shift, ElementSelectionMode.Add)]
+        [TestCase(ModifierKeys.Control | ModifierKeys.Shift, ElementSelectionMode.Toggle)]
+        public void ModeFor_CtrlTogglesShiftAddsElseReplaces(ModifierKeys modifiers, ElementSelectionMode expected) =>
             Assert.That(PreviewSelection.ModeFor(modifiers), Is.EqualTo(expected));
 
         [Test]
         public void Click_PassesTheElementAndTheModeOfTheModifiers()
         {
-            var clicks = new List<(object, HighlightMode)>();
+            var clicks = new List<(object, ElementSelectionMode)>();
             var selection = new PreviewSelection(_ => false, (element, mode) => clicks.Add((element, mode)));
 
             selection.Click("bore", ModifierKeys.Shift);
 
-            Assert.That(clicks, Is.EqualTo(new[] { ((object)"bore", HighlightMode.Add) }));
+            Assert.That(clicks, Is.EqualTo(new[] { ((object)"bore", ElementSelectionMode.Add) }));
         }
 
         [Test]

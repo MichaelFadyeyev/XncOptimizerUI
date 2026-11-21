@@ -34,7 +34,7 @@ namespace XncOptimizerUI.Test
         };
 
         private BoreRowVM Row(XncBore bore) =>
-            new(1, "Front", "68", bore, Program(bore), (_, _) => { }, (_, attribute, text) =>
+            new(1, "Front", "68", bore, Program(bore), (_, attribute, text) =>
             {
                 _edits.Add((attribute, text));
                 return true;

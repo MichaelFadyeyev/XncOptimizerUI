@@ -18,7 +18,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.BoreMill.BoreMillDirection = BoreMillDirection.MillsToBores;
             vm.BoreMill.ConvertBoresToEllipses = true;
             Project.ClearCalls();
@@ -51,7 +51,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.BoreMill.ConvertBoresAndMillsCommand.Execute(null);

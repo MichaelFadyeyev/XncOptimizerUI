@@ -18,7 +18,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.GrooveMill.GrooveMillDirection = GrooveMillDirection.MillsToGrooves;
             vm.GrooveMill.ProcessPockets = true;
             Project.ClearCalls();
@@ -39,7 +39,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.GrooveMill.ConvertGroovesAndMillsCommand.Execute(null);

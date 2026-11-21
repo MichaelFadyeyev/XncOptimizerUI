@@ -23,9 +23,6 @@
         Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
-            <!--  Check: feeds SelectedPartMachiningVM's checked grooves  -->
-            <common:RowCheckColumn x:Name="GroovesCheckColumn" />
-
             <!--  Read-only groove identity  -->
             <DataGridTextColumn
                 x:Name="GroovesNumberColumn"

@@ -74,7 +74,7 @@
         <Setter Property="MaxHeight" Value="250" />
         <Setter Property="Margin" Value="0,0,0,4" />
         <Setter Property="SelectionMode" Value="Extended" />
-        <Setter Property="helpers:DataGridHighlightBehavior.SyncsRowHighlight" Value="True" />
+        <Setter Property="helpers:DataGridRowSelectionBehavior.SyncsRowSelection" Value="True" />
     </Style>
 
     <!--

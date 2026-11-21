@@ -8,102 +8,102 @@ namespace XncOptimizerUI.Test
 {
     /// <summary>
     /// The selection shared by the program tables and the part preview:
-    /// <see cref="SelectedPartMachiningVM.Highlight"/> / <see cref="SelectedPartMachiningVM.ClearHighlight"/>,
+    /// <see cref="SelectedPartMachiningVM.SelectElement"/> / <see cref="SelectedPartMachiningVM.ClearSelection"/>,
     /// as forwarded by <see cref="PartPreviewVM"/>.
     /// </summary>
     [TestFixture]
-    public class MachiningHighlightTests : AppViewModelTestBase
+    public class MachiningSelectionTests : AppViewModelTestBase
     {
         [Test]
-        public void Highlight_Replace_SelectsOnlyTheElementAcrossEveryTable()
+        public void SelectElement_Replace_SelectsOnlyTheElementAcrossEveryTable()
         {
             var vm = OpenWithBoresAndGrooves();
             var machining = vm.Machining;
-            machining.Bores[0].IsHighlighted = true;
-            machining.Grooves[0].IsHighlighted = true;
-            var changes = CountHighlightChanges(vm);
+            machining.Bores[0].IsSelected = true;
+            machining.Grooves[0].IsSelected = true;
+            var changes = CountSelectionChanges(vm);
 
-            vm.Preview.HighlightElement(machining.Bores[1].Model, HighlightMode.Replace);
+            vm.Preview.SelectElement(machining.Bores[1].Model, ElementSelectionMode.Replace);
 
             Assert.Multiple(() =>
             {
-                Assert.That(Highlighted(vm), Is.EqualTo(new[] { false, true, false, false }));
+                Assert.That(Selected(vm), Is.EqualTo(new[] { false, true, false, false }));
                 Assert.That(changes(), Is.EqualTo(1));
             });
         }
 
         [Test]
-        public void Highlight_Toggle_AddsOrRemovesOnlyTheElement()
+        public void SelectElement_Toggle_AddsOrRemovesOnlyTheElement()
         {
             var vm = OpenWithBoresAndGrooves();
             var machining = vm.Machining;
-            machining.Highlight(machining.Bores[0].Model, HighlightMode.Replace);
+            machining.SelectElement(machining.Bores[0].Model, ElementSelectionMode.Replace);
 
-            machining.Highlight(machining.Grooves[1].Model, HighlightMode.Toggle);
-            var added = Highlighted(vm);
-            machining.Highlight(machining.Bores[0].Model, HighlightMode.Toggle);
+            machining.SelectElement(machining.Grooves[1].Model, ElementSelectionMode.Toggle);
+            var added = Selected(vm);
+            machining.SelectElement(machining.Bores[0].Model, ElementSelectionMode.Toggle);
 
             Assert.Multiple(() =>
             {
                 Assert.That(added, Is.EqualTo(new[] { true, false, false, true }));
-                Assert.That(Highlighted(vm), Is.EqualTo(new[] { false, false, false, true }));
+                Assert.That(Selected(vm), Is.EqualTo(new[] { false, false, false, true }));
             });
         }
 
         [Test]
-        public void Highlight_Add_NeverRemoves()
+        public void SelectElement_Add_NeverRemoves()
         {
             var vm = OpenWithBoresAndGrooves();
             var machining = vm.Machining;
-            machining.Highlight(machining.Bores[0].Model, HighlightMode.Replace);
+            machining.SelectElement(machining.Bores[0].Model, ElementSelectionMode.Replace);
 
-            machining.Highlight(machining.Grooves[0].Model, HighlightMode.Add);
-            machining.Highlight(machining.Grooves[0].Model, HighlightMode.Add);
+            machining.SelectElement(machining.Grooves[0].Model, ElementSelectionMode.Add);
+            machining.SelectElement(machining.Grooves[0].Model, ElementSelectionMode.Add);
 
-            Assert.That(Highlighted(vm), Is.EqualTo(new[] { true, false, true, false }));
+            Assert.That(Selected(vm), Is.EqualTo(new[] { true, false, true, false }));
         }
 
         [Test]
-        public void Highlight_OfAnElementNoRowShows_ChangesNothing()
+        public void SelectElement_OfAnElementNoRowShows_ChangesNothing()
         {
             var vm = OpenWithBoresAndGrooves();
-            vm.Machining.Bores[0].IsHighlighted = true;
+            vm.Machining.Bores[0].IsSelected = true;
 
-            vm.Machining.Highlight(new XncBore(), HighlightMode.Replace);
+            vm.Machining.SelectElement(new XncBore(), ElementSelectionMode.Replace);
 
-            Assert.That(Highlighted(vm), Is.EqualTo(new[] { true, false, false, false }));
+            Assert.That(Selected(vm), Is.EqualTo(new[] { true, false, false, false }));
         }
 
         [Test]
-        public void ClearHighlight_DeselectsEveryRowWithOneNotification()
+        public void ClearSelection_DeselectsEveryRowWithOneNotification()
         {
             var vm = OpenWithBoresAndGrooves();
-            vm.Machining.Bores[1].IsHighlighted = true;
-            vm.Machining.Grooves[0].IsHighlighted = true;
-            var changes = CountHighlightChanges(vm);
+            vm.Machining.Bores[1].IsSelected = true;
+            vm.Machining.Grooves[0].IsSelected = true;
+            var changes = CountSelectionChanges(vm);
 
-            vm.Preview.ClearHighlight();
+            vm.Preview.ClearSelection();
 
             Assert.Multiple(() =>
             {
-                Assert.That(Highlighted(vm), Is.All.False);
+                Assert.That(Selected(vm), Is.All.False);
                 Assert.That(changes(), Is.EqualTo(1));
             });
         }
 
         [Test]
-        public void IsElementHighlighted_MatchesTheProgramElementTheRowShows()
+        public void IsElementSelected_MatchesTheProgramElementTheRowShows()
         {
             var vm = OpenWithBoresAndGrooves();
             var program = vm.Preview.Programs.Single();
 
-            vm.Machining.Grooves[1].IsHighlighted = true;
+            vm.Machining.Grooves[1].IsSelected = true;
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.Preview.IsElementHighlighted(program.Groovings[1]), Is.True);
-                Assert.That(vm.Preview.IsElementHighlighted(program.Groovings[0]), Is.False);
-                Assert.That(vm.Preview.IsElementHighlighted(program.Bores[1]), Is.False);
+                Assert.That(vm.Preview.IsElementSelected(program.Groovings[1]), Is.True);
+                Assert.That(vm.Preview.IsElementSelected(program.Groovings[0]), Is.False);
+                Assert.That(vm.Preview.IsElementSelected(program.Bores[1]), Is.False);
             });
         }
 
@@ -111,22 +111,22 @@ namespace XncOptimizerUI.Test
         public void TableSelection_NotifiesThePreview()
         {
             var vm = OpenWithBoresAndGrooves();
-            var changes = CountHighlightChanges(vm);
+            var changes = CountSelectionChanges(vm);
 
-            vm.Machining.Bores[0].IsHighlighted = true;
-            vm.Machining.Bores[0].IsHighlighted = false;
+            vm.Machining.Bores[0].IsSelected = true;
+            vm.Machining.Bores[0].IsSelected = false;
 
             Assert.That(changes(), Is.EqualTo(2));
         }
 
         [Test]
-        public void EditingABore_KeepsItHighlightedOnTheReReadElement()
+        public void EditingABore_KeepsItSelectedOnTheReReadElement()
         {
             var vm = OpenWithBoresAndGrooves();
             Project.Editor.UpdateBore(default, default, default, default!).ReturnsForAnyArgs(Project.ChangingProgramsTo([Program(firstBoreX: 120)]));
             var row = vm.Machining.Bores[0];
-            row.IsHighlighted = true;
-            var changes = CountHighlightChanges(vm);
+            row.IsSelected = true;
+            var changes = CountSelectionChanges(vm);
 
             row.BeginCellEdit();
             row.X.Input = "120";
@@ -135,19 +135,19 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(vm.Machining.Bores[0], Is.SameAs(row));
-                Assert.That(row.IsHighlighted, Is.True);
-                Assert.That(vm.Preview.IsElementHighlighted(vm.Preview.Programs.Single().Bores[0]), Is.True);
+                Assert.That(row.IsSelected, Is.True);
+                Assert.That(vm.Preview.IsElementSelected(vm.Preview.Programs.Single().Bores[0]), Is.True);
                 Assert.That(changes(), Is.EqualTo(1));
             });
         }
 
         [Test]
-        public void RotatingThePart_KeepsTheHighlightedRows()
+        public void RotatingThePart_KeepsTheSelectedRows()
         {
             var vm = OpenWithBoresAndGrooves();
             Project.Editor.RotatePart(default, default, default).ReturnsForAnyArgs(Project.ChangingProgramsTo([Program(firstBoreX: 300, turn: 1)]));
-            vm.Machining.Bores[1].IsHighlighted = true;
-            vm.Machining.Grooves[0].IsHighlighted = true;
+            vm.Machining.Bores[1].IsSelected = true;
+            vm.Machining.Grooves[0].IsSelected = true;
 
             vm.Preview.Rotation = PartTurn.Deg90;
 
@@ -155,21 +155,21 @@ namespace XncOptimizerUI.Test
             Assert.Multiple(() =>
             {
                 Assert.That(program.Turn, Is.EqualTo(1));
-                Assert.That(Highlighted(vm), Is.EqualTo(new[] { false, true, true, false }));
-                Assert.That(vm.Preview.IsElementHighlighted(program.Bores[1]), Is.True);
-                Assert.That(vm.Preview.IsElementHighlighted(program.Groovings[0]), Is.True);
+                Assert.That(Selected(vm), Is.EqualTo(new[] { false, true, true, false }));
+                Assert.That(vm.Preview.IsElementSelected(program.Bores[1]), Is.True);
+                Assert.That(vm.Preview.IsElementSelected(program.Groovings[0]), Is.True);
             });
         }
 
         [Test]
-        public void SelectingAnotherPart_StartsWithNothingHighlighted()
+        public void SelectingAnotherPart_StartsWithNothingSelected()
         {
             var vm = OpenWithBoresAndGrooves();
-            vm.Machining.Bores[0].IsHighlighted = true;
+            vm.Machining.Bores[0].IsSelected = true;
 
             vm.PartsList.SelectedPart = vm.PartsList.Parts[1];
 
-            Assert.That(Highlighted(vm), Is.All.False);
+            Assert.That(Selected(vm), Is.All.False);
         }
 
         private AppViewModel OpenWithBoresAndGrooves()
@@ -213,15 +213,15 @@ namespace XncOptimizerUI.Test
             ]
         };
 
-        /// <summary>Highlight of bore 1, bore 2, groove 1, groove 2.</summary>
-        private static bool[] Highlighted(AppViewModel vm) =>
-            [.. vm.Machining.Bores.Select(row => row.IsHighlighted).Concat(vm.Machining.Grooves.Select(row => row.IsHighlighted))];
+        /// <summary>Selection of bore 1, bore 2, groove 1, groove 2.</summary>
+        private static bool[] Selected(AppViewModel vm) =>
+            [.. vm.Machining.Bores.Select(row => row.IsSelected).Concat(vm.Machining.Grooves.Select(row => row.IsSelected))];
 
-        /// <summary>Counts <see cref="PartPreviewVM.HighlightChanged"/> from now on.</summary>
-        private static Func<int> CountHighlightChanges(AppViewModel vm)
+        /// <summary>Counts <see cref="PartPreviewVM.SelectionChanged"/> from now on.</summary>
+        private static Func<int> CountSelectionChanges(AppViewModel vm)
         {
             var count = 0;
-            vm.Preview.HighlightChanged += () => count++;
+            vm.Preview.SelectionChanged += () => count++;
 
             return () => count;
         }

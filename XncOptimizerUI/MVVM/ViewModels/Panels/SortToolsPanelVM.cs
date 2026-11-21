@@ -25,14 +25,14 @@ namespace XncOptimizerUI.MVVM.ViewModels.Panels
         [RelayCommand]
         private void SortToolDeclarations() =>
             runner.RunOnParts(
-                SelectedParts,
+                TargetParts,
                 SortToolsGlobally ? "No parts pass the filter for tool sorting!" : "No parts checked for tool sorting!",
-                selected => project.Batch.SortToolDeclarations(selected));
+                targets => project.Batch.SortToolDeclarations(targets));
         #endregion
 
         #region Methods
         /// <summary>Globally: every part the grid shows - the filtered set, or all parts when unfiltered.</summary>
-        private List<Part> SelectedParts() => SortToolsGlobally ? parts.ShownParts() : parts.CheckedParts();
+        private List<Part> TargetParts() => SortToolsGlobally ? parts.ShownParts() : parts.CheckedParts();
         #endregion
     }
 }

@@ -56,7 +56,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             if (_viewModel is not null)
             {
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-                _viewModel.HighlightChanged -= OnHighlightChanged;
+                _viewModel.SelectionChanged -= OnSelectionChanged;
             }
 
             _viewModel = e.NewValue as PartPreviewVM;
@@ -64,7 +64,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             if (_viewModel is not null)
             {
                 _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-                _viewModel.HighlightChanged += OnHighlightChanged;
+                _viewModel.SelectionChanged += OnSelectionChanged;
             }
 
             WatchPart(_viewModel?.Part);
@@ -128,7 +128,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         }
 
         /// <summary>Restyles the drawn machining to the new selection, without redrawing (keeps the scroll position).</summary>
-        private void OnHighlightChanged() => _selection.Refresh();
+        private void OnSelectionChanged() => _selection.Refresh();
 
         /// <summary>
         /// A plain left click on the drawing that no bore, groove or mill took (they handle their
@@ -141,7 +141,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
                 return;
             }
 
-            _viewModel?.ClearHighlight();
+            _viewModel?.ClearSelection();
         }
 
         private void ResetToFit()
@@ -183,7 +183,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
             PartCanvas.Width = layout.CanvasWidth;
             PartCanvas.Height = layout.CanvasHeight;
 
-            _selection = new PreviewSelection(viewModel.IsElementHighlighted, viewModel.HighlightElement);
+            _selection = new PreviewSelection(viewModel.IsElementSelected, viewModel.SelectElement);
 
             var scene = new PartPreviewScene(viewModel.Programs, part.ConsiderTexture, viewModel.TurnText, viewModel.BandSymbols, _selection);
             PartPreviewRenderer.DrawPart(PartCanvas, layout, scene, Palette);

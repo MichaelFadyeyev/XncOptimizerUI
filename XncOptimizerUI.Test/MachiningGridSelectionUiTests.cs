@@ -7,14 +7,14 @@ namespace XncOptimizerUI.Test
 {
     /// <summary>
     /// Drives the real bores <see cref="DataGrid"/> on <c>TestData/td-bores-displaying.project</c>:
-    /// its selected rows and the rows' <see cref="IHighlightableRow.IsHighlighted"/> (the part
-    /// preview's selection) follow each other both ways (<c>DataGridHighlightBehavior</c>).
+    /// its selected rows and the rows' <see cref="ISelectableRow.IsSelected"/> (the part
+    /// preview's selection) follow each other both ways (<c>DataGridRowSelectionBehavior</c>).
     /// </summary>
     [TestFixture]
-    public class MachiningGridHighlightUiTests : ProgramGridUiTestBase
+    public class MachiningGridSelectionUiTests : ProgramGridUiTestBase
     {
         [Test]
-        public void SelectingRowsInTheGrid_HighlightsExactlyThem()
+        public void SelectingRowsInTheGrid_SelectsExactlyThem()
         {
             var vm = OpenProject("td-bores-displaying.project");
             var (window, grid, _) = Show(new SelectedPartBoresGrid(), vm, "BoresDataGrid");
@@ -25,7 +25,7 @@ namespace XncOptimizerUI.Test
                 grid.SelectedItems.Add(rows[0]);
                 grid.SelectedItems.Add(rows[1]);
                 Pump();
-                var both = rows.Select(row => row.IsHighlighted).ToList();
+                var both = rows.Select(row => row.IsSelected).ToList();
 
                 grid.SelectedItem = rows[1];
                 Pump();
@@ -33,7 +33,7 @@ namespace XncOptimizerUI.Test
                 Assert.Multiple(() =>
                 {
                     Assert.That(both.Take(2), Is.All.True);
-                    Assert.That(rows.Where(row => row.IsHighlighted), Is.EqualTo(new[] { rows[1] }));
+                    Assert.That(rows.Where(row => row.IsSelected), Is.EqualTo(new[] { rows[1] }));
                 });
             }
             finally
@@ -43,7 +43,7 @@ namespace XncOptimizerUI.Test
         }
 
         [Test]
-        public void HighlightingFromThePreview_SelectsTheRowsInTheGrid()
+        public void SelectingFromThePreview_SelectsTheRowsInTheGrid()
         {
             var vm = OpenProject("td-bores-displaying.project");
             var (window, grid, _) = Show(new SelectedPartBoresGrid(), vm, "BoresDataGrid");
@@ -51,15 +51,15 @@ namespace XncOptimizerUI.Test
 
             try
             {
-                vm.Preview.HighlightElement(rows[1].Model, HighlightMode.Replace);
+                vm.Preview.SelectElement(rows[1].Model, ElementSelectionMode.Replace);
                 Pump();
                 var single = grid.SelectedItems.Cast<object>().ToList();
 
-                vm.Preview.HighlightElement(rows[0].Model, HighlightMode.Toggle);
+                vm.Preview.SelectElement(rows[0].Model, ElementSelectionMode.Toggle);
                 Pump();
                 var added = grid.SelectedItems.Cast<object>().ToList();
 
-                vm.Preview.ClearHighlight();
+                vm.Preview.ClearSelection();
                 Pump();
 
                 Assert.Multiple(() =>
@@ -93,7 +93,7 @@ namespace XncOptimizerUI.Test
                 Assert.Multiple(() =>
                 {
                     Assert.That(grid.ItemsSource, Is.SameAs(rows), "rows rebuilt");
-                    Assert.That(rows.Where(row => row.IsHighlighted), Is.EqualTo(new[] { rows[1] }));
+                    Assert.That(rows.Where(row => row.IsSelected), Is.EqualTo(new[] { rows[1] }));
                     Assert.That(grid.SelectedItems, Is.EqualTo(new object[] { rows[1] }));
                 });
             }
