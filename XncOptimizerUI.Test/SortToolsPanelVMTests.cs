@@ -17,7 +17,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);
@@ -50,7 +50,7 @@ namespace XncOptimizerUI.Test
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
             var hidden = vm.PartsList.Parts.Single(p => p.Id == 101);
-            hidden.IsSelected = true;
+            hidden.IsChecked = true;
             vm.Filter.FilterName = vm.PartsList.Parts.Single(p => p.Id == 100).Name;
             vm.SortTools.SortToolsGlobally = true;
             Project.ClearCalls();
@@ -70,7 +70,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.SortTools.SortToolDeclarationsCommand.Execute(null);

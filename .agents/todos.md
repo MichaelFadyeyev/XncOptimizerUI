@@ -147,38 +147,6 @@ place exactly. Possible refinements:
   (`AppViewModelTests.CopyPartsList_FormatsFractionalSizesWithCurrentCulture`); switch to
   invariant if the consumer needs it.
 
-## Selected / checked naming
-
-Clean up how the code names the two row states, so that **selected** always means "clicked
-(row selection in a table or a click on the part preview)" and **checked** always means "its
-check box is ticked". Apply each rename everywhere it is used: properties, fields,
-`OnXxxChanged` partials, methods, callbacks, interfaces, classes, XAML bindings, tests, and
-the docs (`code-analysis.md`, this file).
-
-- **Bores / grooves / mills (machining tables + preview)**
-  - Clicked state: `IsHighlighted` → `IsSelected`. This also covers `IHighlightableRow`,
-    `HighlightMode`, `Highlight`/`ClearHighlight`/`IsHighlighted(element)`/`HighlightChanged`
-    on `SelectedPartMachiningVM`, `IsElementHighlighted`/`HighlightElement` on `PartPreviewVM`,
-    and `Helpers/DataGridHighlightBehavior` (`SyncsRowHighlight`).
-  - Check box: `MachiningElementRowVM.IsSelected` → `IsChecked`. This also covers
-    `OnIsSelectedChanged` and the `onSelectionChanged` constructor callback (`Action<TModel, bool>`)
-    of `MachiningElementRowVM` and the row VMs.
-  - The test (and, later, the check box) assertions that use `row.IsSelected` mean checked.
-  - Rename in a fixed order: free the name first (`IsSelected` → `IsChecked`), then rename
-    `IsHighlighted` → `IsSelected`. Otherwise the two states collide in the middle of the rename.
-- **Parts table: same refactoring needed** (checked 2026-11-19)
-  - Check box: `PartVM.IsSelected` → `IsChecked`. `PartsListVM` already says "checked"
-    (`CheckedCount`, `CheckedParts`, `SetChecked`) but reads and writes `IsSelected`. Its
-    comments and `RebindCheckedCount` handler mention it, and so do many panel / list tests
-    (`Parts[0].IsSelected = true`).
-  - `MVVM/Views/Common/RowCheckColumn.cs` binds `IsSelected` for both the parts grid and the
-    machining tables, so it changes to `IsChecked` together with both row types.
-  - `SortToolsPanelVM.SelectedParts()` returns the checked (or all shown) parts: rename it,
-    e.g. `TargetParts()`.
-  - The clicked part (`PartsListVM.SelectedPart`, `SelectedPartChanged`,
-    `SelectedPartMachiningVM`, `SourcePartVM`'s use of `SelectedPart`) already follows the
-    rule and stays as it is.
-
 ## Test project layout
 
 - **Group test files into folders mirroring the app** - `XncOptimizerUI.Test/` is flat

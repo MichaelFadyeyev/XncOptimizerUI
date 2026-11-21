@@ -6,7 +6,7 @@ using System.Windows.Data;
 namespace XncOptimizerUI.MVVM.Views.Common
 {
     /// <summary>
-    /// "Check" column: a centered check box bound two-way to the row's <c>IsSelected</c>, toggled
+    /// "Check" column: a centered check box bound two-way to the row's <c>IsChecked</c>, toggled
     /// with a single click (unlike <see cref="DataGridCheckBoxColumn"/>, which selects the cell
     /// first).
     /// </summary>
@@ -23,7 +23,7 @@ namespace XncOptimizerUI.MVVM.Views.Common
         {
             var checkBox = new FrameworkElementFactory(typeof(CheckBox));
             checkBox.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-            checkBox.SetBinding(ToggleButton.IsCheckedProperty, new Binding("IsSelected")
+            checkBox.SetBinding(ToggleButton.IsCheckedProperty, new Binding("IsChecked")
             {
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged

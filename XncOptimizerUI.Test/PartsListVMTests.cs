@@ -20,7 +20,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.PartsList.Parts.Select(p => p.IsSelected), Is.All.True);
+                Assert.That(vm.PartsList.Parts.Select(p => p.IsChecked), Is.All.True);
                 Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(2));
             });
         }
@@ -38,7 +38,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(vm.PartsList.Parts.Select(p => p.IsSelected), Is.All.False);
+                Assert.That(vm.PartsList.Parts.Select(p => p.IsChecked), Is.All.False);
                 Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(0));
             });
         }
@@ -57,14 +57,14 @@ namespace XncOptimizerUI.Test
                 if (e.PropertyName == nameof(PartsListVM.CheckedCount)) raised++;
             };
 
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Assert.Multiple(() =>
             {
                 Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(1));
                 Assert.That(raised, Is.GreaterThanOrEqualTo(1));
             });
 
-            vm.PartsList.Parts[0].IsSelected = false;
+            vm.PartsList.Parts[0].IsChecked = false;
             Assert.That(vm.PartsList.CheckedCount, Is.EqualTo(0));
         }
 
@@ -84,7 +84,7 @@ namespace XncOptimizerUI.Test
 
             vm.Filter.ClearFiltersCommand.Execute(null);
             var reappeared = vm.PartsList.Parts.Single(p => p.Name == "Бокова");
-            Assert.That(reappeared.IsSelected, Is.False);
+            Assert.That(reappeared.IsChecked, Is.False);
         }
     }
 }

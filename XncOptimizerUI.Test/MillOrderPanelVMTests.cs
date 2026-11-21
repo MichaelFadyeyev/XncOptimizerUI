@@ -17,7 +17,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);
@@ -36,7 +36,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             Project.ClearCalls();
 
             vm.MillOrder.OptimizeMillTraversalCommand.Execute(null);

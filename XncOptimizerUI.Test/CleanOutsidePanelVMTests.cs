@@ -31,7 +31,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[1].IsSelected = true;
+            vm.PartsList.Parts[1].IsChecked = true;
             vm.CleanOutside.CleanOutsideGrooves = false;
             Project.ClearCalls();
 

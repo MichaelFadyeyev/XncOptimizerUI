@@ -19,7 +19,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[1].IsSelected = true;
+            vm.PartsList.Parts[1].IsChecked = true;
             vm.MillOffset.MillOffset = "2.5";
             vm.MillOffset.MillOffsetSide = MillOffsetSide.Left;
             Project.ClearCalls();
@@ -53,7 +53,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.MillOffset.MillOffset = "3";
             vm.MillOffset.OffsetOpenMillPaths = open;
             vm.MillOffset.OffsetClosedMillPaths = closed;
@@ -70,7 +70,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.MillOffset.MillOffset = "3";
             vm.MillOffset.OffsetOpenMillPaths = false;
             vm.MillOffset.OffsetClosedMillPaths = false;
@@ -96,7 +96,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.MillOffset.MillOffset = offset;
             Project.ClearCalls();
 
@@ -137,7 +137,7 @@ namespace XncOptimizerUI.Test
 
             var vm = CreateViewModel();
             vm.OpenFileCommand.Execute(null);
-            vm.PartsList.Parts[0].IsSelected = true;
+            vm.PartsList.Parts[0].IsChecked = true;
             vm.MillOffset.MillOffset = "3";
             Project.ClearCalls();
 

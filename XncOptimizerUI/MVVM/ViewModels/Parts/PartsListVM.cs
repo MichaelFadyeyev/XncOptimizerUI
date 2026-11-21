@@ -50,7 +50,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
         /// Number of parts currently checked ("Sel") across the whole project, including
         /// any hidden by the active filter - this is the set the batch commands act on.
         /// </summary>
-        public int CheckedCount => _allParts.Count(p => p.IsSelected);
+        public int CheckedCount => _allParts.Count(p => p.IsChecked);
         #endregion
 
         #region ObservableProperties
@@ -98,7 +98,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
         public void ShowAll() => Parts = new ObservableCollection<PartVM>(_allParts);
 
         /// <summary>The checked parts, shown or hidden by the filter.</summary>
-        public List<Part> CheckedParts() => [.. _allParts.Where(p => p.IsSelected).Select(p => p.Part)];
+        public List<Part> CheckedParts() => [.. _allParts.Where(p => p.IsChecked).Select(p => p.Part)];
 
         /// <summary>The checked parts, or every part of the project when none is checked.</summary>
         public List<Part> CheckedOrAllParts()
@@ -119,12 +119,12 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
         }
 
         // Acts on the currently displayed (filtered) parts only, mirroring the "Filtered no:"
-        // label. Each IsSelected write raises PartVM.PropertyChanged, which refreshes CheckedCount.
+        // label. Each IsChecked write raises PartVM.PropertyChanged, which refreshes CheckedCount.
         private void SetChecked(bool value)
         {
             foreach (var part in Parts)
             {
-                part.IsSelected = value;
+                part.IsChecked = value;
             }
         }
 
@@ -150,7 +150,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
 
         private void OnPartPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(PartVM.IsSelected))
+            if (e.PropertyName == nameof(PartVM.IsChecked))
             {
                 OnPropertyChanged(nameof(CheckedCount));
             }

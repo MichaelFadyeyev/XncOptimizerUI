@@ -111,9 +111,9 @@ namespace XncOptimizerUI.MVVM.ViewModels.Parts
         [ObservableProperty]
         private int _number;
 
-        /// <summary>The "Sel" checkbox: the batch commands act on the checked parts.</summary>
+        /// <summary>The "Check" checkbox: the batch commands act on the checked parts.</summary>
         [ObservableProperty]
-        private bool _isSelected;
+        private bool _isChecked;
         #endregion
     }
 }
