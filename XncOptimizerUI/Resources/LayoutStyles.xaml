@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:helpers="clr-namespace:XncOptimizerUI.Helpers">
 
     <!--  Splitter resizing the grid rows or columns on both of its sides  -->
@@ -67,5 +68,62 @@
         <Setter Property="Height" Value="20" />
         <Setter Property="Margin" Value="2,0,0,0" />
         <Setter Property="Padding" Value="0,2" />
+    </Style>
+
+    <!--  Action button of a table header (Delete, ...)  -->
+    <Style
+        x:Key="TableActionButtonStyle"
+        BasedOn="{StaticResource CompactButtonStyle}"
+        TargetType="Button">
+        <Setter Property="MinWidth" Value="60" />
+        <Setter Property="Margin" Value="4,0,0,0" />
+        <Setter Property="Padding" Value="8,0" />
+    </Style>
+
+    <!--
+        Table header (common:TableHeader): the table name on the left, the table's action
+        buttons right-aligned opposite it, in one row
+    -->
+    <Style TargetType="common:TableHeader">
+        <Style.Resources>
+            <Style BasedOn="{StaticResource TableActionButtonStyle}" TargetType="Button" />
+        </Style.Resources>
+        <Setter Property="Margin" Value="0,2,2,0" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel x:Name="TableHeaderActionsPanel" Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="common:TableHeader">
+
+                    <!--  Name column (stretches) and actions column (right-aligned)  -->
+                    <Grid x:Name="TableHeaderLayout">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!--  Table name  -->
+                        <Label
+                            x:Name="TableHeaderTitle"
+                            Grid.Column="0"
+                            VerticalAlignment="Bottom"
+                            Content="{TemplateBinding Header}"
+                            Style="{StaticResource SectionLabelStyle}" />
+
+                        <!--  Table actions  -->
+                        <ItemsPresenter
+                            x:Name="TableHeaderActions"
+                            Grid.Column="1"
+                            Margin="0,0,0,3"
+                            VerticalAlignment="Bottom" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

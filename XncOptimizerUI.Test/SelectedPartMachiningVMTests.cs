@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -539,6 +540,173 @@ namespace XncOptimizerUI.Test
                 Assert.That(row.Width.HasErrors, Is.True);
                 Assert.That(row.Width.Display, Is.EqualTo("4"));
                 Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
+            });
+        }
+
+        // --- Deleting the selected rows of one table ---
+
+        /// <summary>Operation 5 with face bores at the given x (Bore8) and two grooves (Cut4).</summary>
+        private static XncProgram ProgramForDeletion(params double[] boreXs) => new()
+        {
+            OperationId = 5,
+            Side = true,
+            Dx = 400,
+            Dy = 800,
+            Dz = 19,
+            Tools = [new XncTool { Name = "Bore8", Diameter = 8 }, new XncTool { Name = "Cut4", Diameter = 4 }],
+            Bores = [.. boreXs.Select((x, i) => new XncBore
+            {
+                Surface = BoreSurface.Face, ToolName = "Bore8", Index = i, X = x, Y = 50, Depth = 10
+            })],
+            Groovings = [.. new[] { 50d, 100d }.Select((y, i) => new XncGrooving
+            {
+                ToolName = "Cut4", Start = new XncPoint(0, y), End = new XncPoint(400, y), Depth = 4, Width = 4,
+                Source = new XncElementSource(i, new Dictionary<string, string>())
+            })]
+        };
+
+        private AppViewModel OpenForDeletion()
+        {
+            SeedTwoParts();
+            Project.XncPrograms = [ProgramForDeletion(100, 200, 300)];
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            return vm;
+        }
+
+        private static IReadOnlyList<XncElementRef> Refs(params XncElementRef[] expected) =>
+            Arg.Is<IReadOnlyList<XncElementRef>>(actual => actual.SequenceEqual(expected));
+
+        [Test]
+        public void DeleteSelected_EnabledOnlyForTheTableWithSelectedRows()
+        {
+            var vm = OpenForDeletion();
+            var machining = vm.Machining;
+            var before = (machining.DeleteSelectedBoresCommand.CanExecute(null), machining.DeleteSelectedGroovesCommand.CanExecute(null));
+
+            machining.Grooves[0].IsSelected = true;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(before, Is.EqualTo((false, false)));
+                Assert.That(machining.DeleteSelectedBoresCommand.CanExecute(null), Is.False);
+                Assert.That(machining.DeleteSelectedGroovesCommand.CanExecute(null), Is.True);
+            });
+        }
+
+        [Test]
+        public void DeleteSelectedBores_Declined_DeletesAndSavesNothing()
+        {
+            var vm = OpenForDeletion();
+            vm.Machining.Bores[1].IsSelected = true;
+            Dialogs.Confirm(default!, default!).ReturnsForAnyArgs(false);
+            var savesBefore = Project.SaveCount;
+
+            vm.Machining.DeleteSelectedBoresCommand.Execute(null);
+
+            Project.Editor.DidNotReceiveWithAnyArgs().DeleteMachiningElements(default!);
+            Assert.Multiple(() =>
+            {
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
+                Assert.That(vm.Machining.Bores, Has.Count.EqualTo(3));
+                Assert.That(vm.Machining.Bores[1].IsSelected, Is.True);
+            });
+        }
+
+        [Test]
+        public void DeleteSelectedBores_Confirmed_DeletesOnlyThemSavesAndRebuilds()
+        {
+            var vm = OpenForDeletion();
+            var machining = vm.Machining;
+            machining.Bores[0].IsSelected = true;
+            machining.Bores[2].IsSelected = true;
+            machining.Grooves[1].IsSelected = true;
+            Dialogs.Confirm(default!, default!).ReturnsForAnyArgs(true);
+            const string deletedLine = "Deleted 2 bore(s) of part \"Shelf\" (id=1) from XNC id=5, 0 unused tool(s) removed";
+            Project.Editor.DeleteMachiningElements(default!).ReturnsForAnyArgs(_ =>
+            {
+                Project.XncPrograms = [ProgramForDeletion(200)];
+                return new OperationResult(true, [new LogEntry(LogLevel.Info, deletedLine)]);
+            });
+            var savesBefore = Project.SaveCount;
+            var logBefore = vm.Log.Text;
+
+            machining.DeleteSelectedBoresCommand.Execute(null);
+
+            Dialogs.Received(1).Confirm(Arg.Is<string>(m => m.StartsWith("Delete 2 selected bore(s)?")), Arg.Any<string>());
+            Project.Editor.Received(1).DeleteMachiningElements(Refs(
+                new XncElementRef(5, XncElementKind.Bore, 0),
+                new XncElementRef(5, XncElementKind.Bore, 2)));
+            Assert.Multiple(() =>
+            {
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore + 1));
+                Assert.That(machining.Bores.Select(row => row.Model.X), Is.EqualTo(new[] { 200d }));
+                Assert.That(vm.Log.Text[logBefore.Length..], Does.Match($"^{Regex.Escape(deletedLine)}, saved: [^\n]+\n$"), "one line, no empty row");
+            });
+        }
+
+        [Test]
+        public void DeleteSelectedBores_RemainingBoresUnselected_OtherTablesKeepTheirSelection()
+        {
+            var vm = OpenForDeletion();
+            var machining = vm.Machining;
+            machining.Bores[0].IsSelected = true;
+            machining.Bores[1].IsSelected = true;
+            machining.Grooves[1].IsSelected = true;
+            Dialogs.Confirm(default!, default!).ReturnsForAnyArgs(true);
+            Project.Editor.DeleteMachiningElements(default!)
+                .ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramForDeletion(100, 300)]));
+            var selectionChanges = 0;
+            machining.SelectionChanged += () => selectionChanges++;
+
+            machining.DeleteSelectedBoresCommand.Execute(null);
+
+            var regrooves = machining.Programs.Single().Groovings;
+            Assert.Multiple(() =>
+            {
+                Assert.That(machining.Bores.Select(row => row.IsSelected), Is.EqualTo(new[] { false, false }));
+                Assert.That(machining.Grooves.Select(row => row.IsSelected), Is.EqualTo(new[] { false, true }));
+                Assert.That(machining.IsSelected(regrooves[1]), Is.True, "the preview draws the kept groove red");
+                Assert.That(machining.IsSelected(regrooves[0]), Is.False);
+                Assert.That(selectionChanges, Is.GreaterThan(0));
+                Assert.That(machining.DeleteSelectedBoresCommand.CanExecute(null), Is.False);
+                Assert.That(machining.DeleteSelectedGroovesCommand.CanExecute(null), Is.True);
+            });
+        }
+
+        [Test]
+        public void DeleteSelectedGrooves_SendsGrooveIndicesOnly()
+        {
+            var vm = OpenForDeletion();
+            var machining = vm.Machining;
+            machining.Bores[0].IsSelected = true;
+            machining.Grooves[1].IsSelected = true;
+            Dialogs.Confirm(default!, default!).ReturnsForAnyArgs(true);
+
+            machining.DeleteSelectedGroovesCommand.Execute(null);
+
+            Project.Editor.Received(1).DeleteMachiningElements(Refs(new XncElementRef(5, XncElementKind.Groove, 1)));
+        }
+
+        [Test]
+        public void DeleteSelectedBores_WhenServiceRejects_KeepsRowsAndSavesNothing()
+        {
+            var vm = OpenForDeletion();
+            var rows = vm.Machining.Bores;
+            rows[0].IsSelected = true;
+            Dialogs.Confirm(default!, default!).ReturnsForAnyArgs(true);
+            Project.Editor.DeleteMachiningElements(default!).ReturnsForAnyArgs(_ => Project.Result(changed: false));
+            var savesBefore = Project.SaveCount;
+
+            vm.Machining.DeleteSelectedBoresCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(Project.SaveCount, Is.EqualTo(savesBefore));
+                Assert.That(vm.Machining.Bores, Is.SameAs(rows));
+                Assert.That(rows[0].IsSelected, Is.True);
             });
         }
     }

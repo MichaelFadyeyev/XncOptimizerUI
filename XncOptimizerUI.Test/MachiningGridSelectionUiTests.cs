@@ -1,3 +1,5 @@
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using XncOptimizerUI.MVVM.Models.Xnc;
 using XncOptimizerUI.MVVM.ViewModels.Machining;
@@ -8,7 +10,8 @@ namespace XncOptimizerUI.Test
     /// <summary>
     /// Drives the real bores <see cref="DataGrid"/> on <c>TestData/td-bores-displaying.project</c>:
     /// its selected rows and the rows' <see cref="ISelectableRow.IsSelected"/> (the part
-    /// preview's selection) follow each other both ways (<c>DataGridRowSelectionBehavior</c>).
+    /// preview's selection) follow each other both ways (<c>DataGridRowSelectionBehavior</c>); and the
+    /// bores table's Delete button in the real <see cref="SelectedPartProgramsTabs"/>.
     /// </summary>
     [TestFixture]
     public class MachiningGridSelectionUiTests : ProgramGridUiTestBase
@@ -102,5 +105,51 @@ namespace XncOptimizerUI.Test
                 window.Close();
             }
         }
+
+        [Test]
+        public void DeleteButton_DeletesTheSelectedBores_OtherTablesKeepTheirSelectedRows()
+        {
+            var vm = OpenProject("td-gr-ml-conversion.project");
+            var tabs = new SelectedPartProgramsTabs();
+            var (window, _) = Show(tabs, vm);
+            var boresGrid = InnerGrid(tabs, "SelectedPartBoresGrid", "BoresDataGrid");
+            var groovesGrid = InnerGrid(tabs, "SelectedPartGroovesGrid", "GroovesDataGrid");
+            var deleteBores = (Button)tabs.FindName("DeleteSelectedBoresButton");
+            var boresBefore = vm.Machining.Bores.Count;
+            Assume.That(boresBefore, Is.GreaterThanOrEqualTo(2));
+            Assume.That(vm.Machining.Grooves, Has.Count.GreaterThanOrEqualTo(2));
+
+            try
+            {
+                var enabledWithoutSelection = deleteBores.IsEnabled;
+                boresGrid.SelectedItems.Add(vm.Machining.Bores[0]);
+                groovesGrid.SelectedItems.Add(vm.Machining.Grooves[1]);
+                Pump();
+
+                ((IInvokeProvider)new ButtonAutomationPeer(deleteBores).GetPattern(PatternInterface.Invoke)).Invoke();
+                Pump();
+
+                var grooves = vm.Machining.Grooves;
+                Assert.Multiple(() =>
+                {
+                    Assert.That(enabledWithoutSelection, Is.False);
+                    Assert.That(vm.Machining.Bores, Has.Count.EqualTo(boresBefore - 1));
+                    Assert.That(boresGrid.SelectedItems, Is.Empty);
+                    Assert.That(vm.Machining.Bores.Any(row => row.IsSelected), Is.False);
+                    Assert.That(deleteBores.IsEnabled, Is.False);
+                    Assert.That(groovesGrid.ItemsSource, Is.SameAs(grooves), "rows rebuilt");
+                    Assert.That(groovesGrid.SelectedItems, Is.EqualTo(new object[] { grooves[1] }));
+                    Assert.That(vm.Machining.IsSelected(grooves[1].Model), Is.True);
+                });
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        /// <summary>The <c>DataGrid</c> <paramref name="gridName"/> of the table control <paramref name="controlName"/> in <paramref name="tabs"/>.</summary>
+        private static DataGrid InnerGrid(SelectedPartProgramsTabs tabs, string controlName, string gridName) =>
+            (DataGrid)((UserControl)tabs.FindName(controlName)).FindName(gridName);
     }
 }

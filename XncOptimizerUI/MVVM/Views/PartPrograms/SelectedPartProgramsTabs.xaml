@@ -2,6 +2,7 @@
     x:Class="XncOptimizerUI.MVVM.Views.PartPrograms.SelectedPartProgramsTabs"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:common="clr-namespace:XncOptimizerUI.MVVM.Views.Common"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:partPrograms="clr-namespace:XncOptimizerUI.MVVM.Views.PartPrograms"
@@ -24,20 +25,30 @@
                 VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="SelectedPartMachiningGrids">
 
-                    <!--  Bores  -->
-                    <Label
-                        x:Name="SelectedPartBoresLabel"
-                        Content="Bores"
-                        Style="{StaticResource SectionLabelStyle}"
-                        Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}" />
+                    <!--  Bores: header (name + Delete) and table  -->
+                    <common:TableHeader
+                        x:Name="SelectedPartBoresHeader"
+                        Header="Bores"
+                        Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}">
+                        <Button
+                            x:Name="DeleteSelectedBoresButton"
+                            Command="{Binding DeleteSelectedBoresCommand}"
+                            Content="Delete"
+                            ToolTip="Delete the selected bores and the tools no other element uses" />
+                    </common:TableHeader>
                     <partPrograms:SelectedPartBoresGrid x:Name="SelectedPartBoresGrid" Visibility="{Binding HasBores, Converter={StaticResource BoolToVis}}" />
 
-                    <!--  Grooves and the TCL column explanation  -->
-                    <Label
-                        x:Name="SelectedPartGroovesLabel"
-                        Content="Grooves"
-                        Style="{StaticResource SectionLabelStyle}"
-                        Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
+                    <!--  Grooves: header (name + Delete), table and the TCL column explanation  -->
+                    <common:TableHeader
+                        x:Name="SelectedPartGroovesHeader"
+                        Header="Grooves"
+                        Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}">
+                        <Button
+                            x:Name="DeleteSelectedGroovesButton"
+                            Command="{Binding DeleteSelectedGroovesCommand}"
+                            Content="Delete"
+                            ToolTip="Delete the selected grooves and the tools no other element uses" />
+                    </common:TableHeader>
                     <partPrograms:SelectedPartGroovesGrid x:Name="SelectedPartGroovesGrid" Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
                     <TextBlock
                         x:Name="SelectedPartGroovesTclExplanation"
@@ -45,28 +56,43 @@
                         Text="TCL is grooving tool to center line position"
                         Visibility="{Binding HasGrooves, Converter={StaticResource BoolToVis}}" />
 
-                    <!--  Milling contours  -->
-                    <Label
-                        x:Name="MillingContoursLabel"
-                        Content="Milling contours"
-                        Style="{StaticResource SectionLabelStyle}"
-                        Visibility="{Binding HasMillingContours, Converter={StaticResource BoolToVis}}" />
+                    <!--  Milling contours: header (name + Delete) and table  -->
+                    <common:TableHeader
+                        x:Name="MillingContoursHeader"
+                        Header="Milling contours"
+                        Visibility="{Binding HasMillingContours, Converter={StaticResource BoolToVis}}">
+                        <Button
+                            x:Name="DeleteSelectedMillingContoursButton"
+                            Command="{Binding DeleteSelectedMillingContoursCommand}"
+                            Content="Delete"
+                            ToolTip="Delete the selected milling contours (with their segments) and the tools no other element uses" />
+                    </common:TableHeader>
                     <partPrograms:MillingContoursGrid x:Name="MillingContoursGrid" Visibility="{Binding HasMillingContours, Converter={StaticResource BoolToVis}}" />
 
-                    <!--  Milling ellipses  -->
-                    <Label
-                        x:Name="MillingEllipsesLabel"
-                        Content="Milling ellipses"
-                        Style="{StaticResource SectionLabelStyle}"
-                        Visibility="{Binding HasMillingEllipses, Converter={StaticResource BoolToVis}}" />
+                    <!--  Milling ellipses: header (name + Delete) and table  -->
+                    <common:TableHeader
+                        x:Name="MillingEllipsesHeader"
+                        Header="Milling ellipses"
+                        Visibility="{Binding HasMillingEllipses, Converter={StaticResource BoolToVis}}">
+                        <Button
+                            x:Name="DeleteSelectedMillingEllipsesButton"
+                            Command="{Binding DeleteSelectedMillingEllipsesCommand}"
+                            Content="Delete"
+                            ToolTip="Delete the selected milling ellipses and the tools no other element uses" />
+                    </common:TableHeader>
                     <partPrograms:MillingEllipsesGrid x:Name="MillingEllipsesGrid" Visibility="{Binding HasMillingEllipses, Converter={StaticResource BoolToVis}}" />
 
-                    <!--  Milling rectangles  -->
-                    <Label
-                        x:Name="MillingRectanglesLabel"
-                        Content="Milling rectangles"
-                        Style="{StaticResource SectionLabelStyle}"
-                        Visibility="{Binding HasMillingRectangles, Converter={StaticResource BoolToVis}}" />
+                    <!--  Milling rectangles: header (name + Delete) and table  -->
+                    <common:TableHeader
+                        x:Name="MillingRectanglesHeader"
+                        Header="Milling rectangles"
+                        Visibility="{Binding HasMillingRectangles, Converter={StaticResource BoolToVis}}">
+                        <Button
+                            x:Name="DeleteSelectedMillingRectanglesButton"
+                            Command="{Binding DeleteSelectedMillingRectanglesCommand}"
+                            Content="Delete"
+                            ToolTip="Delete the selected milling rectangles and the tools no other element uses" />
+                    </common:TableHeader>
                     <partPrograms:MillingRectanglesGrid x:Name="MillingRectanglesGrid" Visibility="{Binding HasMillingRectangles, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
             </ScrollViewer>

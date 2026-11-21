@@ -58,5 +58,8 @@ namespace XncOptimizerUI.Services
         {
             MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
+
+        public bool Confirm(string message, string title = "Confirm") =>
+            MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 }

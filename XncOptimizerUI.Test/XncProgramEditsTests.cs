@@ -6,8 +6,8 @@ namespace XncOptimizerUI.Test
 {
     /// <summary>
     /// <see cref="Services.Xnc.XncProgramEdits"/> through <see cref="IProjectEditor.UpdateBore"/>,
-    /// <see cref="IProjectEditor.UpdateMachiningElement"/> and
-    /// <see cref="IProjectEditor.UpdateVariable"/>.
+    /// <see cref="IProjectEditor.UpdateMachiningElement"/>, <see cref="IProjectEditor.UpdateVariable"/>
+    /// and <see cref="IProjectEditor.DeleteMachiningElements"/>.
     /// </summary>
     [TestFixture]
     public class XncProgramEditsTests : ProjectServicesTestBase
@@ -493,6 +493,238 @@ namespace XncOptimizerUI.Test
             var log = string.Empty;
             Assert.That(service.Editor.UpdateVariable(operationId, 9, XncVariableAttribute.Comment, "x").Into(ref log), Is.False);
             Assert.That(log, Does.Contain("variable not found in the program."));
+        }
+
+        // --- Deleting elements (one program with every kind; Bore8 and Mill10 shared, Bore5 and Cut4 not) ---
+
+        private const string DeletionProgram = """
+            <program dx="600" dy="300" dz="18">
+              <tool name="Bore8" d="8" />
+              <tool name="Bore5" d="5" />
+              <tool name="Cut4" d="4" />
+              <tool name="Mill10" d="10" />
+              <var name="depth" type="double" expr="dz-8" />
+              <bf x="50" y="50" dp="depth" name="Bore8" />
+              <bl y="100" dp="20" m="true" name="Bore5" />
+              <bf x="100" y="50" dp="10" name="Bore8" />
+              <gr x1="-10" y1="50" x2="dx+10" y2="50" dp="4" t="4" c="0" p="0" name="Cut4" />
+              <ms x="20" y="20" dp="5" c="0" name="Mill10" />
+              <ml x="200" y="20" />
+              <mac x="220" y="40" cx="200" cy="40" dir="true" />
+              <ms x="20" y="80" dp="5" c="0" name="Mill10" />
+              <ml x="200" y="80" />
+              <me x="300" y="150" l="20" w="10" a="0" dp="5" c="3" name="Mill10" />
+              <mr x="450" y="150" l="100" w="40" a="0" r="0" dp="8" c="3" name="Mill10" />
+            </program>
+            """;
+
+        private static IEnumerable<string> SavedTags(XElement program) => program.Elements().Select(e => e.Name.LocalName);
+
+        private static IEnumerable<string?> SavedToolNames(XElement program) =>
+            program.Elements("tool").Select(t => t.Attribute("name")?.Value);
+
+        /// <summary>
+        /// A project with the <see cref="DeletionProgram"/> in XNC operation 1 machining product part 1 "Shelf"
+        /// and, for <paramref name="secondOperation"/>, in operation 2 machining part <paramref name="secondPartId"/> (2 = "Door").
+        /// </summary>
+        private ProjectServices OpenDeletionProject(bool secondOperation = false, int secondPartId = 2)
+        {
+            new XDocument(new XElement("project",
+                new XElement("good",
+                    new XAttribute("typeId", "product"),
+                    new XElement("part", new XAttribute("id", 1), new XAttribute("name", "Shelf")),
+                    new XElement("part", new XAttribute("id", 2), new XAttribute("name", "Door"))),
+                XncOperation(1, partId: 1),
+                secondOperation ? XncOperation(2, partId: secondPartId) : null)).Save(SingleProgramPath);
+            var service = CreateService();
+            service.Session.Open(SingleProgramPath);
+
+            return service;
+
+            static XElement XncOperation(int id, int partId) =>
+                new("operation",
+                    new XAttribute("typeId", "XNC"),
+                    new XAttribute("id", id),
+                    new XAttribute("program", DeletionProgram),
+                    new XElement("part", new XAttribute("id", partId)));
+        }
+
+        private (bool Result, string Log, XElement Saved) Delete(params XncElementRef[] elements)
+        {
+            var service = OpenDeletionProject();
+
+            var log = string.Empty;
+            var result = service.Editor.DeleteMachiningElements(elements).Into(ref log);
+            service.Session.Save();
+
+            return (result, log, ReadSavedProgram(SingleProgramPath, 1));
+        }
+
+        [Test]
+        public void DeleteMachiningElements_BoreWhoseToolIsStillUsed_KeepsTheTool()
+        {
+            var (result, log, saved) = Delete(new XncElementRef(1, XncElementKind.Bore, 2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(saved.Elements("bf").Select(b => b.Attribute("x")!.Value), Is.EqualTo(new[] { "50" }));
+                Assert.That(saved.Elements("bl").Count(), Is.EqualTo(1));
+                Assert.That(SavedToolNames(saved), Is.EqualTo(new[] { "Bore8", "Bore5", "Cut4", "Mill10" }));
+                Assert.That(log, Does.Contain("Deleted 1 bore(s) of part \"Shelf\" (id=1) from XNC id=1, 0 unused tool(s) removed"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_LastUsersOfTools_RemovesThoseTools()
+        {
+            // The first face bore, the edge bore and the second face bore: Bore8 and Bore5 lose every user.
+            var (result, log, saved) = Delete(
+                new XncElementRef(1, XncElementKind.Bore, 0),
+                new XncElementRef(1, XncElementKind.Bore, 1),
+                new XncElementRef(1, XncElementKind.Bore, 2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(saved.Elements().Any(e => e.Name.LocalName is "bf" or "bl"), Is.False);
+                Assert.That(SavedToolNames(saved), Is.EqualTo(new[] { "Cut4", "Mill10" }));
+                Assert.That(saved.Elements("var").Count(), Is.EqualTo(1), "a variable is never removed");
+                Assert.That(log, Does.Contain("Deleted 3 bore(s) of part \"Shelf\" (id=1) from XNC id=1, 2 unused tool(s) removed"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_Contour_RemovesItsSegmentsOnly()
+        {
+            var (result, log, saved) = Delete(new XncElementRef(1, XncElementKind.Contour, 0));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(
+                    SavedTags(saved).SkipWhile(tag => tag != "ms"),
+                    Is.EqualTo(new[] { "ms", "ml", "me", "mr" }));
+                Assert.That(saved.Element("ms")!.Attribute("y")!.Value, Is.EqualTo("80"));
+                Assert.That(SavedToolNames(saved), Does.Contain("Mill10"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_EveryMillOfTheTool_RemovesTheTool()
+        {
+            var (result, log, saved) = Delete(
+                new XncElementRef(1, XncElementKind.Contour, 0),
+                new XncElementRef(1, XncElementKind.Contour, 1),
+                new XncElementRef(1, XncElementKind.Ellipse, 0),
+                new XncElementRef(1, XncElementKind.Rectangle, 0));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(SavedTags(saved).Any(tag => tag is "ms" or "ml" or "mac" or "me" or "mr"), Is.False);
+                Assert.That(SavedToolNames(saved), Is.EqualTo(new[] { "Bore8", "Bore5", "Cut4" }));
+                Assert.That(log, Does.Contain("Deleted 2 contour(s), 1 ellipse(s), 1 rectangle(s) of part \"Shelf\" (id=1) from XNC id=1, 1 unused tool(s) removed"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_Groove_RemovesItAndItsTool()
+        {
+            var (result, log, saved) = Delete(new XncElementRef(1, XncElementKind.Groove, 0));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(saved.Elements("gr"), Is.Empty);
+                Assert.That(SavedToolNames(saved), Is.EqualTo(new[] { "Bore8", "Bore5", "Mill10" }));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_UnknownElement_RejectedAndUnchanged()
+        {
+            var service = OpenDeletionProject();
+            var before = ReadSavedProgram(SingleProgramPath, 1).ToString();
+
+            var log = string.Empty;
+            var result = service.Editor.DeleteMachiningElements(
+                [new XncElementRef(1, XncElementKind.Bore, 0), new XncElementRef(1, XncElementKind.Ellipse, 5)]).Into(ref log);
+            service.Session.Save();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("<me> not found in the program."));
+                Assert.That(ReadSavedProgram(SingleProgramPath, 1).ToString(), Is.EqualTo(before));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_FailureInOneProgram_LeavesEveryProgramUnchanged()
+        {
+            var service = OpenDeletionProject(secondOperation: true);
+
+            var log = string.Empty;
+            var result = service.Editor.DeleteMachiningElements(
+                [new XncElementRef(1, XncElementKind.Groove, 0), new XncElementRef(2, XncElementKind.Groove, 1)]).Into(ref log);
+            service.Session.Save();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.False);
+                Assert.That(log, Does.Contain("<gr> not found in the program."));
+                Assert.That(ReadSavedProgram(SingleProgramPath, 1).Elements("gr").Count(), Is.EqualTo(1));
+                Assert.That(ReadSavedProgram(SingleProgramPath, 2).Elements("gr").Count(), Is.EqualTo(1));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_InTwoProgramsOfOnePart_LogsOneLine()
+        {
+            var service = OpenDeletionProject(secondOperation: true, secondPartId: 1);
+
+            var log = string.Empty;
+            var result = service.Editor.DeleteMachiningElements(
+                [new XncElementRef(1, XncElementKind.Bore, 0), new XncElementRef(2, XncElementKind.Bore, 1), new XncElementRef(2, XncElementKind.Groove, 0)]).Into(ref log);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(log, Is.EqualTo("Deleted 2 bore(s), 1 groove(s) of part \"Shelf\" (id=1) from XNC id=1, id=2, 2 unused tool(s) removed\n"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_InTwoPrograms_LogsEachProgramWithItsPart()
+        {
+            var service = OpenDeletionProject(secondOperation: true);
+
+            var log = string.Empty;
+            var result = service.Editor.DeleteMachiningElements(
+                [new XncElementRef(1, XncElementKind.Groove, 0), new XncElementRef(2, XncElementKind.Bore, 1)]).Into(ref log);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.True, log);
+                Assert.That(log, Does.Contain("Deleted 1 groove(s) of part \"Shelf\" (id=1) from XNC id=1, 1 unused tool(s) removed"));
+                Assert.That(log, Does.Contain("Deleted 1 bore(s) of part \"Door\" (id=2) from XNC id=2, 1 unused tool(s) removed"));
+            });
+        }
+
+        [Test]
+        public void DeleteMachiningElements_NothingOrUnknownOperation_Rejected()
+        {
+            var service = OpenDeletionProject();
+
+            var log = string.Empty;
+            Assert.Multiple(() =>
+            {
+                Assert.That(service.Editor.DeleteMachiningElements([]).Into(ref log), Is.False);
+                Assert.That(service.Editor.DeleteMachiningElements([new XncElementRef(9, XncElementKind.Bore, 0)]).Into(ref log), Is.False);
+                Assert.That(log, Does.Contain("No elements to delete."));
+                Assert.That(log, Does.Contain("XNC operation id=9 not found."));
+            });
         }
     }
 }

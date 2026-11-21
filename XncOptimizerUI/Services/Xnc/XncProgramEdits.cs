@@ -1,25 +1,29 @@
 using System.Xml.Linq;
 using XncOptimizerUI.Extensions;
 using XncOptimizerUI.MVVM.Models.Xnc;
+using XncOptimizerUI.Services.Xnc.Conversions;
 using static XncOptimizerUI.Services.Xnc.XncSymbols;
 
 namespace XncOptimizerUI.Services.Xnc
 {
     /// <summary>
     /// Single-attribute edits of a decoded XNC program made from the program tables: bore, groove and
-    /// mill coordinates/depth/sizes and <c>&lt;var&gt;</c> name/type/expr/comment. An unacceptable value
-    /// throws <see cref="XncProgramFormatException"/> with the reason, before anything is changed.
+    /// mill coordinates/depth/sizes, <c>&lt;var&gt;</c> name/type/expr/comment, and deleting bores, grooves
+    /// and mills. An unacceptable value throws <see cref="XncProgramFormatException"/> with the reason,
+    /// before anything is changed.
     /// </summary>
     internal static class XncProgramEdits
     {
+        /// <summary>What <see cref="DeleteElements"/> removed: the elements and the tools left unused.</summary>
+        internal readonly record struct DeletedElements(int Elements, int Tools);
+
         /// <summary>
         /// Writes <paramref name="expression"/> (trimmed, as typed) to the bore's attribute; an
         /// explicit <c>z</c> replaces the <c>m="true"</c> middle pin.
         /// </summary>
         public static void SetBoreAttribute(XElement program, int boreIndex, MachiningAttribute attribute, string expression)
         {
-            var bore = program.Elements().Where(e => XncTags.IsBore(e.Name.LocalName)).ElementAtOrDefault(boreIndex)
-                ?? throw new XncProgramFormatException("bore not found in the program.");
+            var bore = FindElement(program, XncElementKind.Bore, boreIndex);
             var surface = BoreAttributes.SurfaceOf(bore.Name.LocalName)!.Value;
 
             if (!attribute.AppliesTo(surface))
@@ -42,13 +46,11 @@ namespace XncOptimizerUI.Services.Xnc
         /// </summary>
         public static void SetElementAttribute(XElement program, XncElementKind kind, int index, MachiningAttribute attribute, string expression)
         {
-            var tag = TagOf(kind);
-            var element = program.Elements(tag).ElementAtOrDefault(index)
-                ?? throw new XncProgramFormatException($"<{tag}> not found in the program.");
+            var element = FindElement(program, kind, index);
 
             if (!kind.EditableAttributes().Contains(attribute))
             {
-                throw new XncProgramFormatException($"<{tag}> has no editable '{attribute.XmlName()}' attribute.");
+                throw new XncProgramFormatException($"<{element.Name.LocalName}> has no editable '{attribute.XmlName()}' attribute.");
             }
 
             WriteExpression(program, element, attribute, expression);
@@ -68,8 +70,42 @@ namespace XncOptimizerUI.Services.Xnc
             }
         }
 
+        /// <summary>
+        /// Removes the elements of <paramref name="kind"/> at <paramref name="indices"/> (positions as
+        /// <see cref="XncElementRef.Index"/>; a contour takes its segments along), then the tools they
+        /// used that no remaining element references. Every index is resolved before anything is
+        /// removed, so an unknown one throws and leaves the program unchanged.
+        /// </summary>
+        public static DeletedElements DeleteElements(XElement program, XncElementKind kind, IEnumerable<int> indices)
+        {
+            var heads = indices
+                .Distinct()
+                .Select(index => FindElement(program, kind, index))
+                .ToList();
+
+            heads
+                .SelectMany(head => ContourSegmentsOf(head).Prepend(head))
+                .ToList()
+                .ForEach(element => element.Remove());
+
+            var toolsRemoved = ConversionTools.RemoveUnreferenced(program, ConversionTools.NamesUsedBy(heads));
+
+            return new DeletedElements(heads.Count, toolsRemoved);
+        }
+
         #region Methods
 
+        /// <summary>The <paramref name="index"/>-th element of <paramref name="kind"/> in document order (see <see cref="XncElementRef.Index"/>).</summary>
+        private static XElement FindElement(XElement program, XncElementKind kind, int index) =>
+            program.Elements().Where(element => IsOfKind(element, kind)).ElementAtOrDefault(index)
+                ?? throw new XncProgramFormatException($"{(kind == XncElementKind.Bore ? "bore" : $"<{TagOf(kind)}>")} not found in the program.");
+
+        private static bool IsOfKind(XElement element, XncElementKind kind) =>
+            kind == XncElementKind.Bore
+                ? XncTags.IsBore(element.Name.LocalName)
+                : element.Name.LocalName == TagOf(kind);
+
+        /// <summary>The one tag of a groove or mill head kind (a bore has five, see <see cref="XncTags.IsBore"/>).</summary>
         private static string TagOf(XncElementKind kind) => kind switch
         {
             XncElementKind.Groove => XncTags.Groove,
@@ -78,6 +114,12 @@ namespace XncOptimizerUI.Services.Xnc
             XncElementKind.Rectangle => XncTags.Rectangle,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
+
+        /// <summary>The segments continuing a <c>&lt;ms&gt;</c> contour head; none for any other element.</summary>
+        private static IEnumerable<XElement> ContourSegmentsOf(XElement head) =>
+            head.Name.LocalName == XncTags.ContourStart
+                ? head.ElementsAfterSelf().TakeWhile(XncMillElements.IsContourSegment)
+                : [];
 
         /// <summary>Checks <paramref name="expression"/> against the element's symbols and range, then writes it trimmed.</summary>
         private static void WriteExpression(XElement program, XElement element, MachiningAttribute attribute, string expression)

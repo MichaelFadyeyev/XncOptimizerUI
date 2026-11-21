@@ -55,5 +55,14 @@ namespace XncOptimizerUI.Contracts
         /// <c>string</c>/<c>bool</c>); an empty comment removes the attribute.
         /// </summary>
         OperationResult UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value);
+
+        /// <summary>
+        /// Deletes <paramref name="elements"/> (bores, grooves, mills - a contour with its segments) from
+        /// their programs, then every tool they used that no remaining element of the same program uses.
+        /// All programs are edited before any is written back, so an element that is not found leaves
+        /// the document unchanged. <c>countBore</c> is not recalculated. Logs one entry per part, which a
+        /// caller can complete (e.g. with the save time).
+        /// </summary>
+        OperationResult DeleteMachiningElements(IReadOnlyList<XncElementRef> elements);
     }
 }

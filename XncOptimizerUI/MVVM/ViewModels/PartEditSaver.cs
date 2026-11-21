@@ -32,18 +32,38 @@ namespace XncOptimizerUI.MVVM.ViewModels
         /// edit of the part, and saves the file in place; logs <paramref name="description"/> with the
         /// save outcome. Returns <c>false</c> when the edit changed nothing.
         /// </summary>
-        public bool SaveWithPendingEdits(PartVM part, Func<OperationResult> edit, string description)
+        public bool SaveWithPendingEdits(PartVM part, Func<OperationResult> edit, string description) =>
+            SaveWithPendingEdits(part, edit, result =>
+            {
+                log.Append(result);
+                return description;
+            });
+
+        /// <summary>
+        /// As <see cref="SaveWithPendingEdits(PartVM, Func{OperationResult}, string)"/>, for an edit whose
+        /// result describes it: its log becomes the save line, e.g. <c>Deleted 2 bore(s) ..., saved: time</c>.
+        /// An edit that changed nothing logs its result as it is.
+        /// </summary>
+        public bool SaveDescribedEdit(PartVM part, Func<OperationResult> edit) =>
+            SaveWithPendingEdits(part, edit, result => result.MessageText);
+
+        /// <summary>
+        /// Applies <paramref name="edit"/> with any pending grid edit of <paramref name="part"/>; when it
+        /// changed something, saves in place and logs <paramref name="describe"/>'s text with the save outcome.
+        /// </summary>
+        private bool SaveWithPendingEdits(PartVM part, Func<OperationResult> edit, Func<OperationResult, string> describe)
         {
             log.Append(project.Editor.UpdatePart(part.Part));
 
             var result = edit();
 
-            log.Append(result);
-
             if (!result.Changed)
             {
+                log.Append(result);
                 return false;
             }
+
+            var description = describe(result);
 
             try
             {

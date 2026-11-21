@@ -22,5 +22,8 @@ namespace XncOptimizerUI.Contracts
         void ShowWarning(string message, string title = "Warning");
 
         void ShowError(string message, string title = "Error");
+
+        /// <returns><c>true</c> when the user answered Yes; No (the default button) or closing the box is <c>false</c>.</returns>
+        bool Confirm(string message, string title = "Confirm");
     }
 }

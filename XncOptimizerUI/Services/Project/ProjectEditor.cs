@@ -8,7 +8,10 @@ using XncOptimizerUI.Services.Xnc;
 
 namespace XncOptimizerUI.Services.Project
 {
-    /// <summary>In-place edits of the open project: parts, part rotation, and bore / variable attributes of an XNC program.</summary>
+    /// <summary>
+    /// In-place edits of the open project: parts, part rotation, bore / groove / mill / variable attributes
+    /// of an XNC program, and deleting bores, grooves and mills.
+    /// </summary>
     public sealed class ProjectEditor(ProjectDocument document, ProjectReader reader) : IProjectEditor
     {
         private readonly PartUpdater _partUpdater = new(document, reader);
@@ -61,7 +64,98 @@ namespace XncOptimizerUI.Services.Project
         public OperationResult UpdateVariable(int operationId, int variableIndex, XncVariableAttribute attribute, string value) =>
             EditProgram(operationId, $"Variable #{variableIndex + 1}", program => XncProgramEdits.SetVariableAttribute(program, variableIndex, attribute, value));
 
+        /// <summary>All programs are edited first and only then written back, so a failing one leaves the document untouched.</summary>
+        public OperationResult DeleteMachiningElements(IReadOnlyList<XncElementRef> elements)
+        {
+            var log = new OperationLog();
+
+            if (!document.IsOpen)
+            {
+                return log.Fail("No project is opened.");
+            }
+
+            if (elements.Count == 0)
+            {
+                return log.Fail("No elements to delete.");
+            }
+
+            List<ProgramDeletion> deletions;
+
+            try
+            {
+                deletions = [.. elements.GroupBy(element => element.OperationId).Select(DeleteFromProgram)];
+            }
+            catch (Exception e)
+            {
+                return log.Fail($"Deleting failed: {e.Message}");
+            }
+
+            deletions.ForEach(deletion => XncProgramText.Write(deletion.Operation, deletion.Program));
+            deletions
+                .GroupBy(deletion => deletion.Part)
+                .ToList()
+                .ForEach(part => log.Info(DescribeDeletion(part.Key, [.. part])));
+
+            return log.Changed();
+        }
+
         #region Methods
+
+        /// <summary>
+        /// One XNC operation's program with elements deleted (not yet written back): the part it machines
+        /// (<c>"name" (id=…)</c>), the deleted element count per kind and the tools removed.
+        /// </summary>
+        private sealed record ProgramDeletion(XElement Operation, string Program, string Part, IReadOnlyList<(XncElementKind Kind, int Count)> Deleted, int Tools);
+
+        /// <summary>The program of one XNC operation with its <paramref name="elements"/> deleted (not yet written back).</summary>
+        private ProgramDeletion DeleteFromProgram(IGrouping<int, XncElementRef> elements)
+        {
+            var operation = FindXncOperation(elements.Key);
+            var programDocument = XncProgramText.Load(operation);
+            var program = XncProgramText.Root(programDocument);
+
+            var deleted = elements
+                .GroupBy(element => element.Kind)
+                .Select(kind => (kind.Key, Result: XncProgramEdits.DeleteElements(program, kind.Key, kind.Select(e => e.Index))))
+                .ToList();
+
+            return new ProgramDeletion(
+                operation,
+                XncProgramText.Serialize(programDocument),
+                DescribePart(operation),
+                [.. deleted.Select(d => (d.Key, d.Result.Elements))],
+                deleted.Sum(d => d.Result.Tools));
+        }
+
+        /// <summary>
+        /// One log line for the deletions in the programs of one part, e.g.
+        /// <c>Deleted 2 bore(s) of part "Shelf" (id=1) from XNC id=4, 1 unused tool(s) removed</c>.
+        /// </summary>
+        private static string DescribeDeletion(string part, IReadOnlyList<ProgramDeletion> deletions)
+        {
+            var counts = deletions
+                .SelectMany(deletion => deletion.Deleted)
+                .GroupBy(deleted => deleted.Kind)
+                .OrderBy(kind => kind.Key)
+                .Select(kind => $"{kind.Sum(deleted => deleted.Count)} {kind.Key.DisplayName().ToLowerInvariant()}(s)");
+            var operationIds = deletions.Select(deletion => deletion.Operation.GetIdValue());
+
+            return $"Deleted {string.Join(", ", counts)} of part {part} from XNC id={string.Join(", id=", operationIds)}, "
+                + $"{deletions.Sum(deletion => deletion.Tools)} unused tool(s) removed";
+        }
+
+        /// <summary>The part machined by <paramref name="operation"/>, as <c>"name" (id=…)</c> like the batch logs.</summary>
+        private string DescribePart(XElement operation)
+        {
+            var partId = operation.GetPart()?.GetIdIntValue();
+            var name = document.ProductParts().FirstOrDefault(part => part.GetIdIntValue() == partId)?.GetNameValue();
+
+            return $"\"{name}\" (id={partId})";
+        }
+
+        private XElement FindXncOperation(int operationId) =>
+            document.XncOperations().FirstOrDefault(o => o.GetIdValue() == operationId.ToString(CultureInfo.InvariantCulture))
+                ?? throw new XncProgramFormatException($"XNC operation id={operationId} not found.");
 
         /// <summary>
         /// Applies <paramref name="edit"/> to the program of XNC operation <paramref name="operationId"/>

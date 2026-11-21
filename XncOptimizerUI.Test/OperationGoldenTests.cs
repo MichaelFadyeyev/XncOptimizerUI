@@ -159,6 +159,14 @@ namespace XncOptimizerUI.Test
                 EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Name, "holeDepth").Into(ref log)));
             yield return new("edit-variable-expr_bore-depth-variable", "td-bore-depth-variable.project",
                 EditFirstProgram((s, ref log, operationId) => s.Editor.UpdateVariable(operationId, 0, XncVariableAttribute.Expr, "dz+4").Into(ref log)));
+
+            // Deleting selected table rows (saved in place)
+            yield return new("delete-bores_gr-ml-conversion", "td-gr-ml-conversion.project",
+                EditFirstProgram((s, ref log, operationId) => s.Editor.DeleteMachiningElements(
+                    [.. Enumerable.Range(0, 4).Select(i => new XncElementRef(operationId, XncElementKind.Bore, i))]).Into(ref log)));
+            yield return new("delete-contours_mills-optimization", "td-mills-optimization.project",
+                EditFirstProgram((s, ref log, operationId) => s.Editor.DeleteMachiningElements(
+                    [new(operationId, XncElementKind.Contour, 1), new(operationId, XncElementKind.Contour, 4)]).Into(ref log)));
         }
 
         private static bool SplitFirstPart(ProjectServices service, ref string log, List<Part> parts)

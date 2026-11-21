@@ -65,7 +65,7 @@ namespace XncOptimizerUI.Test
             }
         }
 
-        /// <summary>Opens a copy of <paramref name="fixture"/>; the first part is selected.</summary>
+        /// <summary>Opens a copy of <paramref name="fixture"/>; the first part is selected and every confirmation is answered Yes.</summary>
         protected AppViewModel OpenProject(string fixture)
         {
             var path = CopyFixture(fixture);
@@ -74,6 +74,7 @@ namespace XncOptimizerUI.Test
             config.SawWidth.Returns(4m);
             var dialogs = Substitute.For<IDialogService>();
             dialogs.ShowOpenProjectDialog().Returns(path);
+            dialogs.Confirm(default!, default!).ReturnsForAnyArgs(true);
 
             config.LabelsToProcess.Returns(["label"]);
             config.GetLastLabelToProcessSelected().Returns("label");
@@ -87,6 +88,14 @@ namespace XncOptimizerUI.Test
         /// <summary>Shows <paramref name="control"/> below an "outside" button; returns its grid named <paramref name="gridName"/>.</summary>
         protected static (Window Window, DataGrid Grid, Button Outside) Show(UserControl control, AppViewModel vm, string gridName)
         {
+            var (window, outside) = Show(control, vm);
+
+            return (window, (DataGrid)control.FindName(gridName), outside);
+        }
+
+        /// <summary>Shows <paramref name="control"/>, bound to the machining view model, below an "outside" button.</summary>
+        protected static (Window Window, Button Outside) Show(UserControl control, AppViewModel vm)
+        {
             control.DataContext = vm.Machining;
             var outside = new Button { Content = "outside" };
             var panel = new StackPanel();
@@ -98,7 +107,7 @@ namespace XncOptimizerUI.Test
             window.Activate();
             Pump();
 
-            return (window, (DataGrid)control.FindName(gridName), outside);
+            return (window, outside);
         }
 
         /// <summary>Puts the cell of <paramref name="item"/> in <paramref name="column"/> into edit mode.</summary>

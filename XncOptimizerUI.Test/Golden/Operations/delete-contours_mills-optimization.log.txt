@@ -1,0 +1,5 @@
+result: True
+output: td-mills-optimization.project
+---
+Deleted 2 contour(s) of part "as-is" (id=1) from XNC id=4, 0 unused tool(s) removed
+

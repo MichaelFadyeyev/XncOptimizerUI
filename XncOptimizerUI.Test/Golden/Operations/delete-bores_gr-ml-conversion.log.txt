@@ -1,0 +1,5 @@
+result: True
+output: td-gr-ml-conversion.project
+---
+Deleted 4 bore(s) of part "512.07.01.ПАН-640" (id=1) from XNC id=4, 1 unused tool(s) removed
+

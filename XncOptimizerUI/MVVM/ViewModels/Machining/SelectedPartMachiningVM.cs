@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.Helpers;
 using XncOptimizerUI.MVVM.Models.Xnc;
@@ -9,7 +10,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// The XNC programs of the selected part: the program tables (bores, grooves, mills, tools,
-    /// variables), the rows selected in them, the "XNC List" text, and the in-cell bore, groove, mill and
+    /// variables), the rows selected in them, the "XNC List" text, deleting the selected bores, grooves
+    /// or mills of one table, and the in-cell bore, groove, mill and
     /// variable edits, which are written to the program and saved in place.
     /// </summary>
     public sealed partial class SelectedPartMachiningVM : ObservableObject
@@ -18,6 +20,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private readonly ProjectWorkspace _workspace;
         private readonly PartsListVM _parts;
         private readonly PartEditSaver _saver;
+        private readonly IDialogService _dialogs;
 
         // The part the program tables were last built for: a rebuild for the same part keeps the
         // selected rows (see Show).
@@ -27,12 +30,13 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private bool _isBatchingSelection;
         private bool _isSelectionChangePending;
 
-        public SelectedPartMachiningVM(ProjectServices project, ProjectWorkspace workspace, PartsListVM parts, PartEditSaver saver)
+        public SelectedPartMachiningVM(ProjectServices project, ProjectWorkspace workspace, PartsListVM parts, PartEditSaver saver, IDialogService dialogs)
         {
             _project = project;
             _workspace = workspace;
             _parts = parts;
             _saver = saver;
+            _dialogs = dialogs;
 
             _parts.SelectedPartChanged += Refresh;
         }
@@ -63,6 +67,16 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         public bool HasMillingEllipses => MillingEllipses.Count > 0;
 
         public bool HasMillingRectangles => MillingRectangles.Count > 0;
+
+        public bool HasSelectedBores => HasSelectedRow(Bores);
+
+        public bool HasSelectedGrooves => HasSelectedRow(Grooves);
+
+        public bool HasSelectedMillingContours => HasSelectedRow(MillingContours);
+
+        public bool HasSelectedMillingEllipses => HasSelectedRow(MillingEllipses);
+
+        public bool HasSelectedMillingRectangles => HasSelectedRow(MillingRectangles);
         #endregion
 
         #region ObservableProperties
@@ -134,19 +148,35 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private IReadOnlyList<XncProgram> _programs = [];
         #endregion
 
+        #region Commands
+        [RelayCommand(CanExecute = nameof(HasSelectedBores))]
+        private void DeleteSelectedBores() =>
+            DeleteSelected(XncElementKind.Bore, Bores, bore => bore.Index);
+
+        [RelayCommand(CanExecute = nameof(HasSelectedGrooves))]
+        private void DeleteSelectedGrooves() =>
+            DeleteSelected(XncElementKind.Groove, Grooves, element => element.Source.Index);
+
+        [RelayCommand(CanExecute = nameof(HasSelectedMillingContours))]
+        private void DeleteSelectedMillingContours() =>
+            DeleteSelected(XncElementKind.Contour, MillingContours, element => element.Source.Index);
+
+        [RelayCommand(CanExecute = nameof(HasSelectedMillingEllipses))]
+        private void DeleteSelectedMillingEllipses() =>
+            DeleteSelected(XncElementKind.Ellipse, MillingEllipses, element => element.Source.Index);
+
+        [RelayCommand(CanExecute = nameof(HasSelectedMillingRectangles))]
+        private void DeleteSelectedMillingRectangles() =>
+            DeleteSelected(XncElementKind.Rectangle, MillingRectangles, element => element.Source.Index);
+        #endregion
+
         #region Methods
         /// <summary>
         /// Re-reads the XNC programs of <paramref name="part"/> and rebuilds everything derived
         /// from them: the programs text, the program tables and (through <see cref="ProgramsRead"/>)
         /// the preview.
         /// </summary>
-        public void Refresh(PartVM? part)
-        {
-            var (programs, readError) = ReadPrograms(part);
-
-            Show(part, programs, readError);
-            Variables = BuildVariableRows(programs);
-        }
+        public void Refresh(PartVM? part) => Rebuild(part, clearedTable: null);
 
         /// <summary>Whether the row showing <paramref name="element"/> (a bore, groove or mill, by reference) is selected.</summary>
         public bool IsSelected(object element) =>
@@ -176,6 +206,58 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         public void ClearSelection() =>
             BatchSelection(() => ElementRows().ToList().ForEach(row => row.IsSelected = false));
 
+        /// <summary>
+        /// Re-reads the programs of <paramref name="part"/> and rebuilds every table and the preview, as
+        /// <see cref="Refresh"/>; the rows of <paramref name="clearedTable"/> (one of <see cref="ElementTables"/>)
+        /// come back unselected.
+        /// </summary>
+        private void Rebuild(PartVM? part, IReadOnlyList<ISelectableRow>? clearedTable)
+        {
+            var (programs, readError) = ReadPrograms(part);
+
+            Show(part, programs, readError, clearedTable);
+            Variables = BuildVariableRows(programs);
+        }
+
+        /// <summary>
+        /// Deletes the selected <paramref name="rows"/> of one table (elements of <paramref name="kind"/>,
+        /// program position by <paramref name="index"/>) once the user confirms, saves the file in place
+        /// and rebuilds the tables: the deleted table's remaining rows unselected, every other table
+        /// keeping its selection (its elements are unchanged, so its row positions still match).
+        /// </summary>
+        private void DeleteSelected<TModel>(
+            XncElementKind kind,
+            IReadOnlyList<MachiningElementRowVM<TModel>> rows,
+            Func<TModel, int> index)
+            where TModel : IXncMachiningElement
+        {
+            var part = _parts.SelectedPart;
+            var selected = rows.Where(row => row.IsSelected).ToList();
+
+            if (part is null || !_workspace.IsOpen || selected.Count == 0)
+            {
+                return;
+            }
+
+            var subject = $"{selected.Count} selected {kind.DisplayName().ToLowerInvariant()}(s)";
+
+            if (!_dialogs.Confirm($"Delete {subject}?\nTools no other element uses are deleted too.", "Delete"))
+            {
+                return;
+            }
+
+            var elements = selected
+                .Select(row => new XncElementRef(row.OperationId, kind, index(row.Model)))
+                .ToList();
+
+            if (_saver.SaveDescribedEdit(part, () => _project.Editor.DeleteMachiningElements(elements)))
+            {
+                Rebuild(part, rows);
+            }
+        }
+
+        private static bool HasSelectedRow(IEnumerable<ISelectableRow> rows) => rows.Any(row => row.IsSelected);
+
         private (IReadOnlyList<XncProgram> Programs, string? ReadError) ReadPrograms(PartVM? part)
         {
             if (part is null || !_workspace.IsOpen)
@@ -196,11 +278,12 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// <summary>
         /// Programs text, preview and every program table but the variables. Rebuilt for the part
         /// already shown (rotation, variable edit), each table keeps its selected row positions
-        /// while its row count is unchanged; another part starts with nothing selected.
+        /// while its row count is unchanged - except <paramref name="clearedTable"/>, which comes back
+        /// unselected; another part starts with nothing selected.
         /// </summary>
-        private void Show(PartVM? part, IReadOnlyList<XncProgram> programs, string? readError)
+        private void Show(PartVM? part, IReadOnlyList<XncProgram> programs, string? readError, IReadOnlyList<ISelectableRow>? clearedTable = null)
         {
-            var keptSelection = ReferenceEquals(part, _shownPart) ? SelectedPositions() : [];
+            var keptSelection = ReferenceEquals(part, _shownPart) ? SelectedPositions(clearedTable) : [];
             _shownPart = part;
 
             ShowPrograms(part, programs, readError);
@@ -221,11 +304,16 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         private IEnumerable<ISelectableRow> ElementRows() => ElementTables().SelectMany(rows => rows);
 
-        /// <summary>Per table (see <see cref="ElementTables"/>), its row count and selected row positions.</summary>
-        private List<(int Count, List<int> Selected)> SelectedPositions() =>
+        /// <summary>
+        /// Per table (see <see cref="ElementTables"/>), its row count and selected row positions; none for
+        /// <paramref name="clearedTable"/>.
+        /// </summary>
+        private List<(int Count, List<int> Selected)> SelectedPositions(IReadOnlyList<ISelectableRow>? clearedTable) =>
             [.. ElementTables().Select(rows => (
                 rows.Count,
-                rows.Select((row, i) => (row, i)).Where(entry => entry.row.IsSelected).Select(entry => entry.i).ToList()))];
+                ReferenceEquals(rows, clearedTable)
+                    ? []
+                    : rows.Select((row, i) => (row, i)).Where(entry => entry.row.IsSelected).Select(entry => entry.i).ToList()))];
 
         /// <summary>Selects the <paramref name="kept"/> rows of the rebuilt tables and tells the preview the rows changed.</summary>
         private void RestoreSelection(List<(int Count, List<int> Selected)> kept) => BatchSelection(() =>
@@ -269,7 +357,18 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             }
 
             _isSelectionChangePending = false;
+            NotifyDeleteCommands();
             SelectionChanged?.Invoke();
+        }
+
+        /// <summary>Each table's Delete is enabled while that table has a selected row.</summary>
+        private void NotifyDeleteCommands()
+        {
+            DeleteSelectedBoresCommand.NotifyCanExecuteChanged();
+            DeleteSelectedGroovesCommand.NotifyCanExecuteChanged();
+            DeleteSelectedMillingContoursCommand.NotifyCanExecuteChanged();
+            DeleteSelectedMillingEllipsesCommand.NotifyCanExecuteChanged();
+            DeleteSelectedMillingRectanglesCommand.NotifyCanExecuteChanged();
         }
 
         /// <summary>Follows the selection of every row of <paramref name="rows"/>.</summary>
