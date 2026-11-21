@@ -42,11 +42,11 @@ namespace XncOptimizerUI.MVVM.ViewModels.Preview
             _neverFlipTclOnTurn = config.NeverFlipTclOnTurn;
 
             _machining.ProgramsRead += Show;
-            _machining.HighlightChanged += () => HighlightChanged?.Invoke();
+            _machining.SelectionChanged += () => SelectionChanged?.Invoke();
         }
 
         /// <summary>Raised when the bores, grooves or mills selected in the program tables changed.</summary>
-        public event Action? HighlightChanged;
+        public event Action? SelectionChanged;
 
         #region Properties
         /// <summary>
@@ -139,13 +139,13 @@ namespace XncOptimizerUI.MVVM.ViewModels.Preview
 
         #region Methods
         /// <summary>Whether <paramref name="element"/> (a bore, groove or mill of <see cref="Programs"/>) is selected in its table.</summary>
-        public bool IsElementHighlighted(object element) => _machining.IsHighlighted(element);
+        public bool IsElementSelected(object element) => _machining.IsSelected(element);
 
-        /// <summary>Selects <paramref name="element"/>'s table row as a click on it does (see <see cref="HighlightMode"/>).</summary>
-        public void HighlightElement(object element, HighlightMode mode) => _machining.Highlight(element, mode);
+        /// <summary>Selects <paramref name="element"/>'s table row as a click on it does (see <see cref="ElementSelectionMode"/>).</summary>
+        public void SelectElement(object element, ElementSelectionMode mode) => _machining.SelectElement(element, mode);
 
         /// <summary>Deselects every bore, groove and mill.</summary>
-        public void ClearHighlight() => _machining.ClearHighlight();
+        public void ClearSelection() => _machining.ClearSelection();
 
         /// <summary>
         /// Sets the display dimensions and turn readout from the part's XNC programs: the first

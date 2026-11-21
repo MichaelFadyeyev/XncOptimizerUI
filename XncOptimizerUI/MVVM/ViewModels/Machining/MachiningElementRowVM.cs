@@ -19,7 +19,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// (<see cref="ICellEditableRow"/>): a commit hands every changed, valid draft to the owner,
     /// which writes it to the program, and is refused while any cell is invalid.
     /// </summary>
-    public abstract partial class MachiningElementRowVM<TModel> : ObservableObject, ICellEditableRow, IHighlightableRow
+    public abstract partial class MachiningElementRowVM<TModel> : ObservableObject, ICellEditableRow, ISelectableRow
         where TModel : IXncMachiningElement
     {
         private readonly Func<TModel, IEnumerable<ExpressionCellValue>> _cellValues;
@@ -74,7 +74,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
         /// <summary>Whether the row is selected in its table, which draws its element red in the preview.</summary>
         [ObservableProperty]
-        private bool _isHighlighted;
+        private bool _isSelected;
 
         #endregion
 

@@ -118,7 +118,7 @@ namespace XncOptimizerUI.Test
         [Test]
         public void AttachSelection_reportsAClickOnAClickTargetWithItsElement()
         {
-            var clicks = new List<(object Element, HighlightMode Mode)>();
+            var clicks = new List<(object Element, ElementSelectionMode Mode)>();
             var selection = new PreviewSelection(_ => false, (element, mode) => clicks.Add((element, mode)));
             var layer = new List<UIElement>();
             var sink = new OverlayShapeSink(Tag, Brushes.Navy);
@@ -129,7 +129,7 @@ namespace XncOptimizerUI.Test
 
             Assert.Multiple(() =>
             {
-                Assert.That(clicks, Is.EqualTo(new[] { (Tag.Element, HighlightMode.Replace) }));
+                Assert.That(clicks, Is.EqualTo(new[] { (Tag.Element, ElementSelectionMode.Replace) }));
                 Assert.That(handled, Is.True);
             });
         }

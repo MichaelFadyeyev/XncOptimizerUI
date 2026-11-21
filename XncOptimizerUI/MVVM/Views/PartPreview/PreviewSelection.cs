@@ -10,7 +10,7 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
     /// drawn element registers how to restyle itself; <see cref="Refresh"/> restyles them all
     /// when the selection changes.
     /// </summary>
-    internal sealed class PreviewSelection(Func<object, bool> isSelected, Action<object, HighlightMode> select)
+    internal sealed class PreviewSelection(Func<object, bool> isSelected, Action<object, ElementSelectionMode> select)
     {
         private readonly List<(object Element, Action<bool> Apply)> _elements = [];
 
@@ -18,10 +18,10 @@ namespace XncOptimizerUI.MVVM.Views.PartPreview
         public static PreviewSelection None() => new(_ => false, (_, _) => { });
 
         /// <summary>How a click with <paramref name="modifiers"/> held changes the selection: Ctrl toggles, Shift adds, else selects only the element.</summary>
-        public static HighlightMode ModeFor(ModifierKeys modifiers) =>
-            modifiers.HasFlag(ModifierKeys.Control) ? HighlightMode.Toggle
-            : modifiers.HasFlag(ModifierKeys.Shift) ? HighlightMode.Add
-            : HighlightMode.Replace;
+        public static ElementSelectionMode ModeFor(ModifierKeys modifiers) =>
+            modifiers.HasFlag(ModifierKeys.Control) ? ElementSelectionMode.Toggle
+            : modifiers.HasFlag(ModifierKeys.Shift) ? ElementSelectionMode.Add
+            : ElementSelectionMode.Replace;
 
         /// <summary>Remembers how to restyle <paramref name="element"/>'s shapes and applies its current state.</summary>
         public void Register(object element, Action<bool> apply)
