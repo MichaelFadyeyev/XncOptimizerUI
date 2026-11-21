@@ -128,11 +128,6 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.Machining.MillingRectangles, Has.Count.EqualTo(1));
                 Assert.That(vm.Machining.ProgramsText, Does.Contain("/ellipse/front/Mill6 (30,40) 20x10 a0 dp2 Center"));
             });
-
-            vm.Machining.MillingContours[0].IsSelected = true;
-            Assert.That(vm.Machining.CheckedMillingContours, Has.Count.EqualTo(1));
-            vm.Machining.MillingContours[0].IsSelected = false;
-            Assert.That(vm.Machining.CheckedMillingContours, Is.Empty);
         }
 
         [Test]
@@ -187,13 +182,6 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.Machining.Grooves[2].ToolToCenterLine, Is.EqualTo("R"));
                 Assert.That(vm.Machining.HasGrooves, Is.True);
             });
-
-            vm.Machining.Grooves[0].IsSelected = true;
-            Assert.That(vm.Machining.CheckedGrooves, Has.Count.EqualTo(1));
-            Assert.That(vm.Machining.CheckedGrooves[0], Is.SameAs(vm.Machining.Grooves[0].Model));
-
-            vm.Machining.Grooves[0].IsSelected = false;
-            Assert.That(vm.Machining.CheckedGrooves, Is.Empty);
         }
 
         [Test]
@@ -264,7 +252,6 @@ namespace XncOptimizerUI.Test
             Project.Editor.UpdateBore(default, default, default, default!).ReturnsForAnyArgs(Project.ChangingProgramsTo([ProgramWithBores((368, "dx-32"), (200, "200"))]));
             var row = vm.Machining.Bores[0];
             vm.Machining.SelectedBore = row;
-            row.IsSelected = true;
             var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
@@ -280,7 +267,6 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.Machining.SelectedBore, Is.SameAs(row));
                 Assert.That(row.X.Display, Is.EqualTo("368"));
                 Assert.That(row.X.Input, Is.EqualTo("dx-32"));
-                Assert.That(vm.Machining.CheckedBores, Is.EqualTo(new[] { row.Model }));
                 Assert.That(vm.Machining.Programs.Single().Bores[0].X, Is.EqualTo(368));
                 Assert.That(vm.Log.Text, Does.Contain("Bore #1 x = \"dx-32\", saved"));
             });
@@ -490,7 +476,6 @@ namespace XncOptimizerUI.Test
             var row = vm.Machining.Grooves[1];
             var rectangleRow = vm.Machining.MillingRectangles[0];
             vm.Machining.SelectedGroove = row;
-            row.IsSelected = true;
             var savesBefore = Project.SaveCount;
 
             row.BeginCellEdit();
@@ -507,7 +492,6 @@ namespace XncOptimizerUI.Test
                 Assert.That(vm.Machining.MillingRectangles[0], Is.SameAs(rectangleRow), "other tables untouched");
                 Assert.That(row.EndY.Display, Is.EqualTo("765"));
                 Assert.That(row.EndY.Input, Is.EqualTo("dy-35"));
-                Assert.That(vm.Machining.CheckedGrooves, Is.EqualTo(new[] { row.Model }));
                 Assert.That(vm.Machining.Programs.Single().Groovings[1].End.Y, Is.EqualTo(765));
                 Assert.That(vm.Log.Text, Does.Contain("Groove #2 y2 = \"dy-35\", saved"));
             });

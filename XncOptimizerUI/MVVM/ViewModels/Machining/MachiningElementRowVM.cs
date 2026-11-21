@@ -14,7 +14,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
     /// <summary>
     /// A row of a program table (bores, grooves, mills): its number, the side it is machined on,
-    /// the element it shows, its check box (reported through the selection callback) and its
+    /// the element it shows, whether it is selected (shared with the part preview) and its
     /// editable numeric <see cref="Cells"/>. Cells are committed one at a time
     /// (<see cref="ICellEditableRow"/>): a commit hands every changed, valid draft to the owner,
     /// which writes it to the program, and is refused while any cell is invalid.
@@ -23,7 +23,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         where TModel : IXncMachiningElement
     {
         private readonly Func<TModel, IEnumerable<ExpressionCellValue>> _cellValues;
-        private readonly Action<TModel, bool> _onSelectionChanged;
         private readonly Func<MachiningElementRowVM<TModel>, MachiningAttribute, string, bool> _onEdited;
 
         /// <param name="cellValues">The editable cells of an element - one per attribute, the same attributes for every re-read of it.</param>
@@ -33,7 +32,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             TModel model,
             XncProgram program,
             Func<TModel, IEnumerable<ExpressionCellValue>> cellValues,
-            Action<TModel, bool> onSelectionChanged,
             Func<MachiningElementRowVM<TModel>, MachiningAttribute, string, bool> onEdited)
         {
             Number = number;
@@ -41,7 +39,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             OperationId = program.OperationId;
             _model = model;
             _cellValues = cellValues;
-            _onSelectionChanged = onSelectionChanged;
             _onEdited = onEdited;
 
             var symbols = XncSymbols.ElementSymbols(program, model);
@@ -74,11 +71,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// <summary>The element as last read from the program; replaced by <see cref="Apply"/> after a save.</summary>
         [ObservableProperty]
         private TModel _model;
-
-        [ObservableProperty]
-        private bool _isSelected;
-
-        partial void OnIsSelectedChanged(bool value) => _onSelectionChanged(Model, value);
 
         /// <summary>Whether the row is selected in its table, which draws its element red in the preview.</summary>
         [ObservableProperty]

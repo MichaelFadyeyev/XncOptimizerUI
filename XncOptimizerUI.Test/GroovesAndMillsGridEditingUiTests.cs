@@ -32,19 +32,19 @@ namespace XncOptimizerUI.Test
 
         private static readonly Table Grooves = new(
             "Grooves end Y", "td-programs.project", () => new SelectedPartGroovesGrid(), "GroovesDataGrid",
-            vm => vm.Machining.Grooves, 6, row => ((GrooveRowVM)row).EndY, "Groove #1 y2");
+            vm => vm.Machining.Grooves, 5, row => ((GrooveRowVM)row).EndY, "Groove #1 y2");
 
         private static readonly Table Contours = new(
             "Contours depth", "td-programs.project", () => new MillingContoursGrid(), "MillingContoursDataGrid",
-            vm => vm.Machining.MillingContours, 7, row => ((MillingContourRowVM)row).Depth, "Contour #1 dp");
+            vm => vm.Machining.MillingContours, 6, row => ((MillingContourRowVM)row).Depth, "Contour #1 dp");
 
         private static readonly Table Rectangles = new(
             "Rectangles length", "td-programs.project", () => new MillingRectanglesGrid(), "MillingRectanglesDataGrid",
-            vm => vm.Machining.MillingRectangles, 6, row => ((MillingRectangleRowVM)row).Length, "Rectangle #1 l");
+            vm => vm.Machining.MillingRectangles, 5, row => ((MillingRectangleRowVM)row).Length, "Rectangle #1 l");
 
         private static readonly Table Ellipses = new(
             "Ellipses angle", "td-mill-ellipse.project", () => new MillingEllipsesGrid(), "MillingEllipsesDataGrid",
-            vm => vm.Machining.MillingEllipses, 8, row => ((MillingEllipseRowVM)row).Angle, "Ellipse #1 a");
+            vm => vm.Machining.MillingEllipses, 7, row => ((MillingEllipseRowVM)row).Angle, "Ellipse #1 a");
 
         private static IEnumerable<TestCaseData> ValidEdits()
         {

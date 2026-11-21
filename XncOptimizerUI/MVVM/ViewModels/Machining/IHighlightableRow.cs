@@ -5,7 +5,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// <summary>
     /// A program-table row whose selection in its <c>DataGrid</c> is shared with the part preview:
     /// <see cref="IsHighlighted"/> is the row selected in the table, drawn red in the preview.
-    /// (The row's "Check" box is a separate state.)
     /// </summary>
     public interface IHighlightableRow : INotifyPropertyChanged
     {

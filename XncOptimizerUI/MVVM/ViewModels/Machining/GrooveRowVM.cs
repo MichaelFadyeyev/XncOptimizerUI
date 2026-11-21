@@ -9,9 +9,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// </summary>
     public sealed class GrooveRowVM(
         int number, string side, XncGrooving groove, XncProgram program,
-        Action<XncGrooving, bool> onSelectionChanged,
         Func<MachiningElementRowVM<XncGrooving>, MachiningAttribute, string, bool> onEdited)
-        : MachiningElementRowVM<XncGrooving>(number, side, groove, program, CellValues, onSelectionChanged, onEdited)
+        : MachiningElementRowVM<XncGrooving>(number, side, groove, program, CellValues, onEdited)
     {
         #region Properties
 

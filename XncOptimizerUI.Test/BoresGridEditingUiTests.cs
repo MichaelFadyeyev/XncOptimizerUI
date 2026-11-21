@@ -13,9 +13,9 @@ namespace XncOptimizerUI.Test
     [TestFixture]
     public class BoresGridEditingUiTests : ProgramGridUiTestBase
     {
-        private const int XColumn = 3;
-        private const int YColumn = 4;
-        private const int DepthColumn = 6;
+        private const int XColumn = 2;
+        private const int YColumn = 3;
+        private const int DepthColumn = 5;
 
         [TestCase(LeaveBy.Enter, DepthColumn, "5", "5", "Bore #1 dp = \"5\", saved")]
         [TestCase(LeaveBy.ClickOutside, XColumn, "dx-32", "dx-32", "Bore #1 x = \"dx-32\", saved")]

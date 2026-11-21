@@ -23,9 +23,6 @@
         Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
-            <!--  Check: feeds SelectedPartMachiningVM.CheckedBores  -->
-            <common:RowCheckColumn x:Name="BoresCheckColumn" />
-
             <!--  Read-only bore identity  -->
             <DataGridTextColumn
                 x:Name="BoresNumberColumn"

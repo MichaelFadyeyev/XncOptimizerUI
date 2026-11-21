@@ -47,7 +47,7 @@ namespace XncOptimizerUI.Test
                 EntryDepth = LongValue
             };
 
-            var row = new MillingContourRowVM(1, "Front", contour, Program(), (_, _) => { }, Record);
+            var row = new MillingContourRowVM(1, "Front", contour, Program(), Record);
 
             Assert.Multiple(() =>
             {
@@ -64,7 +64,7 @@ namespace XncOptimizerUI.Test
         {
             var ellipse = new XncMillingEllipse { Center = new XncPoint(LongValue, 1), Angle = SumWithRoundingNoise, Length = 5, Width = 5, Depth = 5 };
 
-            var row = new MillingEllipseRowVM(1, "Front", ellipse, Program(), (_, _) => { }, Record);
+            var row = new MillingEllipseRowVM(1, "Front", ellipse, Program(), Record);
 
             Assert.Multiple(() =>
             {
@@ -78,7 +78,7 @@ namespace XncOptimizerUI.Test
         {
             var rectangle = new XncMillingRectangle { Length = LongValue, CornerRadius = SumWithRoundingNoise };
 
-            var row = new MillingRectangleRowVM(1, "Front", rectangle, Program(), (_, _) => { }, Record);
+            var row = new MillingRectangleRowVM(1, "Front", rectangle, Program(), Record);
 
             Assert.Multiple(() =>
             {
@@ -107,7 +107,7 @@ namespace XncOptimizerUI.Test
                 Width = 10,
                 Source = Source(("x1", "-10"), ("y1", "565"), ("x2", "dx+10"), ("y2", "565"), ("dp", "4"), ("t", "10"))
             };
-            var row = new GrooveRowVM(1, "Front", groove, Program(), (_, _) => { }, Record);
+            var row = new GrooveRowVM(1, "Front", groove, Program(), Record);
 
             row.BeginCellEdit();
             row.EndY.Input = "dy-35";
@@ -128,7 +128,7 @@ namespace XncOptimizerUI.Test
         public void GrooveRow_InvalidWidth_IsRefused(string text, string error)
         {
             var groove = new XncGrooving { ToolName = "Mill10", Depth = 4, Width = 10 };
-            var row = new GrooveRowVM(1, "Front", groove, Program(), (_, _) => { }, Record);
+            var row = new GrooveRowVM(1, "Front", groove, Program(), Record);
 
             row.BeginCellEdit();
             row.Width.Input = text;
@@ -145,7 +145,7 @@ namespace XncOptimizerUI.Test
         public void RectangleRow_AcceptsZeroCornerRadiusAndToolDiameter_RejectsNegativeRadius()
         {
             var rectangle = new XncMillingRectangle { ToolName = "Mill10", Length = 100, Width = 20, CornerRadius = 5, Depth = 8 };
-            var row = new MillingRectangleRowVM(1, "Front", rectangle, Program(), (_, _) => { }, Record);
+            var row = new MillingRectangleRowVM(1, "Front", rectangle, Program(), Record);
 
             row.BeginCellEdit();
             row.CornerRadius.Input = "-1";
@@ -164,7 +164,7 @@ namespace XncOptimizerUI.Test
         [Test]
         public void ContourRow_ApplyRefreshesReadOnlyColumnsAndCells()
         {
-            var row = new MillingContourRowVM(1, "Front", new XncMillingContour { EntryDepth = 5 }, Program(), (_, _) => { }, Record);
+            var row = new MillingContourRowVM(1, "Front", new XncMillingContour { EntryDepth = 5 }, Program(), Record);
             var changed = new List<string?>();
             row.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
             var reread = new XncMillingContour
@@ -189,7 +189,7 @@ namespace XncOptimizerUI.Test
         public void FailedSave_MarksTheCellAndKeepsTheDraft()
         {
             var ellipse = new XncMillingEllipse { Length = 20, Width = 20, Depth = 5 };
-            var row = new MillingEllipseRowVM(1, "Front", ellipse, Program(), (_, _) => { }, (_, _, _) => false);
+            var row = new MillingEllipseRowVM(1, "Front", ellipse, Program(), (_, _, _) => false);
 
             row.BeginCellEdit();
             row.Angle.Input = "45";

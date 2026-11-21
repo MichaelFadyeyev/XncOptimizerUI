@@ -23,9 +23,6 @@
         Style="{StaticResource OperationGridStyle}">
         <DataGrid.Columns>
 
-            <!--  Check: feeds SelectedPartMachiningVM's checked contours  -->
-            <common:RowCheckColumn x:Name="ContoursCheckColumn" />
-
             <!--  Read-only contour identity  -->
             <DataGridTextColumn
                 x:Name="ContoursNumberColumn"

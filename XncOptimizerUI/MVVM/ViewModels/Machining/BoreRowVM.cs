@@ -9,9 +9,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// </summary>
     public sealed class BoreRowVM(
         int number, string side, string? diameter, XncBore bore, XncProgram program,
-        Action<XncBore, bool> onSelectionChanged,
         Func<MachiningElementRowVM<XncBore>, MachiningAttribute, string, bool> onEdited)
-        : MachiningElementRowVM<XncBore>(number, side, bore, program, CellValues, onSelectionChanged, onEdited)
+        : MachiningElementRowVM<XncBore>(number, side, bore, program, CellValues, onEdited)
     {
         #region Properties
 

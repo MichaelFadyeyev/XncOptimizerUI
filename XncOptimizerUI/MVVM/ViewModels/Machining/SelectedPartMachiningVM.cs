@@ -9,7 +9,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 {
     /// <summary>
     /// The XNC programs of the selected part: the program tables (bores, grooves, mills, tools,
-    /// variables), their check boxes, the "XNC List" text, and the in-cell bore, groove, mill and
+    /// variables), the rows selected in them, the "XNC List" text, and the in-cell bore, groove, mill and
     /// variable edits, which are written to the program and saved in place.
     /// </summary>
     public sealed partial class SelectedPartMachiningVM : ObservableObject
@@ -63,24 +63,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         public bool HasMillingEllipses => MillingEllipses.Count > 0;
 
         public bool HasMillingRectangles => MillingRectangles.Count > 0;
-
-        /// <summary>
-        /// Bores checked via the bores <c>DataGrid</c>'s checkbox column. Reset whenever the
-        /// selected part changes. Not consumed by anything yet - reserved for future features.
-        /// </summary>
-        public CheckedSet<XncBore> CheckedBores { get; } = [];
-
-        /// <summary>Grooves checked via the grooves table. Reset when the selected part changes.</summary>
-        public CheckedSet<XncGrooving> CheckedGrooves { get; } = [];
-
-        /// <summary>Contours checked via the milling contours table.</summary>
-        public CheckedSet<XncMillingContour> CheckedMillingContours { get; } = [];
-
-        /// <summary>Ellipses checked via the milling ellipses table.</summary>
-        public CheckedSet<XncMillingEllipse> CheckedMillingEllipses { get; } = [];
-
-        /// <summary>Rectangles checked via the milling rectangles table.</summary>
-        public CheckedSet<XncMillingRectangle> CheckedMillingRectangles { get; } = [];
         #endregion
 
         #region ObservableProperties
@@ -223,11 +205,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
 
             ShowPrograms(part, programs, readError);
 
-            CheckedBores.Clear();
-            CheckedGrooves.Clear();
-            CheckedMillingContours.Clear();
-            CheckedMillingEllipses.Clear();
-            CheckedMillingRectangles.Clear();
             Bores = WatchHighlight(BuildBoreRows(programs));
             Grooves = WatchHighlight(BuildGrooveRows(programs));
             Tools = BuildToolRows(programs);
@@ -332,7 +309,7 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
                 row.OperationId,
                 $"Bore #{row.Number} {attribute.XmlName()} = \"{expression}\"",
                 operationId => _project.Editor.UpdateBore(operationId, row.Model.Index, attribute, expression),
-                part => RefreshRowsInPlace(part, Bores, program => program.Bores, CheckedBores));
+                part => RefreshRowsInPlace(part, Bores, program => program.Bores));
 
         /// <summary>
         /// The cell edit handler of a groove or mill table: writes one committed cell edit of an
@@ -343,15 +320,14 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private Func<MachiningElementRowVM<TModel>, MachiningAttribute, string, bool> ElementEditHandler<TModel, TRow>(
             XncElementKind kind,
             Func<ObservableCollection<TRow>> rows,
-            Func<XncProgram, IEnumerable<TModel>> elements,
-            CheckedSet<TModel> checkedSet)
+            Func<XncProgram, IEnumerable<TModel>> elements)
             where TModel : IXncEditableElement
             where TRow : MachiningElementRowVM<TModel> =>
             (row, attribute, expression) => SaveProgramEdit(
                 row.OperationId,
                 $"{kind.DisplayName()} #{row.Number} {attribute.XmlName()} = \"{expression}\"",
                 operationId => _project.Editor.UpdateMachiningElement(operationId, kind, row.Model.Source.Index, attribute, expression),
-                part => RefreshRowsInPlace(part, rows(), elements, checkedSet));
+                part => RefreshRowsInPlace(part, rows(), elements));
 
         /// <summary>
         /// Writes one committed variable cell edit into its program, saves the file in place and
@@ -392,16 +368,14 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         /// Re-reads <paramref name="part"/>'s programs after a bore, groove or mill edit and updates
         /// the edited table's <paramref name="rows"/> in place - the collection is not replaced,
         /// because this runs while that <c>DataGrid</c> is still ending its cell edit (replacing its
-        /// items source then throws), and in-place rows keep the grid's selection and the
-        /// checkboxes (<paramref name="checkedSet"/> follows the re-read elements). One element does
+        /// items source then throws), and in-place rows keep the grid's selection. One element does
         /// not affect the other machining tables, so those are left alone; the re-read programs
         /// redraw the preview.
         /// </summary>
         private void RefreshRowsInPlace<TModel, TRow>(
             PartVM part,
             ObservableCollection<TRow> rows,
-            Func<XncProgram, IEnumerable<TModel>> elements,
-            CheckedSet<TModel> checkedSet)
+            Func<XncProgram, IEnumerable<TModel>> elements)
             where TModel : IXncMachiningElement
             where TRow : MachiningElementRowVM<TModel>
         {
@@ -419,18 +393,10 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
             rows
                 .Zip(reread)
                 .ToList()
-                .ForEach(pair => ApplyRow(pair.First, pair.Second.Element, pair.Second.Program, checkedSet));
+                .ForEach(pair => pair.First.Apply(pair.Second.Element, pair.Second.Program));
 
             // The rows now show the re-read elements the preview draws.
             RaiseHighlightChanged();
-        }
-
-        /// <summary>Refreshes one row and keeps <paramref name="checkedSet"/> pointing at its current element.</summary>
-        private static void ApplyRow<TModel>(MachiningElementRowVM<TModel> row, TModel element, XncProgram program, CheckedSet<TModel> checkedSet)
-            where TModel : IXncMachiningElement
-        {
-            checkedSet.Replace(row.Model, element);
-            row.Apply(element, program);
         }
 
         /// <summary>
@@ -477,7 +443,6 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
                 ToolDiameter(program, bore.ToolName),
                 bore,
                 program,
-                CheckedBores.Set,
                 OnBoreRowEdited));
 
         private static ObservableCollection<ToolRowVM> BuildToolRows(IReadOnlyList<XncProgram> programs) =>
@@ -492,41 +457,41 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
         private ObservableCollection<GrooveRowVM> BuildGrooveRows(IReadOnlyList<XncProgram> programs)
         {
             var onEdited = ElementEditHandler<XncGrooving, GrooveRowVM>(
-                XncElementKind.Groove, () => Grooves, program => program.Groovings, CheckedGrooves);
+                XncElementKind.Groove, () => Grooves, program => program.Groovings);
 
             return BuildRows(programs, program => program.Groovings,
                 (number, program, groove) => new GrooveRowVM(
-                    number, MachiningDisplay.GrooveSide(groove, program), groove, program, CheckedGrooves.Set, onEdited));
+                    number, MachiningDisplay.GrooveSide(groove, program), groove, program, onEdited));
         }
 
         private ObservableCollection<MillingContourRowVM> BuildMillingContourRows(IReadOnlyList<XncProgram> programs)
         {
             var onEdited = ElementEditHandler<XncMillingContour, MillingContourRowVM>(
-                XncElementKind.Contour, () => MillingContours, program => program.MillingContours, CheckedMillingContours);
+                XncElementKind.Contour, () => MillingContours, program => program.MillingContours);
 
             return BuildRows(programs, program => program.MillingContours,
                 (number, program, contour) => new MillingContourRowVM(
-                    number, MachiningDisplay.SideName(program.Side), contour, program, CheckedMillingContours.Set, onEdited));
+                    number, MachiningDisplay.SideName(program.Side), contour, program, onEdited));
         }
 
         private ObservableCollection<MillingEllipseRowVM> BuildMillingEllipseRows(IReadOnlyList<XncProgram> programs)
         {
             var onEdited = ElementEditHandler<XncMillingEllipse, MillingEllipseRowVM>(
-                XncElementKind.Ellipse, () => MillingEllipses, program => program.MillingEllipses, CheckedMillingEllipses);
+                XncElementKind.Ellipse, () => MillingEllipses, program => program.MillingEllipses);
 
             return BuildRows(programs, program => program.MillingEllipses,
                 (number, program, ellipse) => new MillingEllipseRowVM(
-                    number, MachiningDisplay.SideName(program.Side), ellipse, program, CheckedMillingEllipses.Set, onEdited));
+                    number, MachiningDisplay.SideName(program.Side), ellipse, program, onEdited));
         }
 
         private ObservableCollection<MillingRectangleRowVM> BuildMillingRectangleRows(IReadOnlyList<XncProgram> programs)
         {
             var onEdited = ElementEditHandler<XncMillingRectangle, MillingRectangleRowVM>(
-                XncElementKind.Rectangle, () => MillingRectangles, program => program.MillingRectangles, CheckedMillingRectangles);
+                XncElementKind.Rectangle, () => MillingRectangles, program => program.MillingRectangles);
 
             return BuildRows(programs, program => program.MillingRectangles,
                 (number, program, rectangle) => new MillingRectangleRowVM(
-                    number, MachiningDisplay.SideName(program.Side), rectangle, program, CheckedMillingRectangles.Set, onEdited));
+                    number, MachiningDisplay.SideName(program.Side), rectangle, program, onEdited));
         }
 
         /// <summary>Diameter of the program's tool <paramref name="toolName"/>, or <c>null</c> when it is not declared.</summary>

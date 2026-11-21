@@ -24,9 +24,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// </summary>
     public sealed class MillingContourRowVM(
         int number, string side, XncMillingContour contour, XncProgram program,
-        Action<XncMillingContour, bool> onSelectionChanged,
         Func<MachiningElementRowVM<XncMillingContour>, MachiningAttribute, string, bool> onEdited)
-        : MachiningElementRowVM<XncMillingContour>(number, side, contour, program, CellValues, onSelectionChanged, onEdited)
+        : MachiningElementRowVM<XncMillingContour>(number, side, contour, program, CellValues, onEdited)
     {
         #region Properties
 
@@ -62,9 +61,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// <summary>One row of the selected part's milling ellipses table: center, semi-axes, angle and depth are editable cells.</summary>
     public sealed class MillingEllipseRowVM(
         int number, string side, XncMillingEllipse ellipse, XncProgram program,
-        Action<XncMillingEllipse, bool> onSelectionChanged,
         Func<MachiningElementRowVM<XncMillingEllipse>, MachiningAttribute, string, bool> onEdited)
-        : MachiningElementRowVM<XncMillingEllipse>(number, side, ellipse, program, CellValues, onSelectionChanged, onEdited)
+        : MachiningElementRowVM<XncMillingEllipse>(number, side, ellipse, program, CellValues, onEdited)
     {
         #region Properties
 
@@ -104,9 +102,8 @@ namespace XncOptimizerUI.MVVM.ViewModels.Machining
     /// <summary>One row of the selected part's milling rectangles table: center, size, angle, corner radius and depth are editable cells.</summary>
     public sealed class MillingRectangleRowVM(
         int number, string side, XncMillingRectangle rectangle, XncProgram program,
-        Action<XncMillingRectangle, bool> onSelectionChanged,
         Func<MachiningElementRowVM<XncMillingRectangle>, MachiningAttribute, string, bool> onEdited)
-        : MachiningElementRowVM<XncMillingRectangle>(number, side, rectangle, program, CellValues, onSelectionChanged, onEdited)
+        : MachiningElementRowVM<XncMillingRectangle>(number, side, rectangle, program, CellValues, onEdited)
     {
         #region Properties
 
