@@ -12,7 +12,7 @@
 
     <!--
         Parts filter: checked / filtered counts on the first row; check buttons, length and
-        width ranges, name filter and Filter / Clear buttons on the second
+        width ranges, name filter, Filter / Clear buttons and the Delete button (right) on the second
     -->
     <Grid x:Name="PartsFilterGrid" Margin="5,0,5,0">
         <Grid.ColumnDefinitions>
@@ -27,6 +27,7 @@
             <ColumnDefinition Width="1*" />
             <ColumnDefinition Width="40" />
             <ColumnDefinition Width="40" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -38,7 +39,7 @@
             x:Name="CheckedCountPanel"
             Grid.Row="0"
             Grid.Column="0"
-            Grid.ColumnSpan="11"
+            Grid.ColumnSpan="12"
             HorizontalAlignment="Left"
             Orientation="Horizontal">
             <Label
@@ -56,7 +57,7 @@
             x:Name="FilteredCountPanel"
             Grid.Row="0"
             Grid.Column="0"
-            Grid.ColumnSpan="11"
+            Grid.ColumnSpan="12"
             HorizontalAlignment="Right"
             Orientation="Horizontal">
             <Label
@@ -159,5 +160,14 @@
             Command="{Binding Filter.ClearFiltersCommand}"
             Content="Clear"
             Style="{StaticResource CompactButtonStyle}" />
+
+        <!--  Delete the checked parts (also those hidden by the filter) with their XNC operations  -->
+        <Button
+            x:Name="DeletePartsButton"
+            Grid.Row="1"
+            Grid.Column="11"
+            Command="{Binding PartsList.DeleteCheckedCommand}"
+            Content="Delete"
+            Style="{StaticResource TableActionButtonStyle}" />
     </Grid>
 </UserControl>

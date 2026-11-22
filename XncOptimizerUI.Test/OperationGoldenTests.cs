@@ -167,6 +167,9 @@ namespace XncOptimizerUI.Test
             yield return new("delete-contours_mills-optimization", "td-mills-optimization.project",
                 EditFirstProgram((s, ref log, operationId) => s.Editor.DeleteMachiningElements(
                     [new(operationId, XncElementKind.Contour, 1), new(operationId, XncElementKind.Contour, 4)]).Into(ref log)));
+
+            // Deleting checked parts (saved in place)
+            yield return new("delete-parts_gr-ml-conversion", "td-gr-ml-conversion.project", DeletePartsAndSave(5, 6));
         }
 
         private static bool SplitFirstPart(ProjectServices service, ref string log, List<Part> parts)
@@ -191,6 +194,15 @@ namespace XncOptimizerUI.Test
             (ProjectServices service, ref string log, List<Part> _) =>
             {
                 var result = service.Editor.RotatePart(partId, turn, flipEdgeGrooveTcl).Into(ref log);
+                service.Session.Save();
+
+                return result;
+            };
+
+        private static Operation DeletePartsAndSave(params int[] partIds) =>
+            (ProjectServices service, ref string log, List<Part> _) =>
+            {
+                var result = service.Editor.DeleteParts(partIds).Into(ref log);
                 service.Session.Save();
 
                 return result;

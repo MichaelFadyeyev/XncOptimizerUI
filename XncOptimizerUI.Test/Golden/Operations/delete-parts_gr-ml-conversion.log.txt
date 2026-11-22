@@ -1,0 +1,8 @@
+result: True
+output: td-gr-ml-conversion.project
+---
+Deleted 2 part(s):
+"512.08.01.ПАН-640" (id=5),
+"512.08.02.ПАН-600" (id=6),
+4 XNC operation(s) removed
+

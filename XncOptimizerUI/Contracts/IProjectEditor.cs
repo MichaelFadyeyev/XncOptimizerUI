@@ -64,5 +64,13 @@ namespace XncOptimizerUI.Contracts
         /// caller can complete (e.g. with the save time).
         /// </summary>
         OperationResult DeleteMachiningElements(IReadOnlyList<XncElementRef> elements);
+
+        /// <summary>
+        /// Deletes the product parts with <paramref name="partIds"/>, their XNC operations and their
+        /// <c>&lt;part id&gt;</c> entries in every CS and EL operation (the operations are kept). Every id
+        /// is resolved first, so an unknown one leaves the document unchanged. Logs one entry listing
+        /// the deleted parts, which a caller can complete (e.g. with the save time).
+        /// </summary>
+        OperationResult DeleteParts(IReadOnlyList<int> partIds);
     }
 }

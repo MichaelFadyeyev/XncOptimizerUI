@@ -10,13 +10,16 @@ namespace XncOptimizerUI.Services.Project
 {
     /// <summary>
     /// In-place edits of the open project: parts, part rotation, bore / groove / mill / variable attributes
-    /// of an XNC program, and deleting bores, grooves and mills.
+    /// of an XNC program, and deleting bores, grooves, mills and parts.
     /// </summary>
     public sealed class ProjectEditor(ProjectDocument document, ProjectReader reader) : IProjectEditor
     {
         private readonly PartUpdater _partUpdater = new(document, reader);
+        private readonly PartDeleter _partDeleter = new(document);
 
         public OperationResult UpdatePart(Part part) => _partUpdater.Update(part);
+
+        public OperationResult DeleteParts(IReadOnlyList<int> partIds) => _partDeleter.Delete(partIds);
 
         /// <summary>All programs are rotated first and only then written back, so a failing program leaves the document untouched.</summary>
         public OperationResult RotatePart(int partId, int targetTurn, bool flipEdgeGrooveTcl)

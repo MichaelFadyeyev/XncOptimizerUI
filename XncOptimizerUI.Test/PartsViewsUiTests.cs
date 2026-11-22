@@ -16,6 +16,9 @@ namespace XncOptimizerUI.Test
     {
         private const string BandedFixture = "td-bore-depth-variable.project";
 
+        /// <summary>14 parts: more rows than a 200 px high grid shows.</summary>
+        private const string ScrollFixture = "td-mill-offset.project";
+
         [Test]
         public void BandColumn_ShowsTheCaptionOfThePartsBand()
         {
@@ -98,11 +101,90 @@ namespace XncOptimizerUI.Test
             });
         }
 
+        [Test]
+        public void DeleteButton_EnabledWhileAPartIsChecked()
+        {
+            var vm = OpenProject(BandedFixture);
+
+            ShowAndRun(new PartsFilterBar(), vm, control =>
+            {
+                var button = (Button)control.FindName("DeletePartsButton");
+                var disabledBefore = !button.IsEnabled;
+
+                vm.PartsList.Parts[0].IsChecked = true;
+                Pump();
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(disabledBefore, Is.True);
+                    Assert.That(button.IsEnabled, Is.True);
+                });
+            });
+        }
+
+        [Test]
+        public void DeleteChecked_NextPartVisible_KeepsTheScrollPosition()
+        {
+            var vm = OpenProject(ScrollFixture);
+
+            ShowAndRun(new PartsGrid(), vm, control =>
+            {
+                var scroller = ScrollerOf(control);
+                scroller.ScrollToVerticalOffset(3);
+                Pump();
+                var offsetBefore = scroller.VerticalOffset;
+                var shown = vm.PartsList.Parts;
+                var next = shown[5];
+                shown[4].IsChecked = true;
+
+                vm.PartsList.DeleteCheckedCommand.Execute(null);
+                Pump();
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(offsetBefore, Is.EqualTo(3));
+                    Assert.That(scroller.VerticalOffset, Is.EqualTo(offsetBefore));
+                    Assert.That(vm.PartsList.SelectedPart, Is.SameAs(next));
+                    Assert.That(((DataGrid)control.FindName("PartsDataGrid")).SelectedItem, Is.SameAs(next));
+                });
+            }, height: 200);
+        }
+
+        [Test]
+        public void DeleteChecked_NextPartOffScreen_ScrollsItIntoView()
+        {
+            var vm = OpenProject(ScrollFixture);
+
+            ShowAndRun(new PartsGrid(), vm, control =>
+            {
+                var scroller = ScrollerOf(control);
+                var shown = vm.PartsList.Parts;
+                var next = shown[11];
+                shown[10].IsChecked = true;
+
+                vm.PartsList.DeleteCheckedCommand.Execute(null);
+                Pump();
+
+                var nextIndex = shown.IndexOf(next);
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(vm.PartsList.SelectedPart, Is.SameAs(next));
+                    Assert.That(scroller.VerticalOffset, Is.GreaterThan(0));
+                    Assert.That(nextIndex, Is.InRange(scroller.VerticalOffset, scroller.VerticalOffset + scroller.ViewportHeight - 1),
+                        "the next part's row is within the viewport (item-based scrolling)");
+                });
+            }, height: 200);
+        }
+
+        private static ScrollViewer ScrollerOf(UserControl control) =>
+            FindDescendant<ScrollViewer>((DataGrid)control.FindName("PartsDataGrid"))!;
+
         /// <summary>Shows <paramref name="control"/> bound to <paramref name="vm"/> in an off-screen window while <paramref name="act"/> runs.</summary>
-        private static void ShowAndRun(UserControl control, AppViewModel vm, Action<UserControl> act)
+        private static void ShowAndRun(UserControl control, AppViewModel vm, Action<UserControl> act, double height = 400)
         {
             control.DataContext = vm;
-            var window = new Window { Content = control, Width = 1000, Height = 400, Left = -4000, ShowInTaskbar = false };
+            var window = new Window { Content = control, Width = 1000, Height = height, Left = -4000, ShowInTaskbar = false };
 
             try
             {
