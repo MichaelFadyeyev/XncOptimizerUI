@@ -34,6 +34,20 @@ namespace XncOptimizerUI.Services
             return saveDialog.ShowDialog() == true ? saveDialog.FileName : null;
         }
 
+        public string? ShowSaveProjectDialog(string currentPath)
+        {
+            var saveDialog = new SaveFileDialog()
+            {
+                Filter = "GibLab project files (*.project)|*.project",
+                DefaultExt = ".project",
+                Title = "Save Project As",
+                InitialDirectory = Path.GetDirectoryName(currentPath) ?? string.Empty,
+                FileName = Path.GetFileName(currentPath)
+            };
+
+            return saveDialog.ShowDialog() == true ? saveDialog.FileName : null;
+        }
+
         public void SaveTextFile(string path, string content)
         {
             File.WriteAllText(path, content, Encoding.UTF8);

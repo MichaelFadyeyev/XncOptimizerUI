@@ -153,6 +153,42 @@ namespace XncOptimizerUI.MVVM.ViewModels
             Log.Append($"Saved file: {Workspace.FullPath} at {_clock.GetLocalNow().DateTime}\n");
         }
 
+        /// <summary>
+        /// Saves the project to a file the user chooses and continues in it; the parts grid, its
+        /// check boxes and the selected part and machining elements are kept (nothing is re-read).
+        /// </summary>
+        [RelayCommand]
+        private void SaveFileAs()
+        {
+            if (!Workspace.IsOpen)
+            {
+                Log.Append("No file selected!\n");
+                return;
+            }
+
+            var fullPath = _dialogs.ShowSaveProjectDialog(Workspace.FullPath);
+
+            if (fullPath == null)
+            {
+                return;
+            }
+
+            if (PartsList.SelectedPart != null)
+            {
+                Log.Append(_project.Editor.UpdatePart(PartsList.SelectedPart.Part));
+            }
+
+            try
+            {
+                Workspace.SaveAs(fullPath);
+                Log.Append($"Saved file as: {fullPath} at {_clock.GetLocalNow().DateTime}\n");
+            }
+            catch (Exception e)
+            {
+                Log.Append($"***\nSaving as {fullPath} failed: {e.Message}\n");
+            }
+        }
+
         [RelayCommand]
         private void CloseFile()
         {

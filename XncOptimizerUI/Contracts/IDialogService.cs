@@ -13,6 +13,10 @@ namespace XncOptimizerUI.Contracts
         /// <returns>The chosen path, or <c>null</c> if the user cancelled.</returns>
         string? ShowSaveCsvDialog(string suggestedFileName);
 
+        /// <summary>Asks where to save the project, starting at <paramref name="currentPath"/>; overwriting is confirmed by the dialog.</summary>
+        /// <returns>The chosen path, or <c>null</c> if the user cancelled.</returns>
+        string? ShowSaveProjectDialog(string currentPath);
+
         void SaveTextFile(string path, string content);
 
         void SetClipboardText(string text);

@@ -65,6 +65,16 @@ namespace XncOptimizerUI.MVVM.ViewModels
             parts.SelectedPart = parts.Parts.FirstOrDefault();
         }
 
+        /// <summary>
+        /// Saves the project to <paramref name="fullPath"/> and continues in that file. Nothing is
+        /// re-read, so the parts, their check boxes and every selection stay as they are.
+        /// </summary>
+        public void SaveAs(string fullPath)
+        {
+            project.Session.SaveAs(fullPath);
+            FullPath = fullPath;
+        }
+
         public void Close()
         {
             project.Session.Close();

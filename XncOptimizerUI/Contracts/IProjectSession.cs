@@ -18,5 +18,11 @@ namespace XncOptimizerUI.Contracts
 
         /// <summary>Saves over <see cref="FullPath"/> (in-place edits; see <see cref="IProjectEditor"/>).</summary>
         void Save();
+
+        /// <summary>
+        /// Saves to <paramref name="path"/>, which becomes <see cref="FullPath"/> (and the base name of
+        /// suffixed outputs); when writing fails the session stays on the previous file.
+        /// </summary>
+        void SaveAs(string path);
     }
 }

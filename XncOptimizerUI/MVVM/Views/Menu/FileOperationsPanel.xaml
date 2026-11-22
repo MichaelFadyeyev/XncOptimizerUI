@@ -9,7 +9,7 @@
                                      IsDesignTimeCreatable=False}"
     mc:Ignorable="d">
 
-    <!--  File operations buttons: open, close and save the project  -->
+    <!--  File operations buttons: open, close, save and save as the project  -->
     <Grid x:Name="FileOperationsGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -45,13 +45,13 @@
             Content="Save"
             Style="{StaticResource FileOpsButtonStyle}" />
 
-        <!--  Save as: not implemented yet  -->
+        <!--  Save as: write the project to a chosen file and continue in it  -->
         <Button
             x:Name="SaveFileAsButton"
             Grid.Row="1"
             Grid.Column="1"
+            Command="{Binding SaveFileAsCommand}"
             Content="Save as..."
-            IsEnabled="False"
             Style="{StaticResource FileOpsButtonStyle}" />
     </Grid>
 </UserControl>

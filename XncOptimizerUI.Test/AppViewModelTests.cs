@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using NSubstitute;
 using XncOptimizerUI.Contracts;
 using XncOptimizerUI.MVVM.ViewModels;
+using XncOptimizerUI.Test.Fakes;
 
 namespace XncOptimizerUI.Test
 {
@@ -163,6 +164,103 @@ namespace XncOptimizerUI.Test
 
             Assert.That(firstPartName, Is.EqualTo("301.07.03.підріз.47=ПАН-ВРХ"),
                 "re-opening the source file after Execute Optimize must not rename its first part");
+        }
+
+        [Test]
+        public void SaveFileAs_WithNoFileOpen_LogsAndAsksNothing()
+        {
+            var vm = CreateViewModel();
+
+            vm.SaveFileAsCommand.Execute(null);
+
+            Dialogs.DidNotReceive().ShowSaveProjectDialog(Arg.Any<string>());
+            Assert.That(vm.Log.Text, Does.Contain("No file selected!"));
+        }
+
+        [Test]
+        public void SaveFileAs_WhenUserCancelsDialog_SavesNothing()
+        {
+            SeedTwoParts();
+            Dialogs.ShowSaveProjectDialog(Arg.Any<string>()).Returns((string?)null);
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.SaveFileAsCommand.Execute(null);
+
+            Dialogs.Received(1).ShowSaveProjectDialog(@"C:\project.project");
+            Project.Session.DidNotReceive().SaveAs(Arg.Any<string>());
+            Assert.That(vm.Workspace.FullPath, Is.EqualTo(@"C:\project.project"));
+        }
+
+        [Test]
+        public void SaveFileAs_SavesPendingEditToChosenFileAndContinuesInIt()
+        {
+            SeedTwoParts();
+            Dialogs.ShowSaveProjectDialog(Arg.Any<string>()).Returns(@"D:\copy.project");
+            var now = new DateTimeOffset(2026, 11, 22, 10, 30, 0, TimeSpan.Zero);
+
+            var vm = CreateViewModel(new FakeTimeProvider(now));
+            vm.OpenFileCommand.Execute(null);
+            Project.ClearCalls();
+
+            vm.SaveFileAsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(Project.Calls, Is.EqualTo(new[] { nameof(IProjectEditor.UpdatePart), nameof(IProjectSession.SaveAs) }),
+                    "the selected part's pending edit is written first, then the file");
+                Assert.That(vm.Workspace.FullPath, Is.EqualTo(@"D:\copy.project"));
+                Assert.That(vm.WindowTitle, Is.EqualTo("TestAssembly - copy.project"));
+                Assert.That(vm.Log.Text, Does.Contain($"Saved file as: D:\\copy.project at {now.DateTime}\n"));
+            });
+        }
+
+        [Test]
+        public void SaveFileAs_KeepsPartsCheckBoxesAndSelection()
+        {
+            SeedTwoParts();
+            Dialogs.ShowSaveProjectDialog(Arg.Any<string>()).Returns(@"D:\copy.project");
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+            var parts = vm.PartsList.Parts.ToList();
+            parts[0].IsChecked = true;
+            vm.PartsList.SelectedPart = parts[1];
+            Project.ClearCalls();
+
+            vm.SaveFileAsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.PartsList.Parts, Is.EqualTo(parts), "the same rows, so the grid keeps its scroll offset");
+                Assert.That(vm.PartsList.SelectedPart, Is.SameAs(parts[1]));
+                Assert.That(parts.Select(part => part.IsChecked), Is.EqualTo(new[] { true, false }));
+                Assert.That(Project.Calls, Has.None.EqualTo(nameof(IProjectSession.Open))
+                    .And.None.EqualTo(nameof(IProjectReader.ReadParts))
+                    .And.None.EqualTo(nameof(IProjectReader.ReadXncPrograms)),
+                    "nothing is re-read, so the machining tables keep their selected rows");
+            });
+        }
+
+        [Test]
+        public void SaveFileAs_WhenSavingFails_StaysOnTheOpenFileAndLogsTheError()
+        {
+            SeedTwoParts();
+            Dialogs.ShowSaveProjectDialog(Arg.Any<string>()).Returns(@"Z:\copy.project");
+            Project.Session.When(session => session.SaveAs(@"Z:\copy.project")).Do(_ => throw new IOException("disk not found"));
+
+            var vm = CreateViewModel();
+            vm.OpenFileCommand.Execute(null);
+
+            vm.SaveFileAsCommand.Execute(null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.Workspace.FullPath, Is.EqualTo(@"C:\project.project"));
+                Assert.That(vm.WindowTitle, Is.EqualTo("TestAssembly - project.project"));
+                Assert.That(vm.Log.Text, Does.Contain("***\nSaving as Z:\\copy.project failed: disk not found\n"));
+            });
         }
 
         [Test]

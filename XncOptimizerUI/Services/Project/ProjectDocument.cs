@@ -40,9 +40,7 @@ namespace XncOptimizerUI.Services.Project
             _document = document;
             ConvertedFromEncoding = ProjectFileEncoding.IsUtf8(encoding) ? null : encoding.WebName;
             PrepareIfCadExport(document);
-            FullPath = path;
-            _directory = Path.GetDirectoryName(path) ?? string.Empty;
-            _sourceFileName = Path.GetFileName(path);
+            SetPath(path);
         }
 
         public void Close()
@@ -56,14 +54,16 @@ namespace XncOptimizerUI.Services.Project
         }
 
         /// <summary>Saves over the file at <see cref="FullPath"/>.</summary>
-        public void Save()
-        {
-            if (_document == null || string.IsNullOrEmpty(FullPath))
-            {
-                throw new InvalidOperationException("No project is opened");
-            }
+        public void Save() => OpenedDocument().Save(FullPath);
 
-            _document.Save(FullPath);
+        /// <summary>
+        /// Saves to <paramref name="path"/>, which then becomes <see cref="FullPath"/> and the base name
+        /// of suffixed outputs, as if the file had been opened from there. A failed write changes nothing.
+        /// </summary>
+        public void SaveAs(string path)
+        {
+            OpenedDocument().Save(path);
+            SetPath(path);
         }
 
         /// <summary>
@@ -93,6 +93,20 @@ namespace XncOptimizerUI.Services.Project
             }
 
             description.Value += line;
+        }
+
+        /// <exception cref="InvalidOperationException">No project is open.</exception>
+        private XDocument OpenedDocument() =>
+            _document != null && !string.IsNullOrEmpty(FullPath)
+                ? _document
+                : throw new InvalidOperationException("No project is opened");
+
+        /// <summary>Makes <paramref name="path"/> the document's file: in-place saves and suffixed names follow it.</summary>
+        private void SetPath(string path)
+        {
+            FullPath = path;
+            _directory = Path.GetDirectoryName(path) ?? string.Empty;
+            _sourceFileName = Path.GetFileName(path);
         }
 
         /// <summary>

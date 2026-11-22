@@ -110,6 +110,7 @@ namespace XncOptimizerUI.Test.Fakes
             Session.FullPath.Returns(_ => fullPath);
             Session.ConvertedFromEncoding.Returns(_ => ConvertedFromEncoding);
             Session.When(session => session.Open(Arg.Any<string>())).Do(call => fullPath = call.Arg<string>());
+            Session.When(session => session.SaveAs(Arg.Any<string>())).Do(call => fullPath = call.Arg<string>());
         }
 
         private void ConfigureReader()
